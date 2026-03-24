@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth, API } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { 
-  FaFileAlt, FaUpload, FaDownload, FaTrash, FaStar, FaRegStar,
-  FaSearch, FaFilter, FaSyncAlt, FaEye, FaCheckCircle, FaTimesCircle,
-  FaFilePdf, FaFileWord, FaFile, FaInfoCircle, FaExclamationTriangle,
-  FaSpinner, FaChartLine, FaShare, FaLink, FaEnvelope, FaWhatsapp,FaSortUp,FaSortDown,
-  FaTelegram, FaTwitter, FaLinkedin, FaCalendarAlt, FaClock, FaTimes
+  FaFileAlt, FaUpload, FaDownload, FaTrash, FaStar, 
+  FaSearch, FaFilter, FaSyncAlt, FaEye, 
+  FaFilePdf, FaFileWord, 
+  FaExclamationTriangle,
+  FaSpinner, FaChartLine, FaShare, FaLink, FaEnvelope, FaWhatsapp, FaSortUp, FaSortDown,
+  FaTelegram, FaTwitter, FaLinkedin, 
+  FaTimes, FaPlus, FaCloudUploadAlt
 } from 'react-icons/fa';
 
 const CvManager = () => {
@@ -43,7 +45,16 @@ const CvManager = () => {
   });
 
   useEffect(() => {
-    checkAuthAndFetchCVs();
+    const token = localStorage.getItem('token');
+    console.log('Token check:', token ? 'Present' : 'Missing');
+    
+    if (!token) {
+      setError('Please login to view your CVs');
+      setLoading(false);
+      return;
+    }
+    
+    fetchCVs();
   }, []);
 
   useEffect(() => {
@@ -51,33 +62,6 @@ const CvManager = () => {
       calculateStats();
     }
   }, [cvs]);
-
-  const checkAuthAndFetchCVs = async () => {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      setError('Please login to view your CVs');
-      setTimeout(() => navigate('/login'), 2000);
-      setLoading(false);
-      return;
-    }
-
-    if (!user) {
-      setError('User data not found. Please login again.');
-      setTimeout(() => navigate('/login'), 2000);
-      setLoading(false);
-      return;
-    }
-
-    if (user.role !== 'student') {
-      setError('Access denied. Only students can manage CVs.');
-      setTimeout(() => navigate('/'), 2000);
-      setLoading(false);
-      return;
-    }
-
-    await fetchCVs();
-  };
 
   const fetchCVs = async () => {
     try {
@@ -95,24 +79,12 @@ const CvManager = () => {
     } catch (err) {
       console.error('Error fetching CVs:', err);
       
-      if (err.code === 'ECONNREFUSED' || err.message.includes('Network Error')) {
-        setError('Cannot connect to server. Please make sure the backend is running.');
-      } else if (err.response) {
-        if (err.response.status === 401) {
-          setError('Session expired. Please login again.');
-          localStorage.removeItem('token');
-          setTimeout(() => navigate('/login'), 2000);
-        } else if (err.response.status === 403) {
-          setError('You are not authorized to view CVs.');
-        } else if (err.response.status === 404) {
-          setCvs([]);
-        } else {
-          setError(err.response.data?.message || `Server error: ${err.response.status}`);
-        }
-      } else if (err.request) {
-        setError('No response from server. Please check if backend is running.');
+      if (err.response?.status === 401) {
+        setError('Session expired. Please login again.');
+      } else if (err.code === 'ECONNREFUSED') {
+        setError('Cannot connect to server. Please make sure the backend is running on port 5000.');
       } else {
-        setError('Error: ' + err.message);
+        setError(err.response?.data?.message || 'Failed to load CVs');
       }
     } finally {
       setLoading(false);
@@ -126,7 +98,7 @@ const CvManager = () => {
       primary: cvs.filter(cv => cv.isPrimary).length,
       pdf: cvs.filter(cv => cv.fileType?.includes('pdf')).length,
       doc: cvs.filter(cv => cv.fileType?.includes('document') || cv.fileType?.includes('msword')).length,
-      other: cvs.filter(cv => !cv.fileType?.includes('pdf') && !cv.fileType?.includes('document') && !cv.fileType?.includes('msword')).length,
+      other: cvs.filter(cv => !cv.fileType?.includes('pdf') && !cv.fileType?.includes('document')).length,
       totalSize: cvs.reduce((sum, cv) => sum + (cv.fileSize || 0), 0)
     };
     setStats(newStats);
@@ -134,21 +106,21 @@ const CvManager = () => {
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
-        return;
-      }
-      
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error('Only PDF, DOC, DOCX, and TXT files are allowed');
-        return;
-      }
-      
-      setSelectedFile(file);
-      setCvTitle(file.name);
+    if (!file) return;
+    
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
     }
+    
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only PDF, DOC, DOCX, and TXT files are allowed');
+      return;
+    }
+    
+    setSelectedFile(file);
+    setCvTitle(file.name.replace(/\.[^/.]+$/, ""));
   };
 
   const handleUpload = async () => {
@@ -169,8 +141,10 @@ const CvManager = () => {
       const response = await API.post('/cv/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
         }
       });
       
@@ -332,7 +306,7 @@ const CvManager = () => {
       <div className="ds-error-container">
         <div className="ds-error-card">
           <FaExclamationTriangle className="ds-error-icon" />
-          <h3>Error Loading CVs</h3>
+          <h3>Cannot Load CVs</h3>
           <p>{error}</p>
           <div className="ds-error-actions">
             <button className="ds-btn ds-btn-primary" onClick={fetchCVs}>
@@ -367,7 +341,7 @@ const CvManager = () => {
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             <button className="ds-btn ds-btn-primary" onClick={() => setShowUploadModal(true)}>
-              <FaUpload /> Upload New CV
+              <FaPlus /> Upload New CV
             </button>
           </div>
         </div>
@@ -462,7 +436,7 @@ const CvManager = () => {
             <h3>No CVs Found</h3>
             <p>You haven't uploaded any CVs yet. Upload your first CV to get started!</p>
             <button className="ds-btn ds-btn-primary ds-btn-lg" onClick={() => setShowUploadModal(true)}>
-              <FaUpload /> Upload Your First CV
+              <FaCloudUploadAlt /> Upload Your First CV
             </button>
           </div>
         ) : filteredCVs.length === 0 ? (
@@ -536,34 +510,56 @@ const CvManager = () => {
         <div className="ds-modal-overlay" onClick={() => { setShowUploadModal(false); setSelectedFile(null); setCvTitle(''); setIsPrimary(false); setUploadProgress(0); }}>
           <div className="ds-modal" onClick={e => e.stopPropagation()}>
             <div className="ds-modal-header">
-              <FaUpload className="ds-modal-icon" />
+              <FaCloudUploadAlt className="ds-modal-icon" />
               <h3>Upload New CV</h3>
               <button className="ds-modal-close" onClick={() => { setShowUploadModal(false); setSelectedFile(null); setCvTitle(''); setIsPrimary(false); setUploadProgress(0); }}>
                 <FaTimes />
               </button>
             </div>
             <div className="ds-modal-body">
-              <div className="ds-form-group">
-                <label>Select CV File</label>
-                <input type="file" className="ds-file-input" accept=".pdf,.doc,.docx,.txt" onChange={handleFileSelect} />
-                <small>Allowed formats: PDF, DOC, DOCX, TXT (Max 5MB)</small>
+              <div className="ds-upload-area">
+                <input
+                  type="file"
+                  id="cvFileUpload"
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleFileSelect}
+                  className="ds-file-input"
+                />
+                <label htmlFor="cvFileUpload" className="ds-upload-label">
+                  <FaCloudUploadAlt />
+                  <span>Choose File</span>
+                </label>
+                <p className="ds-upload-hint">Supported formats: PDF, DOC, DOCX, TXT (Max 5MB)</p>
               </div>
 
               {selectedFile && (
                 <>
                   <div className="ds-form-group">
                     <label>CV Title</label>
-                    <input type="text" value={cvTitle} onChange={(e) => setCvTitle(e.target.value)} placeholder="Enter a title for your CV" />
+                    <input 
+                      type="text" 
+                      value={cvTitle} 
+                      onChange={(e) => setCvTitle(e.target.value)} 
+                      placeholder="Enter a title for your CV"
+                      className="ds-form-control"
+                    />
                   </div>
 
                   <div className="ds-checkbox">
-                    <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} id="isPrimary" />
+                    <input 
+                      type="checkbox" 
+                      checked={isPrimary} 
+                      onChange={(e) => setIsPrimary(e.target.checked)} 
+                      id="isPrimary" 
+                    />
                     <label htmlFor="isPrimary">Set as primary CV</label>
                   </div>
 
                   {uploadProgress > 0 && (
                     <div className="ds-progress">
-                      <div className="ds-progress-bar" style={{ width: `${uploadProgress}%` }}>{uploadProgress}%</div>
+                      <div className="ds-progress-bar" style={{ width: `${uploadProgress}%` }}>
+                        {uploadProgress}%
+                      </div>
                     </div>
                   )}
 
@@ -577,11 +573,26 @@ const CvManager = () => {
               )}
             </div>
             <div className="ds-modal-footer">
-              <button className="ds-btn ds-btn-secondary" onClick={() => { setShowUploadModal(false); setSelectedFile(null); setCvTitle(''); setIsPrimary(false); setUploadProgress(0); }}>
+              <button 
+                className="ds-btn ds-btn-secondary" 
+                onClick={() => { setShowUploadModal(false); setSelectedFile(null); setCvTitle(''); setIsPrimary(false); setUploadProgress(0); }}
+              >
                 Cancel
               </button>
-              <button className="ds-btn ds-btn-primary" onClick={handleUpload} disabled={!selectedFile || uploading}>
-                {uploading ? <><FaSpinner className="ds-spin" /> Uploading...</> : <><FaUpload /> Upload CV</>}
+              <button 
+                className="ds-btn ds-btn-primary" 
+                onClick={handleUpload} 
+                disabled={!selectedFile || uploading}
+              >
+                {uploading ? (
+                  <>
+                    <FaSpinner className="ds-spin" /> Uploading...
+                  </>
+                ) : (
+                  <>
+                    <FaUpload /> Upload CV
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -609,13 +620,13 @@ const CvManager = () => {
                   <h4>{selectedCv.title}</h4>
                   <table className="ds-info-table">
                     <tbody>
-                      <tr><th>Filename:</th><td>{selectedCv.filename}</td></tr>
-                      <tr><th>File Type:</th><td>{selectedCv.fileType}</td></tr>
-                      <tr><th>File Size:</th><td>{formatFileSize(selectedCv.fileSize)}</td></tr>
-                      <tr><th>Uploaded:</th><td>{formatDate(selectedCv.createdAt)}</td></tr>
-                      <tr><th>Last Updated:</th><td>{formatDate(selectedCv.updatedAt)}</td></tr>
-                      <tr><th>Views:</th><td>{selectedCv.analytics?.views || 0}</td></tr>
-                      <tr><th>Downloads:</th><td>{selectedCv.analytics?.downloads || 0}</td></tr>
+                      <tr><th>Filename:</th>        <td>{selectedCv.filename}</td>       </tr>
+                      <tr><th>File Type:</th>        <td>{selectedCv.fileType}</td>       </tr>
+                      <tr><th>File Size:</th>        <td>{formatFileSize(selectedCv.fileSize)}</td></tr>
+                      <tr><th>Uploaded:</th>         <td>{formatDate(selectedCv.createdAt)}</td></tr>
+                      <tr><th>Last Updated:</th>     <td>{formatDate(selectedCv.updatedAt)}</td></tr>
+                      <tr><th>Views:</th>            <td>{selectedCv.analytics?.views || 0}</td></tr>
+                      <tr><th>Downloads:</th>        <td>{selectedCv.analytics?.downloads || 0}</td></tr>
                     </tbody>
                   </table>
                 </div>

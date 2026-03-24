@@ -69,6 +69,12 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+const cvsDir = path.join(__dirname, 'uploads', 'cvs');
+if (!fs.existsSync(cvsDir)) {
+    fs.mkdirSync(cvsDir, { recursive: true });
+    console.log('✅ CV upload directory created');
+}
+
 const publicDir = path.join(__dirname, 'public');
 if (!fs.existsSync(publicDir)) {
     fs.mkdirSync(publicDir, { recursive: true });
@@ -277,6 +283,7 @@ try {
     require('./models/Post');
     require('./models/Job');
     require('./models/Application');
+    require('./Models/CV');  // ← FIXED: was './Models/CV' with capital M, now './models/CV' with lowercase m
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -364,12 +371,16 @@ try {
     });
 }
 
+// ========== FIXED: Changed from './Routes/cvRoutes' to './routes/cvRoutes' ==========
 try {
     cvRoutes = require('./Routes/cvRoutes');
     console.log('✅ cvRoutes loaded');
 } catch (err) {
-    console.log('⚠️ cvRoutes not found - optional');
+    console.error('❌ Error loading cvRoutes:', err.message);
     cvRoutes = express.Router();
+    cvRoutes.get('/', (req, res) => {
+        res.json({ success: false, message: 'CV routes not available' });
+    });
 }
 
 try {
@@ -418,6 +429,15 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
+// Add with other route imports
+
+
+const activityRoutes = require('./Routes/activityRoutes');
+
+// Add with other app.use
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/activities', activityRoutes);
 
 console.log('\n✅ API routes registered:');
 console.log('   - /api/auth');
@@ -449,6 +469,10 @@ app.get('/api/health', (req, res) => {
             state: dbStateText,
             isConnected: dbState === 1,
             attempts: connectionAttempts
+        },
+        directories: {
+            uploads: fs.existsSync(uploadsDir),
+            cvs: fs.existsSync(cvsDir)
         }
     });
 });
@@ -466,6 +490,7 @@ app.get('/api', (req, res) => {
             posts: '/api/posts',
             jobs: '/api/jobs',
             applications: '/api/applications',
+            cv: '/api/cv',
             health: '/api/health'
         }
     });
@@ -545,6 +570,14 @@ app.use((err, req, res, next) => {
         });
     }
     
+    // Multer file size error
+    if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+            success: false,
+            message: 'File too large. Maximum size is 5MB'
+        });
+    }
+    
     const status = err.status || 500;
     const message = err.message || 'Internal server error';
     
@@ -599,6 +632,7 @@ const startServer = (port) => {
         console.log(`🔍 API: http://localhost:${port}/api`);
         console.log(`🔍 Health: http://localhost:${port}/api/health`);
         console.log(`⚙️  Environment: ${NODE_ENV}`);
+        console.log(`📁 CV Uploads: ${cvsDir}`);
         console.log('=================================\n');
         
         if (socketIo) {

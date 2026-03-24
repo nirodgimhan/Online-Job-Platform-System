@@ -25,7 +25,7 @@ const auth = async (req, res, next) => {
             });
         }
 
-        if (!user.isActive) {
+        if (user.isActive === false) {
             return res.status(403).json({ 
                 success: false, 
                 message: 'Account deactivated' 
@@ -66,6 +66,7 @@ const auth = async (req, res, next) => {
     }
 };
 
+// Add authorize method to auth function
 auth.authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {
@@ -85,21 +86,4 @@ auth.authorize = (...roles) => {
     };
 };
 
-// In middleware/auth.js
-module.exports = {
-    auth: (req, res, next) => {
-        // existing auth logic
-    },
-    authorize: (...roles) => {
-        return (req, res, next) => {
-            if (!roles.includes(req.user.role)) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: 'Access denied' 
-                });
-            }
-            next();
-        };
-    }
-};
 module.exports = auth;

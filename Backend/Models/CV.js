@@ -40,45 +40,13 @@ const CVSchema = new mongoose.Schema({
         suggestions: [String],
         atsCompatibility: Number
     },
-    jobMatches: [{
-        jobId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Job'
-        },
-        matchScore: Number,
-        matchedSkills: [String],
-        missingSkills: [String],
-        suggestedImprovements: [String]
-    }],
-    versions: [{
-        versionNumber: Number,
-        filename: String,
-        filePath: String,
-        createdAt: Date,
-        changes: String
-    }],
     analytics: {
-        views: {
-            type: Number,
-            default: 0
-        },
-        downloads: {
-            type: Number,
-            default: 0
-        },
-        applicationsUsing: {
-            type: Number,
-            default: 0
-        }
+        views: { type: Number, default: 0 },
+        downloads: { type: Number, default: 0 },
+        applicationsUsing: { type: Number, default: 0 }
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('CV', CVSchema);

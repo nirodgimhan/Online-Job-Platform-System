@@ -21,7 +21,17 @@ import {
   FaShieldAlt,
   FaCheckCircle,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaCalendarAlt,
+  FaVideo,
+  FaComments,
+  FaStar,
+  FaRegStar,
+  FaChartLine,
+  FaEnvelope,
+  FaBell,
+  FaSearch,
+  FaFilter
 } from 'react-icons/fa';
 
 const Sidebar = ({ children }) => {
@@ -37,23 +47,25 @@ const Sidebar = ({ children }) => {
     setIsOpen(!isOpen);
   };
 
-  // Student Sidebar Items
+  // Student Sidebar Items with Interviews
   const studentMenuItems = [
     { title: 'Dashboard', path: '/student/dashboard', icon: <FaTachometerAlt /> },
     { title: 'My Profile', path: '/student/profile', icon: <FaUser /> },
     { title: 'Browse Jobs', path: '/student/jobs', icon: <FaBriefcase /> },
     { title: 'My Applications', path: '/student/applied-jobs', icon: <FaClipboardList />, badge: 'new' },
     { title: 'Saved Jobs', path: '/student/saved-jobs', icon: <FaHeart /> },
-    { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> }
+    { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> },
+    { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' }
   ];
 
-  // Company Sidebar Items
+  // Company Sidebar Items with Interviews
   const companyMenuItems = [
     { title: 'Dashboard', path: '/company/dashboard', icon: <FaTachometerAlt /> },
     { title: 'Company Profile', path: '/company/profile', icon: <FaBuilding /> },
     { title: 'Post New Job', path: '/company/post-job', icon: <FaPlusCircle /> },
     { title: 'Manage Jobs', path: '/company/manage-jobs', icon: <FaListAlt /> },
-    { title: 'Applications', path: '/company/applicants', icon: <FaUsers />, badge: 'new' }
+    { title: 'Applications', path: '/company/applicants', icon: <FaUsers />, badge: 'new' },
+    { title: 'Interviews', path: '/company/interviews', icon: <FaCalendarAlt /> }
   ];
 
   // Admin Sidebar Items
@@ -62,7 +74,8 @@ const Sidebar = ({ children }) => {
     { title: 'Admin Profile', path: '/admin/profile', icon: <FaUserTie /> },
     { title: 'Manage Users', path: '/admin/users', icon: <FaUsers /> },
     { title: 'Manage Companies', path: '/admin/companies', icon: <FaBuilding /> },
-    { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: 'pending' }
+    { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: 'pending' },
+    { title: 'Reports', path: '/admin/reports', icon: <FaChartLine /> }
   ];
 
   const getMenuItems = () => {
@@ -81,8 +94,39 @@ const Sidebar = ({ children }) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.name) return 'U';
+    return user.name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Get role color for badge
+  const getRoleColor = () => {
+    switch(user?.role) {
+      case 'student': return '#48bb78';
+      case 'company': return '#4299e1';
+      case 'admin': return '#ed8936';
+      default: return '#a0aec0';
+    }
+  };
+
+  // Get role icon
+  const getRoleIcon = () => {
+    switch(user?.role) {
+      case 'student': return <FaUserGraduate />;
+      case 'company': return <FaBuilding />;
+      case 'admin': return <FaShieldAlt />;
+      default: return <FaUser />;
+    }
+  };
+
   return (
-    <div className="ds-dashboard-container">
+    <div className="ds-dashboard-layout">
       {/* Mobile Toggle Button */}
       <button className="ds-sidebar-toggle-btn" onClick={toggleSidebar}>
         {isOpen ? <FaTimes /> : <FaBars />}
@@ -90,17 +134,26 @@ const Sidebar = ({ children }) => {
 
       {/* Sidebar */}
       <div className={`ds-sidebar ${isOpen ? 'open' : ''}`}>
-        {/* User Info */}
+        {/* User Info - No Logo */}
         <div className="ds-sidebar-user-info">
-          <div className="ds-user-avatar-large">
-            {user?.name?.charAt(0).toUpperCase()}
+          <div className="ds-user-avatar-large" style={{ background: `linear-gradient(135deg, ${getRoleColor()}, ${getRoleColor()}cc)` }}>
+            {user?.profilePicture ? (
+              <img src={user.profilePicture} alt={user.name} className="ds-avatar-image" />
+            ) : (
+              <div className="ds-avatar-placeholder">
+                {getUserInitials()}
+              </div>
+            )}
           </div>
           <div className="ds-user-details">
-            <h4>{user?.name}</h4>
-            <p>{user?.email}</p>
-            <span className={`ds-role-badge ${user?.role}`}>
-              {user?.role}
-            </span>
+            <h4>{user?.name || 'User'}</h4>
+            <p>{user?.email || 'user@example.com'}</p>
+            <div className="ds-role-wrapper">
+              {getRoleIcon()}
+              <span className={`ds-role-badge ${user?.role}`}>
+                {user?.role === 'student' ? 'Student' : user?.role === 'company' ? 'Company' : 'Admin'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -137,9 +190,10 @@ const Sidebar = ({ children }) => {
             <li>
               <Link to="/help" className="ds-sidebar-nav-link" onClick={() => setIsOpen(false)}>
                 <span className="ds-nav-icon"><FaQuestionCircle /></span>
-                <span className="ds-nav-title">Help</span>
+                <span className="ds-nav-title">Help & Support</span>
               </Link>
             </li>
+            <li className="ds-divider"></li>
             <li>
               <button onClick={handleLogout} className="ds-sidebar-nav-link ds-logout-btn">
                 <span className="ds-nav-icon"><FaSignOutAlt /></span>

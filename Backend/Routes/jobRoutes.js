@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const jobController = require('../Controllers/jobController');
 const auth = require('../middleware/auth');
+const Job = require('../models/Job');
+const Student = require('../models/Student');
+const Company = require('../models/Company');
+const Application = require('../models/Application');
 
 // ==================== PUBLIC ROUTES ====================
 
@@ -28,6 +32,68 @@ router.get('/featured', jobController.getFeaturedJobs);
  * @query   { q, employmentType, workMode, location, experienceLevel, minSalary, maxSalary, skills, category, page, limit, sortBy }
  */
 router.get('/search', jobController.searchJobs);
+
+// ==================== IMPORTANT: This route MUST come before /:id ====================
+/**
+ * @route   GET /api/jobs/recommended
+ * @desc    Get recommended jobs for a student based on their CV skills
+ * @access  Private/Student
+ */
+router.get('/recommended', auth, auth.authorize('student'), async (req, res) => {
+    try {
+        console.log('📡 GET /api/jobs/recommended');
+        
+        const limit = parseInt(req.query.limit) || 5;
+        
+        // Get student profile to extract skills
+        const student = await Student.findOne({ userId: req.user.id });
+        
+        if (!student || !student.skills || student.skills.length === 0) {
+            // If no skills, return recent jobs
+            const recentJobs = await Job.find({ status: 'active' })
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .populate('companyId', 'companyName companyLogo');
+            
+            return res.json({ success: true, jobs: recentJobs });
+        }
+        
+        // Get student's skills
+        const studentSkills = student.skills.map(s => s.name?.toLowerCase());
+        
+        // Find jobs that match student's skills
+        const jobs = await Job.find({
+            status: 'active',
+            'skills.name': { $in: studentSkills }
+        })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .populate('companyId', 'companyName companyLogo');
+        
+        // Calculate match percentage for each job
+        const jobsWithMatch = jobs.map(job => {
+            const jobSkills = job.skills?.map(s => s.name?.toLowerCase()) || [];
+            const matchedSkills = jobSkills.filter(skill => studentSkills.includes(skill));
+            const matchPercentage = jobSkills.length > 0 
+                ? Math.round((matchedSkills.length / jobSkills.length) * 100)
+                : 0;
+            
+            return {
+                ...job.toObject(),
+                matchPercentage
+            };
+        });
+        
+        // Sort by match percentage
+        jobsWithMatch.sort((a, b) => b.matchPercentage - a.matchPercentage);
+        
+        res.json({ success: true, jobs: jobsWithMatch });
+        
+    } catch (error) {
+        console.error('❌ Error fetching recommended jobs:', error.message);
+        res.status(500).json({ success: false, message: 'Server Error: ' + error.message });
+    }
+});
 
 /**
  * @route   GET /api/jobs/:id

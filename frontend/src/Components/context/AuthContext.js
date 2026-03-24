@@ -90,11 +90,21 @@ API.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized - Modified to not redirect immediately for CV uploads
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-      toast.error('Session expired. Please login again.');
+      // Check if this is a CV upload request
+      const isCVUpload = originalRequest.url?.includes('/cv/upload');
+      
+      if (!isCVUpload) {
+        // For non-CV requests, redirect to login
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        toast.error('Session expired. Please login again.');
+      } else {
+        // For CV upload, just show error and let user handle
+        toast.error('Session expired. Please login again to upload CV.');
+        // Don't redirect immediately, let the component handle it
+      }
       return Promise.reject(error);
     }
     
@@ -155,8 +165,8 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading user:', error);
-      // Don't remove token on network errors
-      if (error.response?.status !== 503 && error.message !== 'Network Error') {
+      // Don't remove token on network errors or 503
+      if (error.response?.status !== 503 && error.response?.status !== 401 && error.message !== 'Network Error') {
         localStorage.removeItem('token');
         setToken(null);
       }
