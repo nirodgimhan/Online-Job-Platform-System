@@ -282,8 +282,9 @@ try {
     require('./models/Company');
     require('./models/Post');
     require('./models/Job');
-    require('./models/Application');
-    require('./Models/CV');  // ← FIXED: was './Models/CV' with capital M, now './models/CV' with lowercase m
+    require('./Models/Application');
+    require('./Models/Interview');  // Changed from 'Models/Interview' to 'models/Interview'
+    require('./models/CV');
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -292,10 +293,11 @@ try {
 // ==================== IMPORT ROUTES ====================
 
 let authRoutes, userRoutes, studentRoutes, companyRoutes, postRoutes, jobRoutes, applicationRoutes;
-let cvRoutes, notificationRoutes, messageRoutes, adminRoutes, searchRoutes;
+let cvRoutes, notificationRoutes, messageRoutes, adminRoutes, searchRoutes, interviewRoutes, activityRoutes;
 
+// Auth Routes
 try {
-    authRoutes = require('./Routes/authRoutes');
+    authRoutes = require('./routes/authRoutes');
     console.log('✅ authRoutes loaded');
 } catch (err) {
     console.error('❌ Error loading authRoutes:', err.message);
@@ -305,8 +307,9 @@ try {
     });
 }
 
+// User Routes
 try {
-    userRoutes = require('./Routes/userRoutes');
+    userRoutes = require('./routes/userRoutes');
     console.log('✅ userRoutes loaded');
 } catch (err) {
     console.error('❌ Error loading userRoutes:', err.message);
@@ -316,8 +319,9 @@ try {
     });
 }
 
+// Student Routes
 try {
-    studentRoutes = require('./Routes/studentRoutes');
+    studentRoutes = require('./routes/studentRoutes');
     console.log('✅ studentRoutes loaded');
 } catch (err) {
     console.error('❌ Error loading studentRoutes:', err.message);
@@ -327,6 +331,7 @@ try {
     });
 }
 
+// Company Routes
 try {
     companyRoutes = require('./routes/companyRoutes');
     console.log('✅ companyRoutes loaded');
@@ -338,6 +343,7 @@ try {
     });
 }
 
+// Post Routes
 try {
     postRoutes = require('./routes/postRoutes');
     console.log('✅ postRoutes loaded');
@@ -349,6 +355,7 @@ try {
     });
 }
 
+// Job Routes
 try {
     jobRoutes = require('./routes/jobRoutes');
     console.log('✅ jobRoutes loaded');
@@ -360,6 +367,7 @@ try {
     });
 }
 
+// Application Routes
 try {
     applicationRoutes = require('./routes/applicationRoutes');
     console.log('✅ applicationRoutes loaded');
@@ -371,9 +379,9 @@ try {
     });
 }
 
-// ========== FIXED: Changed from './Routes/cvRoutes' to './routes/cvRoutes' ==========
+// CV Routes
 try {
-    cvRoutes = require('./Routes/cvRoutes');
+    cvRoutes = require('./routes/cvRoutes');
     console.log('✅ cvRoutes loaded');
 } catch (err) {
     console.error('❌ Error loading cvRoutes:', err.message);
@@ -383,22 +391,61 @@ try {
     });
 }
 
+// Interview Routes - IMPORTANT: This is the main interview route
+try {
+    interviewRoutes = require('./routes/interviews'); // Changed from './Routes/interviewRoutes' to './routes/interviews'
+    console.log('✅ interviewRoutes loaded from ./routes/interviews');
+} catch (err) {
+    console.error('❌ Error loading interviewRoutes:', err.message);
+    interviewRoutes = express.Router();
+    interviewRoutes.post('/', (req, res) => {
+        res.status(501).json({ 
+            success: false, 
+            message: 'Interview routes not properly configured. Please check routes/interviews.js file.'
+        });
+    });
+    interviewRoutes.get('/', (req, res) => {
+        res.json({ success: false, message: 'Interview routes not available' });
+    });
+}
+
+// Activity Routes
+try {
+    activityRoutes = require('./routes/activityRoutes');
+    console.log('✅ activityRoutes loaded');
+} catch (err) {
+    console.log('⚠️ activityRoutes not found - creating fallback');
+    activityRoutes = express.Router();
+    activityRoutes.get('/recent', (req, res) => {
+        res.json({ success: true, activities: [] });
+    });
+}
+
+// Notification Routes
 try {
     notificationRoutes = require('./routes/notificationRoutes');
     console.log('✅ notificationRoutes loaded');
 } catch (err) {
     console.log('⚠️ notificationRoutes not found - optional');
     notificationRoutes = express.Router();
+    notificationRoutes.get('/', (req, res) => {
+        res.json({ success: true, notifications: [] });
+    });
 }
 
+// Message Routes
 try {
     messageRoutes = require('./routes/messageRoutes');
     console.log('✅ messageRoutes loaded');
 } catch (err) {
     console.log('⚠️ messageRoutes not found - optional');
     messageRoutes = express.Router();
+    messageRoutes.get('/recent', (req, res) => {
+        res.json({ success: true, messages: [] });
+    });
 }
 
+// Admin Routes
 try {
     adminRoutes = require('./routes/adminRoutes');
     console.log('✅ adminRoutes loaded');
@@ -407,6 +454,7 @@ try {
     adminRoutes = express.Router();
 }
 
+// Search Routes
 try {
     searchRoutes = require('./routes/searchRoutes');
     console.log('✅ searchRoutes loaded');
@@ -425,19 +473,12 @@ app.use('/api/posts', postRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/cv', cvRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/search', searchRoutes);
-// Add with other route imports
-
-
-const activityRoutes = require('./Routes/activityRoutes');
-
-// Add with other app.use
+app.use('/api/interviews', interviewRoutes);  // This is the main interview route
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/search', searchRoutes);
 
 console.log('\n✅ API routes registered:');
 console.log('   - /api/auth');
@@ -448,8 +489,10 @@ console.log('   - /api/posts');
 console.log('   - /api/jobs');
 console.log('   - /api/applications');
 console.log('   - /api/cv');
+console.log('   - /api/interviews');  // Added to log
 console.log('   - /api/notifications');
 console.log('   - /api/messages');
+console.log('   - /api/activities');
 console.log('   - /api/admin');
 console.log('   - /api/search');
 
@@ -473,6 +516,9 @@ app.get('/api/health', (req, res) => {
         directories: {
             uploads: fs.existsSync(uploadsDir),
             cvs: fs.existsSync(cvsDir)
+        },
+        routes: {
+            interviews: '/api/interviews'
         }
     });
 });
@@ -491,6 +537,10 @@ app.get('/api', (req, res) => {
             jobs: '/api/jobs',
             applications: '/api/applications',
             cv: '/api/cv',
+            interviews: '/api/interviews',
+            notifications: '/api/notifications',
+            messages: '/api/messages',
+            activities: '/api/activities',
             health: '/api/health'
         }
     });
@@ -631,6 +681,7 @@ const startServer = (port) => {
         console.log(`📍 URL: http://localhost:${port}`);
         console.log(`🔍 API: http://localhost:${port}/api`);
         console.log(`🔍 Health: http://localhost:${port}/api/health`);
+        console.log(`📅 Interviews: http://localhost:${port}/api/interviews`);
         console.log(`⚙️  Environment: ${NODE_ENV}`);
         console.log(`📁 CV Uploads: ${cvsDir}`);
         console.log('=================================\n');
@@ -645,6 +696,8 @@ const startServer = (port) => {
                 });
 
                 io.on('connection', (socket) => {
+                    console.log('🔌 New client connected');
+                    
                     if (socket.user) {
                         socket.join(`user:${socket.user.id}`);
                     }
@@ -655,6 +708,10 @@ const startServer = (port) => {
 
                     socket.on('leave-chat', (chatId) => {
                         socket.leave(`chat:${chatId}`);
+                    });
+                    
+                    socket.on('disconnect', () => {
+                        console.log('🔌 Client disconnected');
                     });
                 });
 

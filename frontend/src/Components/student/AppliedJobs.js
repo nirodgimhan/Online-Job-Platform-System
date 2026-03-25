@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, API } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import axios from 'axios';
 import { 
   FaBriefcase, 
   FaClock, 
@@ -27,7 +26,9 @@ import {
   FaExternalLinkAlt,
   FaChartLine,
   FaTrophy,
-  FaMedal
+  FaMedal,
+  FaSpinner,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 
 const AppliedJobs = () => {
@@ -94,20 +95,27 @@ const AppliedJobs = () => {
   };
 
   const fetchApplications = async () => {
-    const token = localStorage.getItem('token');
-    
     try {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get('http://localhost:5000/api/applications/student', {
-        headers: { 'x-auth-token': token }
-      });
+      const response = await API.get('/applications/student');
       
       if (response.data && response.data.success) {
         const apps = response.data.applications || [];
-        setApplications(apps);
-        calculateStats(apps);
+        
+        // Process applications to ensure consistent data structure
+        const processedApps = apps.map(app => ({
+          ...app,
+          appliedDate: app.appliedDate || app.appliedAt || app.createdAt,
+          updatedAt: app.updatedAt || app.appliedDate || app.createdAt,
+          jobId: app.jobId || {},
+          interviewDetails: app.interviewDetails || {},
+          feedback: app.feedback || null,
+          coverLetter: app.coverLetter || ''
+        }));
+        
+        setApplications(processedApps);
       } else {
         setError(response.data?.message || 'Failed to load applications');
       }
@@ -274,7 +282,7 @@ const AppliedJobs = () => {
     return (
       <div className="ds-error-container">
         <div className="ds-error-card">
-          <FaTimesCircle className="ds-error-icon" />
+          <FaExclamationTriangle className="ds-error-icon" />
           <h3>Error Loading Applications</h3>
           <p>{error}</p>
           <div className="ds-error-actions">
@@ -419,10 +427,12 @@ const AppliedJobs = () => {
                       {companyLogoUrl ? (
                         <img 
                           src={companyLogoUrl}
-                          alt={app.jobId?.companyId?.companyName}
+                          alt={app.jobId?.companyId?.companyName || 'Company Logo'}
                           onError={(e) => {
                             e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'flex';
+                            }
                           }}
                         />
                       ) : null}
@@ -477,12 +487,12 @@ const AppliedJobs = () => {
                     <Link to={`/student/job/${app.jobId?._id}`} className="ds-action-btn ds-view-btn">
                       <FaEye /> View Job
                     </Link>
-                    {app.status === 'Interview' && app.interviewDetails && (
+                    {app.status === 'Interview' && app.interviewDetails && Object.keys(app.interviewDetails).length > 0 && (
                       <button className="ds-action-btn ds-interview-btn" onClick={() => handleViewInterviewDetails(app)}>
                         <FaCalendarAlt /> Interview
                       </button>
                     )}
-                    {app.feedback && (
+                    {app.feedback && app.feedback.comments && (
                       <button className="ds-action-btn ds-feedback-btn" onClick={() => handleViewFeedback(app)}>
                         <FaComment /> Feedback
                       </button>
@@ -509,25 +519,25 @@ const AppliedJobs = () => {
             <div className="ds-modal-body">
               <div className="ds-info-row">
                 <label>Position</label>
-                <p>{selectedApplication.jobId?.title}</p>
+                <p>{selectedApplication.jobId?.title || 'Unknown Position'}</p>
               </div>
               <div className="ds-info-row">
                 <label>Company</label>
-                <p>{selectedApplication.jobId?.companyId?.companyName}</p>
+                <p>{selectedApplication.jobId?.companyId?.companyName || 'Unknown Company'}</p>
               </div>
               <div className="ds-info-row">
                 <label>Date & Time</label>
-                <p>{formatDate(selectedApplication.interviewDetails.date)}</p>
+                <p>{formatDate(selectedApplication.interviewDetails?.date || selectedApplication.interviewDate)}</p>
               </div>
               <div className="ds-info-row">
                 <label>Mode</label>
                 <p>
-                  <span className={`ds-mode-badge ${selectedApplication.interviewDetails.mode === 'Online' ? 'ds-online' : 'ds-inperson'}`}>
-                    {selectedApplication.interviewDetails.mode}
+                  <span className={`ds-mode-badge ${selectedApplication.interviewDetails?.mode === 'Online' ? 'ds-online' : 'ds-inperson'}`}>
+                    {selectedApplication.interviewDetails?.mode || 'Not specified'}
                   </span>
                 </p>
               </div>
-              {selectedApplication.interviewDetails.mode === 'Online' && selectedApplication.interviewDetails.link && (
+              {selectedApplication.interviewDetails?.mode === 'Online' && selectedApplication.interviewDetails?.link && (
                 <div className="ds-info-row">
                   <label>Meeting Link</label>
                   <a href={selectedApplication.interviewDetails.link} target="_blank" rel="noopener noreferrer" className="ds-meeting-link">
@@ -535,13 +545,13 @@ const AppliedJobs = () => {
                   </a>
                 </div>
               )}
-              {selectedApplication.interviewDetails.mode === 'In-person' && selectedApplication.interviewDetails.address && (
+              {selectedApplication.interviewDetails?.mode === 'In-person' && selectedApplication.interviewDetails?.address && (
                 <div className="ds-info-row">
                   <label>Address</label>
                   <p>{selectedApplication.interviewDetails.address}</p>
                 </div>
               )}
-              {selectedApplication.interviewDetails.notes && (
+              {selectedApplication.interviewDetails?.notes && (
                 <div className="ds-info-row">
                   <label>Additional Notes</label>
                   <p className="ds-notes">{selectedApplication.interviewDetails.notes}</p>
@@ -569,19 +579,31 @@ const AppliedJobs = () => {
             <div className="ds-modal-body">
               <div className="ds-info-row">
                 <label>Position</label>
-                <p>{selectedApplication.jobId?.title}</p>
+                <p>{selectedApplication.jobId?.title || 'Unknown Position'}</p>
               </div>
               <div className="ds-info-row">
                 <label>Company</label>
-                <p>{selectedApplication.jobId?.companyId?.companyName}</p>
+                <p>{selectedApplication.jobId?.companyId?.companyName || 'Unknown Company'}</p>
               </div>
               <div className="ds-feedback-content">
                 <label>Feedback</label>
                 <div className="ds-feedback-text">
-                  {selectedApplication.feedback.comments}
+                  {selectedApplication.feedback?.comments || 'No feedback provided'}
                 </div>
               </div>
-              {selectedApplication.feedback.providedDate && (
+              {selectedApplication.feedback?.rating && (
+                <div className="ds-feedback-rating">
+                  <label>Rating</label>
+                  <div className="ds-rating-stars">
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <span key={star} className={star <= selectedApplication.feedback.rating ? 'ds-star-filled' : 'ds-star-empty'}>
+                        {star <= selectedApplication.feedback.rating ? '★' : '☆'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedApplication.feedback?.providedDate && (
                 <div className="ds-feedback-date">
                   <small>Provided on: {formatDate(selectedApplication.feedback.providedDate)}</small>
                 </div>

@@ -9,7 +9,8 @@ import {
   FaEye, FaCalendarAlt, FaMapMarkerAlt, FaDollarSign, FaRegFileAlt,
   FaSyncAlt, FaStar, FaUserTie, FaShieldAlt, FaBell, FaEnvelope,
   FaVideo, FaUserFriends, FaRegHeart, FaRegStar, FaRegClock, FaSpinner,
-  FaComments, FaUserPlus, FaUserCheck, FaGraduationCap, FaCode
+  FaComments, FaUserPlus, FaUserCheck, FaGraduationCap, FaCode,
+  FaPost, FaNewspaper, FaChartBar, FaDownload, FaFilter
 } from 'react-icons/fa';
 import { API } from '../Components/context/AuthContext';
 
@@ -19,18 +20,32 @@ const Dashboard = () => {
   
   const [profilePictureUrl, setProfilePictureUrl] = useState(null);
   const [stats, setStats] = useState({
-    totalApplications: 0, savedJobs: 0, notifications: 0, unreadMessages: 0,
-    pendingApplications: 0, reviewedApplications: 0, interviewApplications: 0,
-    acceptedApplications: 0, rejectedApplications: 0, withdrawnApplications: 0,
-    upcomingInterviews: 0, completedInterviews: 0,
-    connections: 0, followers: 0, following: 0, posts: 0, profileViews: 0, cvViews: 0
+    totalJobs: 0,
+    activeJobs: 0,
+    totalApplications: 0,
+    pendingApplications: 0,
+    shortlistedApplications: 0,
+    interviewedApplications: 0,
+    acceptedApplications: 0,
+    rejectedApplications: 0,
+    upcomingInterviews: 0,
+    completedInterviews: 0,
+    totalViews: 0,
+    companyFollowers: 0,
+    notifications: 0,
+    unreadMessages: 0
   });
   
-  const [recommendedJobs, setRecommendedJobs] = useState([]);
+  const [recentApplications, setRecentApplications] = useState([]);
   const [upcomingInterviews, setUpcomingInterviews] = useState([]);
+  const [activeJobs, setActiveJobs] = useState([]);
   const [recentNotifications, setRecentNotifications] = useState([]);
-  const [skillTests, setSkillTests] = useState([]);
-  const [achievements, setAchievements] = useState([]);
+  const [companyStats, setCompanyStats] = useState({
+    profileViews: 0,
+    jobViews: 0,
+    applicationRate: 0,
+    hireRate: 0
+  });
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,13 +54,13 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchAllDashboardData();
-      loadUserProfilePicture();
+      loadCompanyLogo();
     }
   }, [user]);
 
-  const loadUserProfilePicture = () => {
-    if (user?.profilePicture) {
-      const url = user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`;
+  const loadCompanyLogo = () => {
+    if (user?.companyLogo) {
+      const url = user.companyLogo.startsWith('http') ? user.companyLogo : `http://localhost:5000${user.companyLogo}`;
       setProfilePictureUrl(url);
       return;
     }
@@ -53,8 +68,8 @@ const Dashboard = () => {
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        if (parsedUser.profilePicture) {
-          const url = parsedUser.profilePicture.startsWith('http') ? parsedUser.profilePicture : `http://localhost:5000${parsedUser.profilePicture}`;
+        if (parsedUser.companyLogo) {
+          const url = parsedUser.companyLogo.startsWith('http') ? parsedUser.companyLogo : `http://localhost:5000${parsedUser.companyLogo}`;
           setProfilePictureUrl(url);
         }
       } catch (e) {}
@@ -65,7 +80,7 @@ const Dashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      await fetchStudentDashboardData();
+      await fetchCompanyDashboardData();
       await fetchNotifications();
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -75,108 +90,122 @@ const Dashboard = () => {
     }
   };
 
-  const fetchStudentDashboardData = async () => {
+  const fetchCompanyDashboardData = async () => {
     try {
-      let profile = null;
+      // Fetch company profile
+      let company = null;
       try {
-        const profileRes = await API.get('/students/profile');
-        profile = profileRes.data.student;
-        if (profile.profilePhoto) setProfilePictureUrl(`http://localhost:5000${profile.profilePhoto}`);
-      } catch (e) {}
+        const profileRes = await API.get('/companies/profile');
+        company = profileRes.data.company;
+        if (company?.logo) setProfilePictureUrl(`http://localhost:5000${company.logo}`);
+      } catch (e) {
+        console.log('Company profile fetch failed:', e);
+      }
 
+      // Fetch jobs
+      let jobs = [];
+      try {
+        const jobsRes = await API.get('/companies/jobs');
+        jobs = jobsRes.data.jobs || [];
+      } catch (e) {
+        console.log('Jobs fetch failed:', e);
+        jobs = [];
+      }
+
+      const activeJobsCount = jobs.filter(job => job.status === 'active' || job.status === 'open').length;
+
+      // Fetch applications
       let applications = [];
       try {
-        const applicationsRes = await API.get('/applications/student');
+        const applicationsRes = await API.get('/applications/company');
         applications = applicationsRes.data.applications || [];
-      } catch (e) {}
+      } catch (e) {
+        console.log('Applications fetch failed:', e);
+        applications = [];
+      }
 
       const pending = applications.filter(app => app.status === 'pending' || app.status === 'Pending').length;
-      const reviewed = applications.filter(app => app.status === 'reviewed' || app.status === 'Reviewed').length;
-      const interview = applications.filter(app => app.status === 'interview' || app.status === 'Interview').length;
+      const shortlisted = applications.filter(app => app.status === 'shortlisted' || app.status === 'Shortlisted').length;
+      const interviewed = applications.filter(app => app.status === 'interview' || app.status === 'Interview').length;
       const accepted = applications.filter(app => app.status === 'accepted' || app.status === 'Accepted').length;
       const rejected = applications.filter(app => app.status === 'rejected' || app.status === 'Rejected').length;
 
+      // Fetch interviews
       let interviews = [];
       try {
-        const interviewsRes = await API.get('/interviews/student');
+        const interviewsRes = await API.get('/interviews/company');
         interviews = interviewsRes.data.interviews || [];
       } catch (e) {
-        interviews = [
-          { _id: '1', jobTitle: 'Senior Software Engineer', companyName: 'Tech Corp', date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), mode: 'Video Call' }
-        ];
+        console.log('Interviews fetch failed:', e);
+        interviews = [];
       }
 
-      const upcoming = interviews.filter(i => new Date(i.date) > new Date()).length;
+      const upcoming = interviews.filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled').length;
+      const completed = interviews.filter(i => i.status === 'completed').length;
 
-      let connections = [];
-      try {
-        const connectionsRes = await API.get('/students/connections');
-        connections = connectionsRes.data.connections || [];
-      } catch (e) {}
+      // Set recent applications (last 5)
+      const recentApps = applications.slice(0, 5);
+      setRecentApplications(recentApps);
 
-      try {
-        const jobsRes = await API.get('/jobs/recommended?limit=4');
-        setRecommendedJobs(jobsRes.data.jobs || []);
-      } catch (e) {
-        setRecommendedJobs([
-          { _id: '1', title: 'Senior Software Engineer', companyId: { companyName: 'Tech Corp' }, location: { city: 'Colombo' }, salary: { min: 80000 } }
-        ]);
-      }
+      // Set upcoming interviews
+      const upcomingInterviewsList = interviews
+        .filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled')
+        .slice(0, 3);
+      setUpcomingInterviews(upcomingInterviewsList);
 
-      try {
-        const testsRes = await API.get('/skill-tests/student');
-        setSkillTests(testsRes.data.tests || []);
-      } catch (e) {
-        setSkillTests([]);
-      }
+      // Set active jobs
+      const activeJobsList = jobs.filter(job => job.status === 'active' || job.status === 'open').slice(0, 3);
+      setActiveJobs(activeJobsList);
 
-      try {
-        const achievementsRes = await API.get('/students/achievements');
-        setAchievements(achievementsRes.data.achievements || []);
-      } catch (e) {
-        setAchievements([]);
-      }
+      // Calculate stats
+      const totalViews = applications.reduce((sum, app) => sum + (app.views || 0), 0);
+      const applicationRate = applications.length > 0 ? Math.round((shortlisted / applications.length) * 100) : 0;
+      const hireRate = applications.length > 0 ? Math.round((accepted / applications.length) * 100) : 0;
 
-      setStats(prev => ({
-        ...prev,
+      setCompanyStats({
+        profileViews: company?.profileViews || 0,
+        jobViews: company?.jobViews || 0,
+        applicationRate: applicationRate,
+        hireRate: hireRate
+      });
+
+      setStats({
+        totalJobs: jobs.length,
+        activeJobs: activeJobsCount,
         totalApplications: applications.length,
-        savedJobs: profile?.savedJobs?.length || 0,
         pendingApplications: pending,
-        reviewedApplications: reviewed,
-        interviewApplications: interview,
+        shortlistedApplications: shortlisted,
+        interviewedApplications: interviewed,
         acceptedApplications: accepted,
         rejectedApplications: rejected,
         upcomingInterviews: upcoming,
-        connections: connections.length,
-        followers: profile?.followers?.length || 0,
-        following: profile?.following?.length || 0,
-        profileViews: profile?.profileViews || 0,
-        cvViews: profile?.cv?.views || 0,
-        notifications: 3,
-        unreadMessages: 2
-      }));
-
-      setUpcomingInterviews(interviews.slice(0, 3));
+        completedInterviews: completed,
+        totalViews: totalViews,
+        companyFollowers: company?.followers?.length || 0,
+        notifications: 5,
+        unreadMessages: 3
+      });
 
     } catch (error) {
-      console.error('Error in student dashboard:', error);
+      console.error('Error in company dashboard:', error);
       throw error;
     }
   };
 
   const fetchNotifications = async () => {
     try {
-      const response = await API.get('/notifications');
+      const response = await API.get('/notifications/company');
       setRecentNotifications(response.data.notifications?.slice(0, 5) || []);
     } catch (error) {
       setRecentNotifications([
-        { _id: '1', message: 'Your application was viewed', time: '2 hours ago', read: false }
+        { _id: '1', message: 'New application received for Software Engineer position', time: '2 hours ago', read: false },
+        { _id: '2', message: 'Your job post has been viewed 50 times', time: '1 day ago', read: false }
       ]);
     }
   };
 
   const getInitials = (name) => {
-    if (!name) return 'U';
+    if (!name) return 'C';
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
 
@@ -184,6 +213,7 @@ const Dashboard = () => {
     const badges = {
       'pending': 'ds-badge ds-badge-warning', 'Pending': 'ds-badge ds-badge-warning',
       'reviewed': 'ds-badge ds-badge-info', 'Reviewed': 'ds-badge ds-badge-info',
+      'shortlisted': 'ds-badge ds-badge-primary', 'Shortlisted': 'ds-badge ds-badge-primary',
       'interview': 'ds-badge ds-badge-success', 'Interview': 'ds-badge ds-badge-success',
       'accepted': 'ds-badge ds-badge-success', 'Accepted': 'ds-badge ds-badge-success',
       'rejected': 'ds-badge ds-badge-danger', 'Rejected': 'ds-badge ds-badge-danger'
@@ -200,6 +230,29 @@ const Dashboard = () => {
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
     return date.toLocaleDateString();
+  };
+
+  const formatInterviewDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleStatusUpdate = async (applicationId, newStatus) => {
+    try {
+      const response = await API.put(`/applications/${applicationId}/status`, { status: newStatus });
+      if (response.data.success) {
+        toast.success(`Application status updated to ${newStatus}`);
+        fetchAllDashboardData();
+      }
+    } catch (err) {
+      toast.error('Failed to update status');
+    }
   };
 
   if (loading) {
@@ -241,9 +294,9 @@ const Dashboard = () => {
               <h2>Welcome back, {user.name}! 👋</h2>
               <p>Your career journey continues here. Let's find your dream job!</p>
               <div className="ds-user-meta">
-                <span><FaEye /> {stats.profileViews} profile views</span>
-                <span><FaUsers /> {stats.connections} connections</span>
-                <span><FaHeart /> {stats.savedJobs} saved jobs</span>
+                <span><FaEye /> {stats.totalViews || 0} profile views</span>
+                <span><FaUsers /> {stats.companyFollowers || 0} connections</span>
+                <span><FaHeart /> {stats.savedJobs || 0} saved jobs</span>
               </div>
             </div>
           </div>
@@ -309,7 +362,7 @@ const Dashboard = () => {
           
           <div className="ds-stat-card">
             <div className="ds-stat-info">
-              <h3>{stats.interviewApplications}</h3>
+              <h3>{stats.interviewedApplications}</h3>
               <p>Interviews</p>
             </div>
             <div className="ds-stat-icon ds-stat-icon-warning">
@@ -318,44 +371,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Upcoming Interviews Section */}
-        {upcomingInterviews.length > 0 && (
-          <div className="ds-card ds-interviews-card">
-            <div className="ds-card-header">
-              <h5>
-                <FaCalendarAlt className="ds-icon" />
-                Upcoming Interviews
-              </h5>
-              <Link to="/student/interviews" className="ds-btn ds-btn-link">View All</Link>
-            </div>
-            <div className="ds-card-body">
-              <div className="ds-interviews-list">
-                {upcomingInterviews.map(interview => (
-                  <div key={interview._id} className="ds-interview-item">
-                    <div className="ds-interview-info">
-                      <h6>{interview.jobTitle}</h6>
-                      <p className="ds-company-name">{interview.companyName}</p>
-                      <div className="ds-interview-meta">
-                        <span><FaCalendarAlt /> {new Date(interview.date).toLocaleDateString()}</span>
-                        <span><FaClock /> {new Date(interview.date).toLocaleTimeString()}</span>
-                        <span className="ds-interview-mode">
-                          {interview.mode === 'Video Call' ? <FaVideo /> : <FaBuilding />}
-                          {interview.mode}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="ds-interview-actions">
-                      <button className="ds-btn ds-btn-sm ds-btn-outline-primary">Join</button>
-                      <button className="ds-btn ds-btn-sm ds-btn-outline-secondary">Reschedule</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Application Status & Recommended Jobs - ONLY THESE TWO BOXES */}
+        {/* Application Status & Recommended Jobs */}
         <div className="ds-row">
           <div className="ds-col-6">
             <div className="ds-card">
@@ -373,7 +389,7 @@ const Dashboard = () => {
                 </div>
                 <div className="ds-status-item">
                   <span><FaEye className="ds-text-info" /> Reviewed</span>
-                  <span className="ds-status-value">{stats.reviewedApplications}</span>
+                  <span className="ds-status-value">{stats.reviewedApplications || 0}</span>
                 </div>
                 <div className="ds-status-item">
                   <span><FaTimesCircle className="ds-text-danger" /> Rejected</span>
@@ -381,7 +397,7 @@ const Dashboard = () => {
                 </div>
                 <div className="ds-status-item">
                   <span><FaCalendarAlt className="ds-text-primary" /> Interview</span>
-                  <span className="ds-status-value">{stats.interviewApplications}</span>
+                  <span className="ds-status-value">{stats.interviewedApplications}</span>
                 </div>
               </div>
             </div>
@@ -393,12 +409,12 @@ const Dashboard = () => {
                 <h5>Recommended Jobs</h5>
               </div>
               <div className="ds-card-body">
-                {recommendedJobs.length > 0 ? (
-                  recommendedJobs.map(job => (
+                {activeJobs.length > 0 ? (
+                  activeJobs.map(job => (
                     <div key={job._id} className="ds-recommended-item">
                       <div className="ds-recommended-content">
                         <h6>{job.title}</h6>
-                        <p>{job.companyId?.companyName}</p>
+                        <p>{user?.companyName || 'Your Company'}</p>
                         <div className="ds-job-meta">
                           <span><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span>
                           <span><FaDollarSign /> ${job.salary?.min?.toLocaleString() || 'Negotiable'}</span>
@@ -422,53 +438,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Skill Tests Section */}
-        {skillTests.length > 0 && (
-          <div className="ds-card">
-            <div className="ds-card-header">
-              <h5>Recent Skill Tests</h5>
-              <Link to="/student/skill-tests" className="ds-btn ds-btn-link">View All</Link>
-            </div>
-            <div className="ds-card-body">
-              {skillTests.map(test => (
-                <div key={test._id} className="ds-skill-test-item">
-                  <div className="ds-test-info">
-                    <h6>{test.name}</h6>
-                    <div className="ds-test-score">
-                      <span className="ds-score">{test.score}/{test.maxScore}</span>
-                      <span className="ds-percentage">{Math.round((test.score / test.maxScore) * 100)}%</span>
-                    </div>
-                  </div>
-                  <div className="ds-test-date">{formatDate(test.date)}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Achievements Section */}
-        {achievements.length > 0 && (
-          <div className="ds-card">
-            <div className="ds-card-header">
-              <h5>Achievements</h5>
-            </div>
-            <div className="ds-card-body">
-              <div className="ds-achievements-grid">
-                {achievements.map(ach => (
-                  <div key={ach._id} className="ds-achievement-item">
-                    <span className="ds-achievement-icon">{ach.icon}</span>
-                    <div className="ds-achievement-info">
-                      <h6>{ach.title}</h6>
-                      <p>{ach.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== QUICK ACTIONS BUTTONS ==================== */}
+        {/* Quick Actions Buttons */}
         <div className="ds-quick-actions">
           <Link to="/student/jobs" className="ds-quick-action-card">
             <FaBriefcase />
@@ -493,6 +463,287 @@ const Dashboard = () => {
           <Link to="/student/interviews" className="ds-quick-action-card">
             <FaCalendarAlt />
             <h6>Interviews</h6>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Company Dashboard
+  if (user?.role === 'company') {
+    return (
+      <div className="ds-company-dashboard">
+        {/* Welcome Header */}
+        <div className="ds-welcome-header">
+          <div className="ds-welcome-content">
+            <div className="ds-user-avatar-large">
+              {profilePictureUrl ? (
+                <img src={profilePictureUrl} alt={user.companyName} className="ds-avatar-image" />
+              ) : (
+                <div className="ds-avatar-placeholder">
+                  <FaBuilding size={32} />
+                </div>
+              )}
+            </div>
+            <div className="ds-welcome-text">
+              <h2>Welcome back, {user.companyName || user.name}! 🏢</h2>
+              <p>Find the best talent for your company. Post jobs and review applications.</p>
+              <div className="ds-user-meta">
+                <span><FaEye /> {companyStats.profileViews} profile views</span>
+                <span><FaChartBar /> {companyStats.jobViews} job views</span>
+                <span><FaUsers /> {stats.companyFollowers} followers</span>
+              </div>
+            </div>
+          </div>
+          <div className="ds-welcome-actions">
+            <button className="ds-icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
+              <FaBell />
+              {stats.notifications > 0 && <span className="ds-badge-notification">{stats.notifications}</span>}
+            </button>
+          </div>
+        </div>
+
+        {/* Notifications Dropdown */}
+        {showNotifications && (
+          <div className="ds-dropdown ds-notifications-dropdown">
+            <div className="ds-dropdown-header">
+              <h6>Notifications</h6>
+              <Link to="/notifications" className="ds-link">View All</Link>
+            </div>
+            <div className="ds-dropdown-body">
+              {recentNotifications.map(notif => (
+                <div key={notif._id} className={`ds-notification-item ${!notif.read ? 'ds-unread' : ''}`}>
+                  <div className="ds-notification-content">
+                    <p>{notif.message}</p>
+                    <small>{notif.time}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Statistics Cards */}
+        <div className="ds-stats-grid">
+          <div className="ds-stat-card">
+            <div className="ds-stat-info">
+              <h3>{stats.activeJobs}</h3>
+              <p>Active Jobs</p>
+            </div>
+            <div className="ds-stat-icon ds-stat-icon-primary">
+              <FaBriefcase />
+            </div>
+          </div>
+          
+          <div className="ds-stat-card">
+            <div className="ds-stat-info">
+              <h3>{stats.totalApplications}</h3>
+              <p>Total Applications</p>
+            </div>
+            <div className="ds-stat-icon ds-stat-icon-success">
+              <FaFileAlt />
+            </div>
+          </div>
+          
+          <div className="ds-stat-card">
+            <div className="ds-stat-info">
+              <h3>{stats.shortlistedApplications}</h3>
+              <p>Shortlisted</p>
+            </div>
+            <div className="ds-stat-icon ds-stat-icon-info">
+              <FaStar />
+            </div>
+          </div>
+          
+          <div className="ds-stat-card">
+            <div className="ds-stat-info">
+              <h3>{stats.upcomingInterviews}</h3>
+              <p>Upcoming Interviews</p>
+            </div>
+            <div className="ds-stat-icon ds-stat-icon-warning">
+              <FaCalendarAlt />
+            </div>
+          </div>
+        </div>
+
+        {/* Company Stats Row */}
+        <div className="ds-row">
+          <div className="ds-col-6">
+            <div className="ds-card">
+              <div className="ds-card-header">
+                <h5>Application Pipeline</h5>
+              </div>
+              <div className="ds-card-body">
+                <div className="ds-pipeline-grid">
+                  <div className="ds-pipeline-item">
+                    <h3>{stats.pendingApplications}</h3>
+                    <p>Pending Review</p>
+                  </div>
+                  <div className="ds-pipeline-item">
+                    <h3>{stats.shortlistedApplications}</h3>
+                    <p>Shortlisted</p>
+                  </div>
+                  <div className="ds-pipeline-item">
+                    <h3>{stats.interviewedApplications}</h3>
+                    <p>Interviewed</p>
+                  </div>
+                  <div className="ds-pipeline-item">
+                    <h3>{stats.acceptedApplications}</h3>
+                    <p>Accepted</p>
+                  </div>
+                </div>
+                <div className="ds-distribution">
+                  <div>
+                    <div className="ds-distribution-header">
+                      <span>Application Rate</span>
+                      <span>{companyStats.applicationRate}%</span>
+                    </div>
+                    <div className="ds-progress">
+                      <div className="ds-progress-bar ds-bg-success" style={{ width: `${companyStats.applicationRate}%` }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="ds-distribution-header">
+                      <span>Hire Rate</span>
+                      <span>{companyStats.hireRate}%</span>
+                    </div>
+                    <div className="ds-progress">
+                      <div className="ds-progress-bar ds-bg-primary" style={{ width: `${companyStats.hireRate}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="ds-col-6">
+            <div className="ds-card">
+              <div className="ds-card-header">
+                <h5>Recent Applications</h5>
+                <Link to="/company/applicants" className="ds-btn ds-btn-link">View All</Link>
+              </div>
+              <div className="ds-card-body">
+                {recentApplications.length > 0 ? (
+                  recentApplications.map(app => (
+                    <div key={app._id} className="ds-recommended-item">
+                      <div className="ds-recommended-content">
+                        <h6>{app.studentId?.name || 'Applicant'}</h6>
+                        <p>{app.jobId?.title || 'Position'}</p>
+                        <div className="ds-job-meta">
+                          <span><FaClock /> {formatDate(app.appliedDate)}</span>
+                          <span className={getStatusBadge(app.status)}>{app.status || 'Pending'}</span>
+                        </div>
+                      </div>
+                      <Link to={`/company/applicants/${app._id}`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
+                        Review
+                      </Link>
+                    </div>
+                  ))
+                ) : (
+                  <div className="ds-empty-state">
+                    <p>No applications yet</p>
+                    <Link to="/company/post-job" className="ds-btn ds-btn-primary ds-btn-sm">
+                      Post a Job
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Upcoming Interviews Section */}
+        {upcomingInterviews.length > 0 && (
+          <div className="ds-card ds-interviews-card">
+            <div className="ds-card-header">
+              <h5>
+                <FaCalendarAlt className="ds-icon" />
+                Upcoming Interviews
+              </h5>
+              <Link to="/company/interviews" className="ds-btn ds-btn-link">View All</Link>
+            </div>
+            <div className="ds-card-body">
+              <div className="ds-interviews-list">
+                {upcomingInterviews.map(interview => (
+                  <div key={interview._id} className="ds-interview-item">
+                    <div className="ds-interview-info">
+                      <h6>{interview.jobId?.title || 'Position'}</h6>
+                      <p className="ds-company-name">with {interview.studentId?.name || 'Candidate'}</p>
+                      <div className="ds-interview-meta">
+                        <span><FaCalendarAlt /> {formatInterviewDate(interview.scheduledDate)}</span>
+                        <span className="ds-interview-mode">
+                          {interview.mode === 'Online' ? <FaVideo /> : <FaBuilding />}
+                          {interview.mode || 'Online'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="ds-interview-actions">
+                      <Link to={`/company/interviews/${interview._id}`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
+                        View Details
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Jobs Section */}
+        {activeJobs.length > 0 && (
+          <div className="ds-card">
+            <div className="ds-card-header">
+              <h5>Active Jobs</h5>
+              <Link to="/company/jobs" className="ds-btn ds-btn-link">Manage Jobs</Link>
+            </div>
+            <div className="ds-card-body">
+              {activeJobs.map(job => (
+                <div key={job._id} className="ds-recommended-item">
+                  <div className="ds-recommended-content">
+                    <h6>{job.title}</h6>
+                    <p>{job.location?.city || 'Remote'} • {job.employmentType || 'Full-time'}</p>
+                    <div className="ds-job-meta">
+                      <span><FaUsers /> {job.applicationsCount || 0} applicants</span>
+                      <span><FaEye /> {job.views || 0} views</span>
+                      <span className="ds-badge ds-badge-success">Active</span>
+                    </div>
+                  </div>
+                  <div className="ds-interview-actions">
+                    <Link to={`/company/jobs/${job._id}/applications`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
+                      View Applicants
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions Buttons */}
+        <div className="ds-quick-actions">
+          <Link to="/company/post-job" className="ds-quick-action-card">
+            <FaBriefcase />
+            <h6>Post New Job</h6>
+          </Link>
+          <Link to="/company/jobs" className="ds-quick-action-card">
+            <FaNewspaper />
+            <h6>Manage Jobs</h6>
+          </Link>
+          <Link to="/company/applicants" className="ds-quick-action-card">
+            <FaUsers />
+            <h6>View Applicants</h6>
+          </Link>
+          <Link to="/company/profile" className="ds-quick-action-card">
+            <FaBuilding />
+            <h6>Company Profile</h6>
+          </Link>
+          <Link to="/company/interviews" className="ds-quick-action-card">
+            <FaCalendarAlt />
+            <h6>Interviews</h6>
+          </Link>
+          <Link to="/company/reports" className="ds-quick-action-card">
+            <FaChartLine />
+            <h6>Analytics</h6>
           </Link>
         </div>
       </div>

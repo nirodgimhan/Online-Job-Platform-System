@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../Components/context/AuthContext';
+import { FaFacebookF, FaGoogle, FaLinkedinIn } from 'react-icons/fa';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -45,54 +46,72 @@ const Login = () => {
   };
 
   return (
-    <div className="row justify-content-center">
-      <div className="col-md-6 col-lg-4">
-        <div className="card shadow">
-          <div className="card-header bg-primary text-white text-center">
-            <h4 className="mb-0">Login</h4>
-          </div>
-          <div className="card-body">
-            <form onSubmit={handleSubmit}>
-              <div className="mb-3">
-                <label htmlFor="email" className="form-label">Email</label>
+    <div className="ds-login-container">
+      <div className="ds-login-wrapper">
+        {/* Left Side - Sign In Form */}
+        <div className="ds-login-form-side">
+          <div className="ds-login-content">
+            <h2 className="ds-login-title">Welcome Back!</h2>
+            <p className="ds-login-subtitle">To keep connected with us please login with your personal info</p>
+            
+            <button className="ds-social-btn ds-social-facebook">
+              <FaFacebookF /> Sign in with Facebook
+            </button>
+            <button className="ds-social-btn ds-social-google">
+              <FaGoogle /> Sign in with Google
+            </button>
+            <button className="ds-social-btn ds-social-linkedin">
+              <FaLinkedinIn /> Sign in with LinkedIn
+            </button>
+            
+            <div className="ds-login-divider">
+              <span>or use your email for registration</span>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="ds-login-form">
+              <div className="ds-form-group">
                 <input
                   type="email"
-                  className="form-control"
-                  id="email"
                   name="email"
+                  placeholder="Email"
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  className="ds-form-input"
                 />
               </div>
-
-              <div className="mb-3">
-                <label htmlFor="password" className="form-label">Password</label>
+              
+              <div className="ds-form-group">
                 <input
                   type="password"
-                  className="form-control"
-                  id="password"
                   name="password"
+                  placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  className="ds-form-input"
                 />
               </div>
-
+              
               <button 
                 type="submit" 
-                className="btn btn-primary w-100"
+                className="ds-login-btn"
                 disabled={loading}
               >
-                {loading ? 'Logging in...' : 'Login'}
+                {loading ? 'Signing In...' : 'SIGN IN'}
               </button>
             </form>
-
-            <div className="text-center mt-3">
-              <p className="mb-0">
-                Don't have an account? <Link to="/register">Register here</Link>
-              </p>
-            </div>
+          </div>
+        </div>
+        
+        {/* Right Side - Sign Up Info */}
+        <div className="ds-signup-side">
+          <div className="ds-signup-content">
+            <h2 className="ds-signup-title">Welcome </h2>
+            <p className="ds-signup-subtitle">Create Account</p>
+            <Link to="/register" className="ds-signup-btn">
+              SIGN UP
+            </Link>
           </div>
         </div>
       </div>

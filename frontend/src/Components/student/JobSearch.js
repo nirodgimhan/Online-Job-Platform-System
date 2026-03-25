@@ -18,10 +18,15 @@ import {
   FaSpinner,
   FaChevronLeft,
   FaChevronRight,
+  FaEye,
+  FaCalendarAlt,
   FaStar,
   FaRegStar,
-  FaEye,
-  FaCalendarAlt
+  FaGraduationCap,
+  FaLaptopCode,
+  FaBell,
+  FaUserCheck,
+  FaArrowRight
 } from 'react-icons/fa';
 
 const JobSearch = () => {
@@ -48,6 +53,9 @@ const JobSearch = () => {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [categories, setCategories] = useState([]);
+  
+  // New state for UI enhancements
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchJobs();
@@ -138,7 +146,16 @@ const JobSearch = () => {
       maxSalary: '',
       category: ''
     });
+    setSearchTerm('');
     setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      setFilters(prev => ({ ...prev, title: searchTerm }));
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
   };
 
   const handleSaveJob = async (jobId) => {
@@ -263,12 +280,30 @@ const JobSearch = () => {
     return null;
   };
 
+  const employmentTypes = [
+    { value: '', label: 'All Job Types' },
+    { value: 'Full-time', label: 'Full-time' },
+    { value: 'Part-time', label: 'Part-time' },
+    { value: 'Contract', label: 'Contract' },
+    { value: 'Internship', label: 'Internship' },
+    { value: 'Temporary', label: 'Temporary' }
+  ];
+
+  const workModes = [
+    { value: '', label: 'All Work Modes' },
+    { value: 'Remote', label: 'Remote' },
+    { value: 'On-site', label: 'On-site' },
+    { value: 'Hybrid', label: 'Hybrid' }
+  ];
+
   if (loading && jobs.length === 0) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
-        <h4>Finding the best jobs for you...</h4>
-        <p>Please wait while we search for opportunities</p>
+      <div className="ds-job-search">
+        <div className="ds-loading-container">
+          <div className="ds-spinner"></div>
+          <h4>Finding the best jobs for you...</h4>
+          <p>Please wait while we search for opportunities</p>
+        </div>
       </div>
     );
   }
@@ -276,266 +311,317 @@ const JobSearch = () => {
   return (
     <div className="ds-job-search">
       <div className="ds-job-search-container">
-        {/* Header */}
-        <div className="ds-job-search-header">
-          <div className="ds-header-left">
-            <FaBriefcase className="ds-header-icon" />
-            <h1>Find Your Dream Job</h1>
+        {/* Hero Section */}
+        <div className="ds-hero-section">
+          <div className="ds-hero-content">
+            <FaBriefcase className="ds-hero-icon" />
+            <h1>Seeking New Job Opportunities?</h1>
+            <p>Find your dream job with thousands of opportunities waiting for you</p>
+            
+            <form onSubmit={handleSearch} className="ds-search-box-large">
+              <div className="ds-search-input-wrapper">
+                <FaSearch className="ds-search-icon-large" />
+                <input
+                  type="text"
+                  placeholder="Search By Job Title, Company, Or Skill"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button type="submit" className="ds-search-btn">
+                Search Jobs
+              </button>
+            </form>
           </div>
-          <button 
-            className="ds-filter-toggle-btn"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <FaFilter /> Filters
-          </button>
         </div>
 
-        {/* Search and Filters Card */}
-        <div className="ds-search-card">
-          <div className="ds-search-form">
-            <div className="ds-search-row">
-              <div className="ds-search-input-group">
-                <FaSearch className="ds-input-icon" />
-                <input
-                  type="text"
-                  name="title"
-                  placeholder="Job title or keywords"
-                  value={filters.title}
-                  onChange={handleFilterChange}
-                />
+        {/* Your Existing Search and Filters Section */}
+        <div className="ds-search-section">
+          {/* Header */}
+          <div className="ds-page-header">
+            <div className="ds-header-left">
+              <div className="ds-header-icon-wrapper">
+                <FaBriefcase className="ds-header-icon" />
               </div>
-              <div className="ds-search-input-group">
-                <FaMapMarkerAlt className="ds-input-icon" />
-                <input
-                  type="text"
-                  name="location"
-                  placeholder="Location"
-                  value={filters.location}
-                  onChange={handleFilterChange}
-                />
+              <div>
+                <h1>Find Your Dream Job</h1>
+                <p className="ds-header-subtitle">Discover opportunities that match your skills and career goals</p>
               </div>
-              <select
-                name="employmentType"
-                value={filters.employmentType}
-                onChange={handleFilterChange}
-              >
-                <option value="">All Job Types</option>
-                <option value="Full-time">Full-time</option>
-                <option value="Part-time">Part-time</option>
-                <option value="Contract">Contract</option>
-                <option value="Internship">Internship</option>
-                <option value="Temporary">Temporary</option>
-              </select>
-              <select
-                name="workMode"
-                value={filters.workMode}
-                onChange={handleFilterChange}
-              >
-                <option value="">All Work Modes</option>
-                <option value="Remote">Remote</option>
-                <option value="On-site">On-site</option>
-                <option value="Hybrid">Hybrid</option>
-              </select>
             </div>
+            <button 
+              className="ds-filter-toggle-btn"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <FaFilter /> {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </button>
+          </div>
 
-            {/* Advanced Filters */}
-            <div className={`ds-advanced-filters ${showFilters ? 'ds-show' : ''}`}>
-              <div className="ds-filter-group">
-                <label>Salary Range</label>
-                <div className="ds-salary-inputs">
+          {/* Search Card */}
+          <div className="ds-search-card">
+            <div className="ds-search-form">
+              <div className="ds-search-row">
+                <div className="ds-search-input-group">
+                  <FaSearch className="ds-input-icon" />
                   <input
-                    type="number"
-                    name="minSalary"
-                    placeholder="Min"
-                    value={filters.minSalary}
-                    onChange={handleFilterChange}
-                  />
-                  <span>-</span>
-                  <input
-                    type="number"
-                    name="maxSalary"
-                    placeholder="Max"
-                    value={filters.maxSalary}
+                    type="text"
+                    name="title"
+                    placeholder="Job title, keywords, or skills"
+                    value={filters.title}
                     onChange={handleFilterChange}
                   />
                 </div>
-              </div>
-              <div className="ds-filter-group">
-                <label>Category</label>
+                <div className="ds-search-input-group">
+                  <FaMapMarkerAlt className="ds-input-icon" />
+                  <input
+                    type="text"
+                    name="location"
+                    placeholder="City, country, or remote"
+                    value={filters.location}
+                    onChange={handleFilterChange}
+                  />
+                </div>
                 <select
-                  name="category"
-                  value={filters.category}
+                  name="employmentType"
+                  value={filters.employmentType}
                   onChange={handleFilterChange}
+                  className="ds-form-select"
                 >
-                  <option value="">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  {employmentTypes.map(type => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+                <select
+                  name="workMode"
+                  value={filters.workMode}
+                  onChange={handleFilterChange}
+                  className="ds-form-select"
+                >
+                  {workModes.map(mode => (
+                    <option key={mode.value} value={mode.value}>{mode.label}</option>
                   ))}
                 </select>
               </div>
-              <button className="ds-clear-filters" onClick={clearFilters}>
-                <FaTimes /> Clear All
-              </button>
-            </div>
-          </div>
-        </div>
 
-        {/* Results Count */}
-        <div className="ds-results-count">
-          <p>Showing <strong>{jobs.length}</strong> of <strong>{pagination.total}</strong> jobs</p>
-        </div>
-
-        {/* Job Listings */}
-        <div className="ds-jobs-grid">
-          {jobs.length === 0 ? (
-            <div className="ds-empty-state">
-              <FaBriefcase className="ds-empty-icon" />
-              <h3>No jobs found</h3>
-              <p>Try adjusting your search filters or check back later.</p>
-              <button className="ds-btn ds-btn-primary" onClick={clearFilters}>
-                Clear Filters
-              </button>
-            </div>
-          ) : (
-            jobs.map(job => {
-              const companyLogo = getCompanyLogo(job.companyId);
-              const isSaved = savedJobs.has(job._id);
-              
-              return (
-                <div key={job._id} className="ds-job-card">
-                  <div className="ds-job-card-header">
-                    <div className="ds-company-info">
-                      {companyLogo ? (
-                        <img 
-                          src={companyLogo} 
-                          alt={job.companyId?.companyName}
-                          className="ds-company-logo"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div className="ds-company-logo-placeholder" style={{ display: companyLogo ? 'none' : 'flex' }}>
-                        <FaBuilding />
-                      </div>
-                      <div className="ds-job-title-info">
-                        <h3>{job.title}</h3>
-                        <p className="ds-company-name">{job.companyId?.companyName || 'Unknown Company'}</p>
-                      </div>
-                    </div>
-                    {user?.role === 'student' && (
-                      <button 
-                        className={`ds-save-btn ${isSaved ? 'ds-saved' : ''}`}
-                        onClick={() => handleSaveJob(job._id)}
-                        disabled={savingJobId === job._id}
-                        title={isSaved ? 'Remove from saved' : 'Save job'}
-                      >
-                        {savingJobId === job._id ? (
-                          <FaSpinner className="ds-spin" />
-                        ) : isSaved ? (
-                          <FaHeart />
-                        ) : (
-                          <FaRegHeart />
-                        )}
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="ds-job-description">
-                    {job.description?.length > 150 
-                      ? `${job.description.substring(0, 150)}...` 
-                      : job.description}
-                  </p>
-
-                  <div className="ds-job-meta">
-                    {job.location?.city && (
-                      <span className="ds-meta-badge">
-                        <FaMapMarkerAlt /> {job.location.city}{job.location.country ? `, ${job.location.country}` : ''}
-                      </span>
-                    )}
-                    <span className="ds-meta-badge">
-                      <FaBriefcase /> {job.employmentType || 'Full-time'}
-                    </span>
-                    <span className="ds-meta-badge">
-                      <FaGlobe /> {job.workMode || 'Remote'}
-                    </span>
-                    {job.salary && (job.salary.min || job.salary.max) && (
-                      <span className="ds-meta-badge ds-salary-badge">
-                        <FaDollarSign /> {formatSalary(job.salary)}
-                      </span>
-                    )}
-                    <span className="ds-meta-badge">
-                      <FaClock /> Posted {formatDate(job.postedAt || job.createdAt)}
-                    </span>
-                  </div>
-
-                  <div className="ds-job-card-footer">
-                    <button 
-                      className="ds-btn ds-btn-primary"
-                      onClick={() => handleViewDetails(job._id)}
-                    >
-                      <FaEye /> View Details
-                    </button>
-                    {job.applicationDeadline && (
-                      <span className="ds-deadline">
-                        <FaCalendarAlt /> Deadline: {new Date(job.applicationDeadline).toLocaleDateString()}
-                      </span>
-                    )}
+              {/* Advanced Filters */}
+              <div className={`ds-advanced-filters ${showFilters ? 'ds-show' : ''}`}>
+                <div className="ds-filter-group">
+                  <label>Salary Range (per year)</label>
+                  <div className="ds-salary-inputs">
+                    <input
+                      type="number"
+                      name="minSalary"
+                      placeholder="Min"
+                      value={filters.minSalary}
+                      onChange={handleFilterChange}
+                      className="ds-form-control"
+                    />
+                    <span className="ds-salary-separator">-</span>
+                    <input
+                      type="number"
+                      name="maxSalary"
+                      placeholder="Max"
+                      value={filters.maxSalary}
+                      onChange={handleFilterChange}
+                      className="ds-form-control"
+                    />
                   </div>
                 </div>
-              );
-            })
+                <div className="ds-filter-group">
+                  <label>Category</label>
+                  <select
+                    name="category"
+                    value={filters.category}
+                    onChange={handleFilterChange}
+                    className="ds-form-select"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <button className="ds-clear-filters" onClick={clearFilters}>
+                  <FaTimes /> Clear All Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Results Count */}
+          <div className="ds-results-count">
+            <p>
+              <strong>{jobs.length}</strong> jobs found 
+              {pagination.total > jobs.length && ` out of ${pagination.total} total`}
+            </p>
+          </div>
+
+          {/* Job Listings Grid */}
+          <div className="ds-jobs-grid">
+            {jobs.length === 0 ? (
+              <div className="ds-empty-state">
+                <div className="ds-empty-icon-wrapper">
+                  <FaBriefcase className="ds-empty-icon" />
+                </div>
+                <h3>No jobs found</h3>
+                <p>Try adjusting your search filters or check back later for new opportunities.</p>
+                <button className="ds-btn ds-btn-primary" onClick={clearFilters}>
+                  Clear All Filters
+                </button>
+              </div>
+            ) : (
+              jobs.map((job, index) => {
+                const companyLogo = getCompanyLogo(job.companyId);
+                const isSaved = savedJobs.has(job._id);
+                
+                return (
+                  <div key={job._id} className="ds-job-card" style={{ animationDelay: `${index * 0.05}s` }}>
+                    <div className="ds-job-card-header">
+                      <div className="ds-company-info">
+                        <div className="ds-company-logo-wrapper">
+                          {companyLogo ? (
+                            <img 
+                              src={companyLogo} 
+                              alt={job.companyId?.companyName}
+                              className="ds-company-logo"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.querySelector('.ds-company-logo-placeholder').style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div className="ds-company-logo-placeholder" style={{ display: companyLogo ? 'none' : 'flex' }}>
+                            <FaBuilding />
+                          </div>
+                        </div>
+                        <div className="ds-job-title-info">
+                          <h3>{job.title}</h3>
+                          <p className="ds-company-name">{job.companyId?.companyName || 'Company'}</p>
+                        </div>
+                      </div>
+                      {user?.role === 'student' && (
+                        <button 
+                          className={`ds-save-job-btn ${isSaved ? 'ds-saved' : ''}`}
+                          onClick={() => handleSaveJob(job._id)}
+                          disabled={savingJobId === job._id}
+                          title={isSaved ? 'Remove from saved' : 'Save job'}
+                        >
+                          {savingJobId === job._id ? (
+                            <FaSpinner className="ds-spin" />
+                          ) : isSaved ? (
+                            <FaHeart />
+                          ) : (
+                            <FaRegHeart />
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="ds-job-description">
+                      {job.description?.length > 150 
+                        ? `${job.description.substring(0, 150)}...` 
+                        : job.description || 'No description available'}
+                    </p>
+
+                    <div className="ds-job-meta">
+                      {job.location?.city && (
+                        <span className="ds-meta-badge">
+                          <FaMapMarkerAlt /> {job.location.city}{job.location.country ? `, ${job.location.country}` : ''}
+                        </span>
+                      )}
+                      <span className="ds-meta-badge">
+                        <FaBriefcase /> {job.employmentType || 'Full-time'}
+                      </span>
+                      <span className="ds-meta-badge">
+                        <FaGlobe /> {job.workMode || 'On-site'}
+                      </span>
+                      {job.salary && (job.salary.min || job.salary.max) && (
+                        <span className="ds-meta-badge ds-salary-badge">
+                          <FaDollarSign /> {formatSalary(job.salary)}
+                        </span>
+                      )}
+                      <span className="ds-meta-badge">
+                        <FaClock /> {formatDate(job.postedAt || job.createdAt)}
+                      </span>
+                    </div>
+
+                    {job.requiredSkills && job.requiredSkills.length > 0 && (
+                      <div className="ds-skills-preview">
+                        {job.requiredSkills.slice(0, 3).map((skill, idx) => (
+                          <span key={idx} className="ds-skill-tag">{skill}</span>
+                        ))}
+                        {job.requiredSkills.length > 3 && (
+                          <span className="ds-skill-tag ds-more-skills">+{job.requiredSkills.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="ds-job-card-footer">
+                      <button 
+                        className="ds-btn ds-btn-primary"
+                        onClick={() => handleViewDetails(job._id)}
+                      >
+                        <FaEye /> View Details
+                      </button>
+                      {job.applicationDeadline && new Date(job.applicationDeadline) > new Date() && (
+                        <span className="ds-deadline">
+                          <FaCalendarAlt /> Apply by {new Date(job.applicationDeadline).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="ds-pagination">
+              <button
+                className={`ds-page-btn ${pagination.page === 1 ? 'ds-disabled' : ''}`}
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+              >
+                <FaChevronLeft /> Previous
+              </button>
+              <div className="ds-page-numbers">
+                {[...Array(pagination.pages).keys()].map(num => {
+                  const pageNum = num + 1;
+                  if (
+                    pageNum === 1 ||
+                    pageNum === pagination.pages ||
+                    (pageNum >= pagination.page - 2 && pageNum <= pagination.page + 2)
+                  ) {
+                    return (
+                      <button
+                        key={pageNum}
+                        className={`ds-page-number ${pagination.page === pageNum ? 'ds-active' : ''}`}
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  } else if (
+                    pageNum === pagination.page - 3 ||
+                    pageNum === pagination.page + 3
+                  ) {
+                    return (
+                      <span key={pageNum} className="ds-page-dots">...</span>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+              <button
+                className={`ds-page-btn ${pagination.page === pagination.pages ? 'ds-disabled' : ''}`}
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.pages}
+              >
+                Next <FaChevronRight />
+              </button>
+            </div>
           )}
         </div>
-
-        {/* Pagination */}
-        {pagination.pages > 1 && (
-          <div className="ds-pagination">
-            <button
-              className={`ds-page-btn ${pagination.page === 1 ? 'ds-disabled' : ''}`}
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-            >
-              <FaChevronLeft /> Previous
-            </button>
-            <div className="ds-page-numbers">
-              {[...Array(pagination.pages).keys()].map(num => {
-                const pageNum = num + 1;
-                if (
-                  pageNum === 1 ||
-                  pageNum === pagination.pages ||
-                  (pageNum >= pagination.page - 2 && pageNum <= pagination.page + 2)
-                ) {
-                  return (
-                    <button
-                      key={pageNum}
-                      className={`ds-page-number ${pagination.page === pageNum ? 'ds-active' : ''}`}
-                      onClick={() => handlePageChange(pageNum)}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                } else if (
-                  pageNum === pagination.page - 3 ||
-                  pageNum === pagination.page + 3
-                ) {
-                  return (
-                    <span key={pageNum} className="ds-page-dots">...</span>
-                  );
-                }
-                return null;
-              })}
-            </div>
-            <button
-              className={`ds-page-btn ${pagination.page === pagination.pages ? 'ds-disabled' : ''}`}
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.pages}
-            >
-              Next <FaChevronRight />
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

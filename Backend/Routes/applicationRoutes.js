@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const Application = require('../models/Application');
+const Application = require('../Models/Application');
 const Student = require('../models/Student');
 const Job = require('../models/Job');
 const Company = require('../models/Company');
+const User = require('../models/User');
 
 // @route   POST api/applications
 // @desc    Apply for a job
@@ -80,7 +81,7 @@ router.get('/student', auth, auth.authorize('student'), async (req, res) => {
         const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
             console.log('❌ Student profile not found');
-            return res.json({ success: true, applications: [] }); // Return empty array instead of error
+            return res.json({ success: true, applications: [] });
         }
 
         const applications = await Application.find({ studentId: student._id })
@@ -112,7 +113,7 @@ router.get('/company', auth, auth.authorize('company'), async (req, res) => {
         const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
             console.log('❌ Company profile not found');
-            return res.json({ success: true, applications: [] }); // Return empty array instead of error
+            return res.json({ success: true, applications: [] });
         }
 
         const applications = await Application.find({ companyId: company._id })
@@ -130,7 +131,22 @@ router.get('/company', auth, auth.authorize('company'), async (req, res) => {
             .sort({ appliedDate: -1 });
 
         console.log(`✅ Found ${applications.length} applications`);
-        res.json({ success: true, applications });
+        
+        // Format applications for frontend compatibility
+        const formattedApplications = applications.map(app => ({
+            _id: app._id,
+            status: app.status,
+            appliedAt: app.appliedDate,
+            coverLetter: app.coverLetter,
+            jobId: app.jobId,
+            companyId: app.companyId,
+            studentId: app.studentId,
+            studentName: app.studentId?.userId?.name || 'Unknown',
+            studentEmail: app.studentId?.userId?.email || 'No email',
+            studentPhone: app.studentId?.userId?.phoneNumber || ''
+        }));
+        
+        res.json({ success: true, applications: formattedApplications });
 
     } catch (error) {
         console.error('❌ Error fetching company applications:', error);
@@ -281,16 +297,15 @@ router.put('/:id/status', auth, auth.authorize('company'), async (req, res) => {
     }
 });
 
-// @route   GET api/applications/student
-// @desc    Get student's applications
+// @route   GET api/applications/student/applied
+// @desc    Get student's applied jobs with details
 // @access  Private/Student
-router.get('/student', auth, auth.authorize('student'), async (req, res) => {
+router.get('/student/applied', auth, auth.authorize('student'), async (req, res) => {
     try {
-        console.log('📊 Fetching student applications for user:', req.user.id);
+        console.log('📊 Fetching student applied jobs for user:', req.user.id);
         
         const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
-            console.log('❌ Student profile not found');
             return res.status(404).json({ 
                 success: false, 
                 message: 'Student profile not found' 
@@ -321,6 +336,38 @@ router.get('/student', auth, auth.authorize('student'), async (req, res) => {
             success: false, 
             message: 'Server Error: ' + error.message 
         });
+    }
+});
+
+// @route   GET api/applications/statistics
+// @desc    Get application statistics for company
+// @access  Private/Company
+router.get('/statistics', auth, auth.authorize('company'), async (req, res) => {
+    try {
+        const company = await Company.findOne({ userId: req.user.id });
+        if (!company) {
+            return res.status(404).json({ success: false, message: 'Company profile not found' });
+        }
+
+        const applications = await Application.find({ companyId: company._id });
+        
+        const statistics = {
+            total: applications.length,
+            pending: applications.filter(app => app.status === 'Pending').length,
+            reviewed: applications.filter(app => app.status === 'Reviewed').length,
+            shortlisted: applications.filter(app => app.status === 'Shortlisted').length,
+            interview: applications.filter(app => app.status === 'Interview').length,
+            offered: applications.filter(app => app.status === 'Offered').length,
+            accepted: applications.filter(app => app.status === 'Accepted').length,
+            rejected: applications.filter(app => app.status === 'Rejected').length,
+            withdrawn: applications.filter(app => app.status === 'Withdrawn').length
+        };
+
+        res.json({ success: true, statistics });
+
+    } catch (error) {
+        console.error('Error fetching statistics:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
 

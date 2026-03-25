@@ -19,13 +19,16 @@ import Dashboard from './Components/Dashboard';
 import ProtectedRoute from './Components/ProtectedRoute';
 import Sidebar from './Components/Sidebar';
 
-// Student Components
-import StudentProfile from './Components/student/StudentProfile';
+// Public Job Search Component (without sidebar, accessible to everyone)
 import JobSearch from './Components/student/JobSearch';
 import JobDetails from './Components/student/JobDetails';
+
+// Student Components
+import StudentProfile from './Components/student/StudentProfile';
 import AppliedJobs from './Components/student/AppliedJobs';
 import SavedJobs from './Components/student/SavedJobs';
 import CvManager from './Components/student/CvManager';
+import StudentInterviews from './Components/student/StudentInterviews';
 
 // Company Components
 import CompanyProfile from './Components/company/CompanyProfile';
@@ -34,6 +37,7 @@ import ManageJobs from './Components/company/ManageJobs';
 import ApplicantsList from './Components/company/ApplicantsList';
 import ApplicantDetails from './Components/company/ApplicantDetails';
 import EditJob from './Components/company/EditJob';
+import CompanyInterviews from './Components/company/CompanyInterviews';
 
 // Admin Components
 import AdminDashboard from './Components/admin/AdminDashboard';
@@ -54,7 +58,7 @@ function App() {
           <Navbar />
           <div className="app-container">
             <Routes>
-              {/* Public Routes */}
+              {/* Public Routes - No Sidebar Required */}
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<AboutUs />} />
               <Route path="/services" element={<Services />} />
@@ -62,8 +66,12 @@ function App() {
               <Route path="/contact" element={<ContactUs />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              
+              {/* Public Job Search Routes - Accessible to Everyone */}
+              <Route path="/jobs" element={<JobSearch />} />
+              <Route path="/job/:id" element={<JobDetails />} />
 
-              {/* Student Routes with Sidebar */}
+              {/* Student Routes with Sidebar (Requires Authentication) */}
               <Route path="/student" element={<ProtectedRoute role="student" />}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={
@@ -101,9 +109,14 @@ function App() {
                     <CvManager />
                   </DashboardPage>
                 } />
+                <Route path="interviews" element={
+                  <DashboardPage>
+                    <StudentInterviews />
+                  </DashboardPage>
+                } />
               </Route>
 
-              {/* Company Routes with Sidebar */}
+              {/* Company Routes with Sidebar (Requires Authentication) */}
               <Route path="/company" element={<ProtectedRoute role="company" />}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={
@@ -141,9 +154,14 @@ function App() {
                     <EditJob />
                   </DashboardPage>
                 } />
+                <Route path="interviews" element={
+                  <DashboardPage>
+                    <CompanyInterviews />
+                  </DashboardPage>
+                } />
               </Route>
 
-              {/* Admin Routes with Sidebar */}
+              {/* Admin Routes with Sidebar (Requires Authentication) */}
               <Route path="/admin" element={<ProtectedRoute role="admin" />}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={

@@ -47,18 +47,17 @@ const Sidebar = ({ children }) => {
     setIsOpen(!isOpen);
   };
 
-  // Student Sidebar Items with Interviews
+  // Student Sidebar Items (Browse Jobs REMOVED)
   const studentMenuItems = [
     { title: 'Dashboard', path: '/student/dashboard', icon: <FaTachometerAlt /> },
     { title: 'My Profile', path: '/student/profile', icon: <FaUser /> },
-    { title: 'Browse Jobs', path: '/student/jobs', icon: <FaBriefcase /> },
     { title: 'My Applications', path: '/student/applied-jobs', icon: <FaClipboardList />, badge: 'new' },
     { title: 'Saved Jobs', path: '/student/saved-jobs', icon: <FaHeart /> },
     { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> },
     { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' }
   ];
 
-  // Company Sidebar Items with Interviews
+  // Company Sidebar Items (Jobs related items are kept as is)
   const companyMenuItems = [
     { title: 'Dashboard', path: '/company/dashboard', icon: <FaTachometerAlt /> },
     { title: 'Company Profile', path: '/company/profile', icon: <FaBuilding /> },
@@ -126,51 +125,45 @@ const Sidebar = ({ children }) => {
   };
 
   return (
-    <div className="ds-dashboard-layout">
+    <div className="app-dashboard-layout">
       {/* Mobile Toggle Button */}
-      <button className="ds-sidebar-toggle-btn" onClick={toggleSidebar}>
+      <button className="app-sidebar-toggle-btn" onClick={toggleSidebar}>
         {isOpen ? <FaTimes /> : <FaBars />}
       </button>
 
       {/* Sidebar */}
-      <div className={`ds-sidebar ${isOpen ? 'open' : ''}`}>
-        {/* User Info - No Logo */}
-        <div className="ds-sidebar-user-info">
-          <div className="ds-user-avatar-large" style={{ background: `linear-gradient(135deg, ${getRoleColor()}, ${getRoleColor()}cc)` }}>
+      <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
+        {/* User Info */}
+        <div className="app-sidebar-user-info">
+          <div className="app-user-avatar-large" style={{ background: `linear-gradient(135deg, ${getRoleColor()}, ${getRoleColor()}cc)` }}>
             {user?.profilePicture ? (
-              <img src={user.profilePicture} alt={user.name} className="ds-avatar-image" />
+              <img src={user.profilePicture} alt={user.name} className="app-avatar-image" />
             ) : (
-              <div className="ds-avatar-placeholder">
+              <div className="app-avatar-placeholder">
                 {getUserInitials()}
               </div>
             )}
           </div>
-          <div className="ds-user-details">
+          <div className="app-user-details">
             <h4>{user?.name || 'User'}</h4>
             <p>{user?.email || 'user@example.com'}</p>
-            <div className="ds-role-wrapper">
-              {getRoleIcon()}
-              <span className={`ds-role-badge ${user?.role}`}>
-                {user?.role === 'student' ? 'Student' : user?.role === 'company' ? 'Company' : 'Admin'}
-              </span>
-            </div>
           </div>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="ds-sidebar-nav">
+        <nav className="app-sidebar-nav">
           <ul>
             {menuItems.map((item, index) => (
               <li key={index}>
                 <Link 
                   to={item.path} 
-                  className={`ds-sidebar-nav-link ${isActive(item.path) ? 'active' : ''}`}
+                  className={`app-sidebar-nav-link ${isActive(item.path) ? 'active' : ''}`}
                   onClick={() => setIsOpen(false)}
                 >
-                  <span className="ds-nav-icon">{item.icon}</span>
-                  <span className="ds-nav-title">{item.title}</span>
+                  <span className="app-nav-icon">{item.icon}</span>
+                  <span className="app-nav-title">{item.title}</span>
                   {item.badge && (
-                    <span className={`ds-nav-badge ${item.badge}`}>{item.badge}</span>
+                    <span className={`app-nav-badge ${item.badge}`}>{item.badge}</span>
                   )}
                 </Link>
               </li>
@@ -179,25 +172,25 @@ const Sidebar = ({ children }) => {
         </nav>
 
         {/* Bottom Menu */}
-        <div className="ds-sidebar-footer">
+        <div className="app-sidebar-footer">
           <ul>
             <li>
-              <Link to="/settings" className="ds-sidebar-nav-link" onClick={() => setIsOpen(false)}>
-                <span className="ds-nav-icon"><FaCog /></span>
-                <span className="ds-nav-title">Settings</span>
+              <Link to="/settings" className="app-sidebar-nav-link" onClick={() => setIsOpen(false)}>
+                <span className="app-nav-icon"><FaCog /></span>
+                <span className="app-nav-title">Settings</span>
               </Link>
             </li>
             <li>
-              <Link to="/help" className="ds-sidebar-nav-link" onClick={() => setIsOpen(false)}>
-                <span className="ds-nav-icon"><FaQuestionCircle /></span>
-                <span className="ds-nav-title">Help & Support</span>
+              <Link to="/help" className="app-sidebar-nav-link" onClick={() => setIsOpen(false)}>
+                <span className="app-nav-icon"><FaQuestionCircle /></span>
+                <span className="app-nav-title">Help & Support</span>
               </Link>
             </li>
-            <li className="ds-divider"></li>
+            <li className="app-divider"></li>
             <li>
-              <button onClick={handleLogout} className="ds-sidebar-nav-link ds-logout-btn">
-                <span className="ds-nav-icon"><FaSignOutAlt /></span>
-                <span className="ds-nav-title">Logout</span>
+              <button onClick={handleLogout} className="app-sidebar-nav-link app-logout-btn">
+                <span className="app-nav-icon"><FaSignOutAlt /></span>
+                <span className="app-nav-title">Logout</span>
               </button>
             </li>
           </ul>
@@ -205,12 +198,12 @@ const Sidebar = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className="ds-main-content">
+      <div className="app-main-content">
         {children}
       </div>
 
       {/* Overlay for mobile */}
-      {isOpen && <div className="ds-sidebar-overlay" onClick={toggleSidebar}></div>}
+      {isOpen && <div className="app-sidebar-overlay" onClick={toggleSidebar}></div>}
     </div>
   );
 };
