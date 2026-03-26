@@ -1,6 +1,26 @@
 const mongoose = require('mongoose');
 const Interview = require('../Models/Interview');
-const Application = require('../Models/Application');
+const Application = require('../models/Application');
+
+// Helper function to get relative time (same as in routes)
+const getRelativeTime = (dateString) => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date - now;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMs < 0) return 'Passed';
+    if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+    if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+    return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+  } catch (e) {
+    return '';
+  }
+};
 
 // @desc    Schedule a new interview
 // @route   POST /api/interviews
@@ -146,14 +166,20 @@ const scheduleInterview = async (req, res) => {
 
     // Return populated interview
     const populatedInterview = await Interview.findById(interview._id)
-      .populate('jobId', 'title')
-      .populate('studentId', 'name email')
-      .populate('companyId', 'name companyName');
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'companyName companyLogo');
+
+    // Add computed fields for frontend
+    const interviewObj = populatedInterview.toObject();
+    interviewObj.isUpcoming = new Date(interviewObj.scheduledDate) > new Date();
+    interviewObj.isPast = new Date(interviewObj.scheduledDate) <= new Date();
+    interviewObj.relativeTime = getRelativeTime(interviewObj.scheduledDate);
 
     res.status(201).json({
       success: true,
       message: 'Interview scheduled successfully',
-      interview: populatedInterview
+      interview: interviewObj
     });
 
   } catch (error) {
@@ -179,19 +205,33 @@ const getInterviews = async (req, res) => {
       query.companyId = req.user.id;
     } else if (req.user.role === 'student') {
       query.studentId = req.user.id;
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized access'
+      });
     }
 
     const interviews = await Interview.find(query)
-      .populate('jobId', 'title location')
+      .populate('jobId', 'title description location employmentType salary')
       .populate('studentId', 'name email phoneNumber')
-      .populate('companyId', 'name companyName')
+      .populate('companyId', 'companyName companyLogo')
       .sort({ scheduledDate: -1 });
 
-    console.log(`Found ${interviews.length} interviews`);
+    // Add computed fields for frontend
+    const processedInterviews = interviews.map(interview => {
+      const interviewObj = interview.toObject();
+      interviewObj.isUpcoming = new Date(interviewObj.scheduledDate) > new Date();
+      interviewObj.isPast = new Date(interviewObj.scheduledDate) <= new Date();
+      interviewObj.relativeTime = getRelativeTime(interviewObj.scheduledDate);
+      return interviewObj;
+    });
+
+    console.log(`Found ${processedInterviews.length} interviews`);
 
     res.json({
       success: true,
-      interviews: interviews || []
+      interviews: processedInterviews || []
     });
 
   } catch (error) {
@@ -210,9 +250,9 @@ const getInterviews = async (req, res) => {
 const getInterviewById = async (req, res) => {
   try {
     const interview = await Interview.findById(req.params.id)
-      .populate('jobId', 'title')
-      .populate('studentId', 'name email')
-      .populate('companyId', 'name companyName');
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'companyName companyLogo');
 
     if (!interview) {
       return res.status(404).json({
@@ -221,9 +261,14 @@ const getInterviewById = async (req, res) => {
       });
     }
 
+    const interviewObj = interview.toObject();
+    interviewObj.isUpcoming = new Date(interviewObj.scheduledDate) > new Date();
+    interviewObj.isPast = new Date(interviewObj.scheduledDate) <= new Date();
+    interviewObj.relativeTime = getRelativeTime(interviewObj.scheduledDate);
+
     res.json({
       success: true,
-      interview
+      interview: interviewObj
     });
 
   } catch (error) {
@@ -280,10 +325,21 @@ const updateInterview = async (req, res) => {
     interview.updatedAt = new Date();
     await interview.save();
 
+    // Reload with populated fields
+    const updatedInterview = await Interview.findById(interview._id)
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'companyName companyLogo');
+
+    const interviewObj = updatedInterview.toObject();
+    interviewObj.isUpcoming = new Date(interviewObj.scheduledDate) > new Date();
+    interviewObj.isPast = new Date(interviewObj.scheduledDate) <= new Date();
+    interviewObj.relativeTime = getRelativeTime(interviewObj.scheduledDate);
+
     res.json({
       success: true,
       message: 'Interview updated successfully',
-      interview
+      interview: interviewObj
     });
 
   } catch (error) {
@@ -329,10 +385,21 @@ const confirmInterview = async (req, res) => {
     interview.updatedAt = new Date();
     await interview.save();
 
+    // Reload with populated fields
+    const updatedInterview = await Interview.findById(interview._id)
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'companyName companyLogo');
+
+    const interviewObj = updatedInterview.toObject();
+    interviewObj.isUpcoming = new Date(interviewObj.scheduledDate) > new Date();
+    interviewObj.isPast = new Date(interviewObj.scheduledDate) <= new Date();
+    interviewObj.relativeTime = getRelativeTime(interviewObj.scheduledDate);
+
     res.json({
       success: true,
       message: 'Interview confirmed successfully',
-      interview
+      interview: interviewObj
     });
 
   } catch (error) {
@@ -400,10 +467,21 @@ const addFeedback = async (req, res) => {
       await application.save();
     }
 
+    // Reload with populated fields
+    const updatedInterview = await Interview.findById(interview._id)
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'companyName companyLogo');
+
+    const interviewObj = updatedInterview.toObject();
+    interviewObj.isUpcoming = new Date(interviewObj.scheduledDate) > new Date();
+    interviewObj.isPast = new Date(interviewObj.scheduledDate) <= new Date();
+    interviewObj.relativeTime = getRelativeTime(interviewObj.scheduledDate);
+
     res.json({
       success: true,
       message: 'Feedback added successfully',
-      interview
+      interview: interviewObj
     });
 
   } catch (error) {
@@ -480,15 +558,23 @@ const getUpcomingInterviews = async (req, res) => {
     }
 
     const interviews = await Interview.find(query)
-      .populate('jobId', 'title')
-      .populate('companyId', 'name companyName')
+      .populate('jobId', 'title description location')
+      .populate('companyId', 'companyName companyLogo')
       .populate('studentId', 'name email')
       .sort({ scheduledDate: 1 })
       .limit(10);
 
+    const processedInterviews = interviews.map(interview => {
+      const interviewObj = interview.toObject();
+      interviewObj.isUpcoming = true;
+      interviewObj.isPast = false;
+      interviewObj.relativeTime = getRelativeTime(interviewObj.scheduledDate);
+      return interviewObj;
+    });
+
     res.json({
       success: true,
-      interviews
+      interviews: processedInterviews
     });
 
   } catch (error) {

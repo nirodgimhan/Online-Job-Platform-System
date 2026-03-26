@@ -14,6 +14,18 @@ import {
   FaEnvelope
 } from 'react-icons/fa';
 
+// Helper to get base URL from environment or fallback
+const getBaseUrl = () => {
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000';
+};
+
+// Helper to get full profile picture URL
+const getProfilePictureUrl = (profilePicture) => {
+  if (!profilePicture) return null;
+  if (profilePicture.startsWith('http')) return profilePicture;
+  return `${getBaseUrl()}${profilePicture}`;
+};
+
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
@@ -70,11 +82,10 @@ const Navbar = () => {
             <Link to="/" className="jobline-nav-link">Home</Link>
             <Link to="/jobs" className="jobline-nav-link">Browse Jobs</Link>
             <Link to="/about" className="jobline-nav-link">About Us</Link>
-               <Link to="/services" className="jobline-nav-link">Services</Link>
+            <Link to="/services" className="jobline-nav-link">Services</Link>
             <Link to="/contact" className="jobline-nav-link">Contact</Link>
           </div>
 
-   
           {/* Right Section */}
           <div className="jobline-nav-right">
             {isAuthenticated ? (
@@ -98,8 +109,8 @@ const Navbar = () => {
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   >
                     <div className="jobline-user-avatar">
-                      {user?.profilePicture ? (
-                        <img src={user.profilePicture} alt={user.name} />
+                      {getProfilePictureUrl(user?.profilePicture) ? (
+                        <img src={getProfilePictureUrl(user?.profilePicture)} alt={user.name} />
                       ) : (
                         <span>{user?.name?.charAt(0) || 'U'}</span>
                       )}
@@ -161,14 +172,14 @@ const Navbar = () => {
           <Link to="/jobs" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Browse Jobs</Link>
           <Link to="/about" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>About Us</Link>
           <Link to="/services" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Services</Link>
-           <Link to="/contact" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Contact</Link>  
+          <Link to="/contact" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Contact</Link>  
           
           {isAuthenticated ? (
             <>
               <div className="jobline-mobile-user-info">
                 <div className="jobline-mobile-user-avatar">
-                  {user?.profilePicture ? (
-                    <img src={user.profilePicture} alt={user.name} />
+                  {getProfilePictureUrl(user?.profilePicture) ? (
+                    <img src={getProfilePictureUrl(user?.profilePicture)} alt={user.name} />
                   ) : (
                     <span>{user?.name?.charAt(0) || 'U'}</span>
                   )}

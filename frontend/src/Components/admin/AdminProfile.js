@@ -19,7 +19,10 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaEye,
-  FaEyeSlash
+  FaEyeSlash,
+  FaUsers,
+  FaBriefcase,
+  FaSyncAlt
 } from 'react-icons/fa';
 
 const AdminProfile = () => {
@@ -34,6 +37,13 @@ const AdminProfile = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  // Welcome header stats
+  const [welcomeStats, setWelcomeStats] = useState({
+    totalUsers: 0,
+    totalCompanies: 0,
+    totalJobs: 0
+  });
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -72,6 +82,7 @@ const AdminProfile = () => {
 
   useEffect(() => {
     checkAuthAndFetchProfile();
+    fetchWelcomeStats();
   }, []);
 
   const checkAuthAndFetchProfile = async () => {
@@ -94,9 +105,6 @@ const AdminProfile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      console.log('Fetching admin profile...');
-      
-      // For admin, we can use the user data from auth context
       setProfile(user);
       
       setFormData({
@@ -124,6 +132,32 @@ const AdminProfile = () => {
       toast.error('Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWelcomeStats = async () => {
+    try {
+      const [usersRes, companiesRes, jobsRes] = await Promise.allSettled([
+        API.get('/admin/users'),
+        API.get('/admin/companies'),
+        API.get('/admin/jobs')
+      ]);
+
+      let totalUsers = 0, totalCompanies = 0, totalJobs = 0;
+      if (usersRes.status === 'fulfilled') {
+        const { students, companies, admins } = usersRes.value.data;
+        totalUsers = (students?.length || 0) + (companies?.length || 0) + (admins?.length || 0);
+      }
+      if (companiesRes.status === 'fulfilled') {
+        totalCompanies = companiesRes.value.data.companies?.length || 0;
+      }
+      if (jobsRes.status === 'fulfilled') {
+        totalJobs = jobsRes.value.data.jobs?.length || 0;
+      }
+
+      setWelcomeStats({ totalUsers, totalCompanies, totalJobs });
+    } catch (err) {
+      console.warn('Could not fetch welcome stats', err);
     }
   };
 
@@ -164,7 +198,6 @@ const AdminProfile = () => {
       checkPasswordStrength(value);
     }
 
-    // Clear error for this field
     if (passwordErrors[name]) {
       setPasswordErrors({
         ...passwordErrors,
@@ -246,7 +279,6 @@ const AdminProfile = () => {
     setSaving(true);
 
     try {
-      // Update user profile
       const response = await API.put(`/users/${user.id}`, {
         name: formData.name,
         phoneNumber: formData.phoneNumber,
@@ -254,17 +286,14 @@ const AdminProfile = () => {
       });
       
       if (response.data.success) {
-        // Update local storage
         const updatedUser = { ...user, ...response.data.user };
         localStorage.setItem('user', JSON.stringify(updatedUser));
-        
         setProfile(updatedUser);
         setEditing(false);
         toast.success('Profile updated successfully!');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      
       if (error.response) {
         if (error.response.status === 401) {
           toast.error('Session expired. Please login again.');
@@ -298,7 +327,6 @@ const AdminProfile = () => {
     setSaving(true);
 
     try {
-      // Change password
       const response = await API.post('/auth/change-password', {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword
@@ -315,7 +343,6 @@ const AdminProfile = () => {
       }
     } catch (error) {
       console.error('Error changing password:', error);
-      
       if (error.response) {
         if (error.response.status === 401) {
           toast.error('Current password is incorrect');
@@ -334,10 +361,10 @@ const AdminProfile = () => {
 
   const getPasswordStrengthColor = () => {
     const score = passwordStrength.score;
-    if (score <= 2) return 'danger';
-    if (score <= 3) return 'warning';
-    if (score <= 4) return 'info';
-    return 'success';
+    if (score <= 2) return 'ap-danger';
+    if (score <= 3) return 'ap-warning';
+    if (score <= 4) return 'ap-info';
+    return 'ap-success';
   };
 
   const getPasswordStrengthText = () => {
@@ -348,545 +375,296 @@ const AdminProfile = () => {
     return 'Strong';
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'A';
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-        <div className="text-center">
-          <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-3 text-muted">Loading profile...</p>
-        </div>
+      <div className="ap-loading-container">
+        <div className="ap-spinner"></div>
+        <p>Loading profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="container-fluid py-4">
-      <div className="row">
-        <div className="col-12">
-          {/* Header */}
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div>
-              <h2 className="mb-1">
-                <FaUserShield className="me-2 text-primary" />
-                Admin Profile
-              </h2>
-              <p className="text-muted mb-0">Manage your account settings and preferences</p>
-            </div>
-            {!editing && !changingPassword && (
-              <button 
-                className="btn btn-primary"
-                onClick={() => setEditing(true)}
-              >
-                <FaEdit className="me-2" />
-                Edit Profile
-              </button>
+    <div className="ap-container">
+      {/* Welcome Header with Edit Profile Button */}
+      <div className="ds-welcome-header">
+        <div className="ds-welcome-content">
+          <div className="ds-user-avatar-large">
+            {user?.profilePicture ? (
+              <img src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} alt={user.name} className="ds-avatar-image" />
+            ) : (
+              <div className="ds-avatar-placeholder">
+                <FaShieldAlt size={32} />
+              </div>
             )}
           </div>
-
-          {/* Profile Card */}
-          <div className="row">
-            <div className="col-md-4">
-              {/* Admin Info Card */}
-              <div className="card shadow-sm mb-4">
-                <div className="card-body text-center p-4">
-                  <div className="admin-avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
-                       style={{ width: '100px', height: '100px' }}>
-                    <FaUserShield className="text-primary" size={50} />
-                  </div>
-                  <h4 className="mb-1">{user?.name}</h4>
-                  <p className="text-muted mb-2">{user?.email}</p>
-                  <span className="badge bg-danger px-3 py-2">
-                    <FaShieldAlt className="me-1" />
-                    Administrator
-                  </span>
-                  
-                  <hr className="my-3" />
-                  
-                  <div className="text-start">
-                    <p className="mb-2">
-                      <FaPhone className="text-primary me-2" />
-                      <strong>Phone:</strong> {user?.phoneNumber || 'Not provided'}
-                    </p>
-                    <p className="mb-2">
-                      <FaMapMarkerAlt className="text-primary me-2" />
-                      <strong>Location:</strong> {user?.address?.city || 'Not provided'}, {user?.address?.country || ''}
-                    </p>
-                    <p className="mb-0">
-                      <FaEnvelope className="text-primary me-2" />
-                      <strong>Member since:</strong> {new Date(user?.createdAt || Date.now()).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Stats */}
-              <div className="card shadow-sm mb-4">
-                <div className="card-header bg-white">
-                  <h5 className="mb-0">Account Statistics</h5>
-                </div>
-                <div className="card-body">
-                  <div className="d-flex justify-content-between mb-2">
-                    <span>Account Status</span>
-                    <span className="badge bg-success">Active</span>
-                  </div>
-                  <div className="d-flex justify-content-between mb-2">
-                    <span>Last Login</span>
-                    <span className="text-muted">Today</span>
-                  </div>
-                  <div className="d-flex justify-content-between mb-2">
-                    <span>Security Level</span>
-                    <span className="badge bg-info">High</span>
-                  </div>
-                  <div className="d-flex justify-content-between">
-                    <span>2FA Status</span>
-                    <span className="badge bg-warning">Not Enabled</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-md-8">
-              {/* Edit Profile Form */}
-              {editing && (
-                <div className="card shadow-sm mb-4">
-                  <div className="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">
-                      <FaEdit className="me-2 text-primary" />
-                      Edit Profile
-                    </h5>
-                    <button 
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={() => setEditing(false)}
-                    >
-                      <FaTimes className="me-1" /> Cancel
-                    </button>
-                  </div>
-                  <div className="card-body">
-                    <form onSubmit={handleProfileSubmit}>
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label fw-bold">
-                            <FaUser className="me-2 text-primary" />
-                            Full Name *
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            required
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label fw-bold">
-                            <FaEnvelope className="me-2 text-primary" />
-                            Email
-                          </label>
-                          <input
-                            type="email"
-                            className="form-control"
-                            value={formData.email}
-                            disabled
-                            readOnly
-                          />
-                          <small className="text-muted">Email cannot be changed</small>
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="form-label fw-bold">
-                          <FaPhone className="me-2 text-primary" />
-                          Phone Number
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          name="phoneNumber"
-                          value={formData.phoneNumber}
-                          onChange={handleInputChange}
-                          placeholder="Enter phone number"
-                        />
-                      </div>
-
-                      <h6 className="fw-bold mb-3">
-                        <FaMapMarkerAlt className="me-2 text-primary" />
-                        Address
-                      </h6>
-
-                      <div className="row">
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">Street Address</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="address.street"
-                            value={formData.address.street}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="col-md-6 mb-3">
-                          <label className="form-label">City</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="address.city"
-                            value={formData.address.city}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="col-md-4 mb-3">
-                          <label className="form-label">State</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="address.state"
-                            value={formData.address.state}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="col-md-4 mb-3">
-                          <label className="form-label">Country</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="address.country"
-                            value={formData.address.country}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="col-md-4 mb-3">
-                          <label className="form-label">Zip Code</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="address.zipCode"
-                            value={formData.address.zipCode}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="d-flex gap-2 mt-3">
-                        <button 
-                          type="submit" 
-                          className="btn btn-primary"
-                          disabled={saving}
-                        >
-                          {saving ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2"></span>
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <FaSave className="me-2" /> Save Changes
-                            </>
-                          )}
-                        </button>
-                        <button 
-                          type="button" 
-                          className="btn btn-outline-secondary"
-                          onClick={() => setEditing(false)}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
-
-              {/* Change Password Section */}
-              {!editing && (
-                <div className="card shadow-sm mb-4">
-                  <div className="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">
-                      <FaKey className="me-2 text-primary" />
-                      Security
-                    </h5>
-                    {!changingPassword && (
-                      <button 
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => setChangingPassword(true)}
-                      >
-                        Change Password
-                      </button>
-                    )}
-                  </div>
-                  
-                  {changingPassword ? (
-                    <div className="card-body">
-                      <form onSubmit={handlePasswordSubmit}>
-                        {/* Current Password */}
-                        <div className="mb-3">
-                          <label className="form-label fw-bold">Current Password</label>
-                          <div className="input-group">
-                            <input
-                              type={showCurrentPassword ? "text" : "password"}
-                              className={`form-control ${passwordErrors.currentPassword ? 'is-invalid' : ''}`}
-                              name="currentPassword"
-                              value={passwordData.currentPassword}
-                              onChange={handlePasswordChange}
-                            />
-                            <button
-                              type="button"
-                              className="btn btn-outline-secondary"
-                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                            >
-                              {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
-                            </button>
-                          </div>
-                          {passwordErrors.currentPassword && (
-                            <div className="text-danger small mt-1">{passwordErrors.currentPassword}</div>
-                          )}
-                        </div>
-
-                        {/* New Password */}
-                        <div className="mb-3">
-                          <label className="form-label fw-bold">New Password</label>
-                          <div className="input-group">
-                            <input
-                              type={showNewPassword ? "text" : "password"}
-                              className={`form-control ${passwordErrors.newPassword ? 'is-invalid' : ''}`}
-                              name="newPassword"
-                              value={passwordData.newPassword}
-                              onChange={handlePasswordChange}
-                            />
-                            <button
-                              type="button"
-                              className="btn btn-outline-secondary"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
-                            >
-                              {showNewPassword ? <FaEyeSlash /> : <FaEye />}
-                            </button>
-                          </div>
-                          {passwordErrors.newPassword && (
-                            <div className="text-danger small mt-1">{passwordErrors.newPassword}</div>
-                          )}
-                          
-                          {/* Password Strength Meter */}
-                          {passwordData.newPassword && (
-                            <div className="mt-2">
-                              <div className="d-flex justify-content-between mb-1">
-                                <small>Password Strength:</small>
-                                <small className={`text-${getPasswordStrengthColor()}`}>
-                                  {getPasswordStrengthText()}
-                                </small>
-                              </div>
-                              <div className="progress" style={{ height: '5px' }}>
-                                <div 
-                                  className={`progress-bar bg-${getPasswordStrengthColor()}`}
-                                  style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Confirm Password */}
-                        <div className="mb-3">
-                          <label className="form-label fw-bold">Confirm New Password</label>
-                          <div className="input-group">
-                            <input
-                              type={showConfirmPassword ? "text" : "password"}
-                              className={`form-control ${passwordErrors.confirmPassword ? 'is-invalid' : ''}`}
-                              name="confirmPassword"
-                              value={passwordData.confirmPassword}
-                              onChange={handlePasswordChange}
-                            />
-                            <button
-                              type="button"
-                              className="btn btn-outline-secondary"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            >
-                              {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                            </button>
-                          </div>
-                          {passwordErrors.confirmPassword && (
-                            <div className="text-danger small mt-1">{passwordErrors.confirmPassword}</div>
-                          )}
-                          {passwordData.newPassword && passwordData.confirmPassword && 
-                           passwordData.newPassword === passwordData.confirmPassword && (
-                            <div className="text-success small mt-1">
-                              <FaCheckCircle className="me-1" /> Passwords match
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="d-flex gap-2">
-                          <button 
-                            type="submit" 
-                            className="btn btn-primary"
-                            disabled={saving}
-                          >
-                            {saving ? 'Updating...' : 'Update Password'}
-                          </button>
-                          <button 
-                            type="button" 
-                            className="btn btn-outline-secondary"
-                            onClick={() => {
-                              setChangingPassword(false);
-                              setPasswordData({
-                                currentPassword: '',
-                                newPassword: '',
-                                confirmPassword: ''
-                              });
-                              setPasswordErrors({});
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  ) : (
-                    <div className="card-body">
-                      <p className="text-muted mb-0">
-                        <FaCheckCircle className="text-success me-2" />
-                        Password last changed: {new Date().toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Notification Preferences */}
-              {!editing && !changingPassword && (
-                <div className="card shadow-sm">
-                  <div className="card-header bg-white">
-                    <h5 className="mb-0">
-                      <FaBell className="me-2 text-primary" />
-                      Notification Preferences
-                    </h5>
-                  </div>
-                  <div className="card-body">
-                    <div className="mb-3">
-                      <div className="form-check form-switch">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          id="emailNotifications"
-                          checked={formData.notifications.emailNotifications}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            notifications: {
-                              ...formData.notifications,
-                              emailNotifications: e.target.checked
-                            }
-                          })}
-                        />
-                        <label className="form-check-label" htmlFor="emailNotifications">
-                          Email Notifications
-                        </label>
-                      </div>
-                      <small className="text-muted ms-4">Receive email updates about your account</small>
-                    </div>
-
-                    <div className="mb-3">
-                      <div className="form-check form-switch">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          id="newUserAlerts"
-                          checked={formData.notifications.newUserAlerts}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            notifications: {
-                              ...formData.notifications,
-                              newUserAlerts: e.target.checked
-                            }
-                          })}
-                        />
-                        <label className="form-check-label" htmlFor="newUserAlerts">
-                          New User Alerts
-                        </label>
-                      </div>
-                      <small className="text-muted ms-4">Get notified when new users register</small>
-                    </div>
-
-                    <div className="mb-3">
-                      <div className="form-check form-switch">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          id="companyVerificationAlerts"
-                          checked={formData.notifications.companyVerificationAlerts}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            notifications: {
-                              ...formData.notifications,
-                              companyVerificationAlerts: e.target.checked
-                            }
-                          })}
-                        />
-                        <label className="form-check-label" htmlFor="companyVerificationAlerts">
-                          Company Verification Alerts
-                        </label>
-                      </div>
-                      <small className="text-muted ms-4">Get notified when companies need verification</small>
-                    </div>
-
-                    <div className="mb-3">
-                      <div className="form-check form-switch">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          id="reportAlerts"
-                          checked={formData.notifications.reportAlerts}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            notifications: {
-                              ...formData.notifications,
-                              reportAlerts: e.target.checked
-                            }
-                          })}
-                        />
-                        <label className="form-check-label" htmlFor="reportAlerts">
-                          Report Alerts
-                        </label>
-                      </div>
-                      <small className="text-muted ms-4">Get notified about new reports</small>
-                    </div>
-
-                    <div className="mb-3">
-                      <div className="form-check form-switch">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          id="systemUpdates"
-                          checked={formData.notifications.systemUpdates}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            notifications: {
-                              ...formData.notifications,
-                              systemUpdates: e.target.checked
-                            }
-                          })}
-                        />
-                        <label className="form-check-label" htmlFor="systemUpdates">
-                          System Updates
-                        </label>
-                      </div>
-                      <small className="text-muted ms-4">Receive important system announcements</small>
-                    </div>
-
-                    <button 
-                      className="btn btn-primary mt-2"
-                      onClick={async () => {
-                        toast.success('Notification preferences saved!');
-                        // Here you would save to backend
-                      }}
-                    >
-                      Save Preferences
-                    </button>
-                  </div>
-                </div>
-              )}
+          <div className="ds-welcome-text">
+            <h2>Welcome back, {user?.name?.split(' ')[0] || 'Admin'}! 👑</h2>
+            <p>Manage your profile, security, and notification preferences.</p>
+            <div className="ds-user-meta">
+              <span><FaUsers /> {welcomeStats.totalUsers} total users</span>
+              <span><FaBuilding /> {welcomeStats.totalCompanies} companies</span>
+              <span><FaBriefcase /> {welcomeStats.totalJobs} jobs posted</span>
             </div>
           </div>
+        </div>
+        <div className="ds-welcome-actions">
+          {/* Refresh Stats Button */}
+          <button className="ds-icon-btn" onClick={fetchWelcomeStats} title="Refresh Stats">
+            <FaSyncAlt />
+          </button>
+          {/* Edit Profile Button */}
+          {!editing && !changingPassword && (
+            <button className="ap-btn ap-btn-primary" onClick={() => setEditing(true)} style={{ marginLeft: '0.5rem' }}>
+              <FaEdit /> Edit Profile
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="ap-grid">
+        {/* Left Column */}
+        <div className="ap-col ap-col-left">
+          {/* Admin Info Card */}
+          <div className="ap-card ap-info-card">
+            <div className="ap-card-body">
+              <div className="ap-avatar">
+                <FaUserShield size={50} />
+              </div>
+              <h4 className="ap-name">{user?.name}</h4>
+              <p className="ap-email">{user?.email}</p>
+              <span className="ap-badge ap-badge-admin">Administrator</span>
+              
+              <hr className="ap-divider" />
+              
+              <div className="ap-info-list">
+                <p><FaPhone /> <strong>Phone:</strong> {user?.phoneNumber || 'Not provided'}</p>
+                <p><FaMapMarkerAlt /> <strong>Location:</strong> {user?.address?.city || 'Not provided'}, {user?.address?.country || ''}</p>
+                <p><FaEnvelope /> <strong>Member since:</strong> {new Date(user?.createdAt || Date.now()).toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Account Statistics Card */}
+          <div className="ap-card ap-stats-card">
+            <div className="ap-card-header">
+              <h5>Account Statistics</h5>
+            </div>
+            <div className="ap-card-body">
+              <div className="ap-stats-list">
+                <div><span>Account Status</span><span className="ap-badge ap-badge-success">Active</span></div>
+                <div><span>Last Login</span><span>Today</span></div>
+                <div><span>Security Level</span><span className="ap-badge ap-badge-info">High</span></div>
+                <div><span>2FA Status</span><span className="ap-badge ap-badge-warning">Not Enabled</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="ap-col ap-col-right">
+          {/* Edit Profile Form */}
+          {editing && (
+            <div className="ap-card ap-form-card">
+              <div className="ap-card-header">
+                <h5><FaEdit /> Edit Profile</h5>
+                <button className="ap-btn ap-btn-outline" onClick={() => setEditing(false)}>
+                  <FaTimes /> Cancel
+                </button>
+              </div>
+              <div className="ap-card-body">
+                <form onSubmit={handleProfileSubmit}>
+                  <div className="ap-form-row">
+                    <div className="ap-form-group">
+                      <label><FaUser /> Full Name *</label>
+                      <input type="text" name="name" value={formData.name} onChange={handleInputChange} required />
+                    </div>
+                    <div className="ap-form-group">
+                      <label><FaEnvelope /> Email</label>
+                      <input type="email" value={formData.email} disabled readOnly />
+                      <small>Email cannot be changed</small>
+                    </div>
+                  </div>
+
+                  <div className="ap-form-group">
+                    <label><FaPhone /> Phone Number</label>
+                    <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} placeholder="Enter phone number" />
+                  </div>
+
+                  <h6>Address</h6>
+                  <div className="ap-form-row">
+                    <div className="ap-form-group">
+                      <label>Street Address</label>
+                      <input type="text" name="address.street" value={formData.address.street} onChange={handleInputChange} />
+                    </div>
+                    <div className="ap-form-group">
+                      <label>City</label>
+                      <input type="text" name="address.city" value={formData.address.city} onChange={handleInputChange} />
+                    </div>
+                  </div>
+                  <div className="ap-form-row">
+                    <div className="ap-form-group">
+                      <label>State</label>
+                      <input type="text" name="address.state" value={formData.address.state} onChange={handleInputChange} />
+                    </div>
+                    <div className="ap-form-group">
+                      <label>Country</label>
+                      <input type="text" name="address.country" value={formData.address.country} onChange={handleInputChange} />
+                    </div>
+                    <div className="ap-form-group">
+                      <label>Zip Code</label>
+                      <input type="text" name="address.zipCode" value={formData.address.zipCode} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="ap-form-actions">
+                    <button type="submit" className="ap-btn ap-btn-primary" disabled={saving}>
+                      {saving ? 'Saving...' : <><FaSave /> Save Changes</>}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Security / Password Section */}
+          {!editing && (
+            <div className="ap-card ap-security-card">
+              <div className="ap-card-header">
+                <h5><FaKey /> Security</h5>
+                {!changingPassword && (
+                  <button className="ap-btn ap-btn-outline" onClick={() => setChangingPassword(true)}>
+                    Change Password
+                  </button>
+                )}
+              </div>
+
+              {changingPassword ? (
+                <div className="ap-card-body">
+                  <form onSubmit={handlePasswordSubmit}>
+                    <div className="ap-form-group">
+                      <label>Current Password</label>
+                      <div className="ap-input-group">
+                        <input type={showCurrentPassword ? "text" : "password"} name="currentPassword" value={passwordData.currentPassword} onChange={handlePasswordChange} />
+                        <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                          {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
+                      </div>
+                      {passwordErrors.currentPassword && <div className="ap-error">{passwordErrors.currentPassword}</div>}
+                    </div>
+
+                    <div className="ap-form-group">
+                      <label>New Password</label>
+                      <div className="ap-input-group">
+                        <input type={showNewPassword ? "text" : "password"} name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} />
+                        <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}>
+                          {showNewPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
+                      </div>
+                      {passwordErrors.newPassword && <div className="ap-error">{passwordErrors.newPassword}</div>}
+                      {passwordData.newPassword && (
+                        <div className="ap-password-strength">
+                          <div className="ap-strength-bar">
+                            <div className="ap-strength-progress" style={{ width: `${(passwordStrength.score / 5) * 100}%`, backgroundColor: `var(--ap-${getPasswordStrengthColor()})` }}></div>
+                          </div>
+                          <div className="ap-strength-text">
+                            <span>Password Strength: </span>
+                            <span className={`ap-${getPasswordStrengthColor()}`}>{getPasswordStrengthText()}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="ap-form-group">
+                      <label>Confirm New Password</label>
+                      <div className="ap-input-group">
+                        <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} />
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                          {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
+                      </div>
+                      {passwordErrors.confirmPassword && <div className="ap-error">{passwordErrors.confirmPassword}</div>}
+                      {passwordData.newPassword && passwordData.confirmPassword && passwordData.newPassword === passwordData.confirmPassword && (
+                        <div className="ap-success"><FaCheckCircle /> Passwords match</div>
+                      )}
+                    </div>
+
+                    <div className="ap-form-actions">
+                      <button type="submit" className="ap-btn ap-btn-primary" disabled={saving}>
+                        {saving ? 'Updating...' : 'Update Password'}
+                      </button>
+                      <button type="button" className="ap-btn ap-btn-outline" onClick={() => {
+                        setChangingPassword(false);
+                        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                        setPasswordErrors({});
+                      }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                <div className="ap-security-info">
+                  <FaCheckCircle className="ap-text-success" /> Password last changed: {new Date().toLocaleDateString()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Notification Preferences */}
+          {!editing && !changingPassword && (
+            <div className="ap-card ap-notifications-card">
+              <div className="ap-card-header">
+                <h5><FaBell /> Notification Preferences</h5>
+              </div>
+              <div className="ap-notifications-list">
+                {Object.entries(formData.notifications).map(([key, value]) => (
+                  <div key={key} className="ap-notification-item">
+                    <div className="ap-switch">
+                      <input
+                        type="checkbox"
+                        id={`notif-${key}`}
+                        checked={value}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          notifications: { ...formData.notifications, [key]: e.target.checked }
+                        })}
+                      />
+                      <label htmlFor={`notif-${key}`}>
+                        {key === 'emailNotifications' && 'Email Notifications'}
+                        {key === 'newUserAlerts' && 'New User Alerts'}
+                        {key === 'companyVerificationAlerts' && 'Company Verification Alerts'}
+                        {key === 'reportAlerts' && 'Report Alerts'}
+                        {key === 'systemUpdates' && 'System Updates'}
+                      </label>
+                    </div>
+                    <small>
+                      {key === 'emailNotifications' && 'Receive email updates about your account'}
+                      {key === 'newUserAlerts' && 'Get notified when new users register'}
+                      {key === 'companyVerificationAlerts' && 'Get notified when companies need verification'}
+                      {key === 'reportAlerts' && 'Get notified about new reports'}
+                      {key === 'systemUpdates' && 'Receive important system announcements'}
+                    </small>
+                  </div>
+                ))}
+              </div>
+              <div className="ap-form-actions" style={{ padding: '0 1.5rem 1.5rem' }}>
+                <button className="ap-btn ap-btn-primary" onClick={() => toast.success('Notification preferences saved!')}>
+                  Save Preferences
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -236,6 +236,12 @@ export const AuthProvider = ({ children }) => {
     toast.info('Logged out successfully');
   };
 
+  // ***** NEW FUNCTION: Update user in context and localStorage *****
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   // Function to check if user is authenticated
   const isAuthenticated = () => {
     return !!token && !!user;
@@ -248,6 +254,7 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
+    updateUser,          // <-- exposed for components to update user
     isAuthenticated: isAuthenticated(),
     token,
     API // Export API for use in components

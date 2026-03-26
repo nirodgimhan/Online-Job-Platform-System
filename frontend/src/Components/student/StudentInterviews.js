@@ -33,6 +33,7 @@ const StudentInterviews = () => {
   const [selectedTab, setSelectedTab] = useState('upcoming');
   const [debugInfo, setDebugInfo] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [ensuringProfile, setEnsuringProfile] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetchInterviews();
@@ -59,7 +60,41 @@ const StudentInterviews = () => {
       return;
     }
 
+    // Ensure student profile exists before fetching
+    await ensureStudentProfile();
     await fetchInterviews();
+  };
+
+  const ensureStudentProfile = async () => {
+    setEnsuringProfile(true);
+    try {
+      // Try to get the student profile
+      const response = await API.get('/students/profile');
+      if (response.data.success) {
+        return true;
+      }
+    } catch (error) {
+      if (error.response?.status === 404) {
+        // Student profile doesn't exist, create it
+        console.log('Student profile not found, creating one...');
+        try {
+          const createResponse = await API.post('/students/profile', {});
+          if (createResponse.data.success) {
+            console.log('Student profile created successfully');
+            return true;
+          }
+        } catch (createError) {
+          console.error('Failed to create student profile:', createError);
+          toast.error('Could not create student profile. Please try again later.');
+        }
+      } else {
+        console.error('Error checking student profile:', error);
+        toast.error('Failed to verify student profile');
+      }
+    } finally {
+      setEnsuringProfile(false);
+    }
+    return false;
   };
 
   const fetchInterviews = async () => {
@@ -69,9 +104,16 @@ const StudentInterviews = () => {
       setRefreshing(true);
       
       console.log('Fetching interviews for student:', user?.id);
-      console.log('User object:', user);
       
-      const response = await API.get('/interviews');
+      // Try student-specific endpoint first
+      let response;
+      try {
+        response = await API.get('/interviews/student');
+      } catch (err) {
+        // Fallback to general interviews endpoint
+        console.warn('Student endpoint failed, trying general endpoint', err);
+        response = await API.get('/interviews');
+      }
       
       console.log('Interviews response:', response.data);
       console.log('Response status:', response.status);
@@ -85,24 +127,48 @@ const StudentInterviews = () => {
       });
       
       if (response.data.success) {
-        const interviewsData = response.data.interviews || [];
+        let interviewsData = response.data.interviews || [];
         
-        if (interviewsData.length === 0) {
-          console.log('No interviews found for student');
-        } else {
-          console.log(`Found ${interviewsData.length} interviews`);
+        // If data is nested differently (e.g., response.data.data.interviews)
+        if (!interviewsData.length && response.data.data?.interviews) {
+          interviewsData = response.data.data.interviews;
         }
+        
+        console.log(`Found ${interviewsData.length} interviews`);
         
         const processedInterviews = interviewsData.map(interview => {
           const scheduledDate = new Date(interview.scheduledDate);
           const now = new Date();
           
+          // Extract job and company data safely
+          const jobTitle = interview.jobId?.title || 
+                           interview.job?.title || 
+                           interview.position || 
+                           'Position Not Available';
+          const companyName = interview.companyId?.companyName || 
+                             interview.companyId?.name || 
+                             interview.company?.name || 
+                             interview.companyName || 
+                             'Company';
+          const companyLogo = interview.companyId?.companyLogo || 
+                             interview.companyLogo || 
+                             null;
+          const meetingLink = interview.meetingLink || interview.link || null;
+          const interviewerName = interview.interviewerName || 
+                                 interview.interviewer?.name || 
+                                 null;
+          const interviewerEmail = interview.interviewerEmail || 
+                                  interview.interviewer?.email || 
+                                  null;
+          const notes = interview.notes || interview.additionalNotes || null;
+          const location = interview.location || interview.address || null;
+          
           return {
             ...interview,
             id: interview._id,
-            jobTitle: interview.jobId?.title || 'Position Not Available',
-            companyName: interview.companyId?.companyName || interview.companyId?.name || 'Company',
-            companyLogo: interview.companyId?.companyLogo || null,
+            jobTitle,
+            companyName,
+            companyLogo,
             scheduledDateObj: scheduledDate,
             scheduledDateFormatted: formatDate(interview.scheduledDate),
             scheduledDateRelative: getRelativeTime(interview.scheduledDate),
@@ -110,13 +176,18 @@ const StudentInterviews = () => {
             isPast: scheduledDate <= now,
             canConfirm: interview.status === 'scheduled' && scheduledDate > now,
             canCancel: ['scheduled', 'confirmed'].includes(interview.status) && scheduledDate > now,
-            canJoin: interview.status === 'confirmed' && interview.meetingLink && scheduledDate > now,
+            canJoin: interview.status === 'confirmed' && meetingLink && scheduledDate > now,
             statusText: getStatusText(interview.status),
             statusIcon: getStatusIcon(interview.status),
             statusColor: getStatusColor(interview.status),
             modeIcon: getModeIcon(interview.mode),
             modeText: interview.mode || 'Online',
             durationText: interview.duration ? `${interview.duration} minutes` : '60 minutes',
+            meetingLink,
+            interviewerName,
+            interviewerEmail,
+            notes,
+            location,
             hasFeedback: interview.feedback && Object.keys(interview.feedback).length > 0,
             feedbackRating: interview.feedback?.rating || 0,
             feedbackComments: interview.feedback?.comments || '',
@@ -175,6 +246,11 @@ const StudentInterviews = () => {
   };
 
   const createTestInterview = async () => {
+    if (ensuringProfile) {
+      toast.info('Please wait, profile is being set up...');
+      return;
+    }
+
     try {
       toast.info('Creating test interview...');
       
@@ -349,10 +425,10 @@ const StudentInterviews = () => {
 
   const getModeClass = (mode) => {
     switch(mode) {
-      case 'Online': return 'ds-mode-online';
-      case 'In-person': return 'ds-mode-inperson';
-      case 'Phone': return 'ds-mode-phone';
-      default: return 'ds-mode-online';
+      case 'Online': return 'si-mode-online';
+      case 'In-person': return 'si-mode-inperson';
+      case 'Phone': return 'si-mode-phone';
+      default: return 'si-mode-online';
     }
   };
 
@@ -452,11 +528,11 @@ const StudentInterviews = () => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       if (i <= rating) {
-        stars.push(<FaStar key={i} className="ds-star-filled" />);
+        stars.push(<FaStar key={i} className="si-star-filled" />);
       } else if (i - 0.5 <= rating) {
-        stars.push(<FaStarHalfAlt key={i} className="ds-star-half" />);
+        stars.push(<FaStarHalfAlt key={i} className="si-star-half" />);
       } else {
-        stars.push(<FaRegStar key={i} className="ds-star-empty" />);
+        stars.push(<FaRegStar key={i} className="si-star-empty" />);
       }
     }
     return stars;
@@ -464,8 +540,8 @@ const StudentInterviews = () => {
 
   if (loading && !refreshing) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
+      <div className="si-loading-container">
+        <div className="si-spinner"></div>
         <h4>Loading your interviews...</h4>
         <p>Please wait while we fetch your interview schedule</p>
       </div>
@@ -474,16 +550,16 @@ const StudentInterviews = () => {
 
   if (error) {
     return (
-      <div className="ds-error-container">
-        <div className="ds-error-card">
-          <FaExclamationTriangle className="ds-error-icon" />
+      <div className="si-error-container">
+        <div className="si-error-card">
+          <FaExclamationTriangle className="si-error-icon" />
           <h3>Error Loading Interviews</h3>
           <p>{error}</p>
-          <div className="ds-error-actions">
-            <button className="ds-btn ds-btn-primary" onClick={handleRetry}>
+          <div className="si-error-actions">
+            <button className="si-btn si-btn-primary" onClick={handleRetry}>
               <FaSyncAlt /> Try Again
             </button>
-            <button className="ds-btn ds-btn-outline-secondary" onClick={() => navigate('/student/dashboard')}>
+            <button className="si-btn si-btn-outline-secondary" onClick={() => navigate('/student/dashboard')}>
               Go to Dashboard
             </button>
           </div>
@@ -493,32 +569,32 @@ const StudentInterviews = () => {
   }
 
   return (
-    <div className="ds-student-interviews">
-      <div className="ds-container">
+    <div className="si-student-interviews">
+      <div className="si-container">
         {/* Header */}
-        <div className="ds-page-header">
-          <div className="ds-header-left">
-            <div className="ds-header-icon-wrapper">
-              <FaCalendarAlt className="ds-header-icon" />
+        <div className="si-page-header">
+          <div className="si-header-left">
+            <div className="si-header-icon-wrapper">
+              <FaCalendarAlt className="si-header-icon" />
             </div>
             <div>
               <h1>My Interviews</h1>
-              <p className="ds-header-subtitle">
+              <p className="si-header-subtitle">
                 Manage and track all your scheduled interviews
               </p>
             </div>
           </div>
-          <div className="ds-header-actions">
+          <div className="si-header-actions">
             <button 
-              className="ds-refresh-btn" 
+              className="si-refresh-btn" 
               onClick={handleRefresh} 
               disabled={refreshing}
             >
-              <FaSyncAlt className={refreshing ? 'ds-spin' : ''} />
+              <FaSyncAlt className={refreshing ? 'si-spin' : ''} />
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             <button 
-              className="ds-btn ds-btn-outline-primary"
+              className="si-btn si-btn-outline-primary"
               onClick={() => setShowDebug(!showDebug)}
               style={{ marginLeft: '10px' }}
             >
@@ -528,8 +604,8 @@ const StudentInterviews = () => {
         </div>
 
         {/* Debug Info Panel */}
-        {showDebug && (
-          <div className="ds-debug-panel" style={{
+        {showDebug && debugInfo && (
+          <div className="si-debug-panel" style={{
             background: '#1e1e1e',
             color: '#d4d4d4',
             padding: '15px',
@@ -558,33 +634,33 @@ const StudentInterviews = () => {
 
         {/* Statistics Cards */}
         {interviews.length > 0 && (
-          <div className="ds-stats-grid">
-            <div className="ds-stat-card ds-stat-total">
-              <div className="ds-stat-icon"><FaCalendarAlt /></div>
-              <div className="ds-stat-info">
-                <span className="ds-stat-value">{totalInterviews}</span>
-                <span className="ds-stat-label">Total Interviews</span>
+          <div className="si-stats-grid">
+            <div className="si-stat-card si-stat-total">
+              <div className="si-stat-icon"><FaCalendarAlt /></div>
+              <div className="si-stat-info">
+                <span className="si-stat-value">{totalInterviews}</span>
+                <span className="si-stat-label">Total Interviews</span>
               </div>
             </div>
-            <div className="ds-stat-card ds-stat-upcoming">
-              <div className="ds-stat-icon"><FaClock /></div>
-              <div className="ds-stat-info">
-                <span className="ds-stat-value">{upcomingInterviews}</span>
-                <span className="ds-stat-label">Upcoming</span>
+            <div className="si-stat-card si-stat-upcoming">
+              <div className="si-stat-icon"><FaClock /></div>
+              <div className="si-stat-info">
+                <span className="si-stat-value">{upcomingInterviews}</span>
+                <span className="si-stat-label">Upcoming</span>
               </div>
             </div>
-            <div className="ds-stat-card ds-stat-confirmed">
-              <div className="ds-stat-icon"><FaCheckCircle /></div>
-              <div className="ds-stat-info">
-                <span className="ds-stat-value">{confirmedInterviews}</span>
-                <span className="ds-stat-label">Confirmed</span>
+            <div className="si-stat-card si-stat-confirmed">
+              <div className="si-stat-icon"><FaCheckCircle /></div>
+              <div className="si-stat-info">
+                <span className="si-stat-value">{confirmedInterviews}</span>
+                <span className="si-stat-label">Confirmed</span>
               </div>
             </div>
-            <div className="ds-stat-card ds-stat-completed">
-              <div className="ds-stat-icon"><FaStar /></div>
-              <div className="ds-stat-info">
-                <span className="ds-stat-value">{completedInterviews}</span>
-                <span className="ds-stat-label">Completed</span>
+            <div className="si-stat-card si-stat-completed">
+              <div className="si-stat-icon"><FaStar /></div>
+              <div className="si-stat-info">
+                <span className="si-stat-value">{completedInterviews}</span>
+                <span className="si-stat-label">Completed</span>
               </div>
             </div>
           </div>
@@ -592,16 +668,16 @@ const StudentInterviews = () => {
 
         {/* Tabs */}
         {interviews.length > 0 && (
-          <div className="ds-tabs">
+          <div className="si-tabs">
             <button 
-              className={`ds-tab ${selectedTab === 'upcoming' ? 'active' : ''}`}
+              className={`si-tab ${selectedTab === 'upcoming' ? 'active' : ''}`}
               onClick={() => setSelectedTab('upcoming')}
             >
               <FaClock /> Upcoming Interviews
-              {scheduledInterviews > 0 && <span className="ds-badge">{scheduledInterviews}</span>}
+              {scheduledInterviews > 0 && <span className="si-badge">{scheduledInterviews}</span>}
             </button>
             <button 
-              className={`ds-tab ${selectedTab === 'past' ? 'active' : ''}`}
+              className={`si-tab ${selectedTab === 'past' ? 'active' : ''}`}
               onClick={() => setSelectedTab('past')}
             >
               <FaCalendarCheck /> Past Interviews
@@ -611,11 +687,11 @@ const StudentInterviews = () => {
 
         {/* Filters Bar */}
         {interviews.length > 0 && (
-          <div className="ds-filters-card">
-            <div className="ds-filters-content">
-              <div className="ds-search-wrapper">
-                <div className="ds-search-input-group">
-                  <FaSearch className="ds-search-icon" />
+          <div className="si-filters-card">
+            <div className="si-filters-content">
+              <div className="si-search-wrapper">
+                <div className="si-search-input-group">
+                  <FaSearch className="si-search-icon" />
                   <input
                     type="text"
                     placeholder="Search by job title or company..."
@@ -624,8 +700,8 @@ const StudentInterviews = () => {
                   />
                 </div>
               </div>
-              <div className="ds-filters-row">
-                <div className="ds-filter-group">
+              <div className="si-filters-row">
+                <div className="si-filter-group">
                   <label>Status</label>
                   <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                     <option value="all">All Status</option>
@@ -635,7 +711,7 @@ const StudentInterviews = () => {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
-                <div className="ds-filter-group">
+                <div className="si-filter-group">
                   <label>Sort By</label>
                   <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                     <option value="date">Date (Earliest First)</option>
@@ -643,7 +719,7 @@ const StudentInterviews = () => {
                     <option value="company">Company Name</option>
                   </select>
                 </div>
-                <button className="ds-clear-filters" onClick={handleClearFilters}>
+                <button className="si-clear-filters" onClick={handleClearFilters}>
                   <FaFilter /> Clear Filters
                 </button>
               </div>
@@ -653,32 +729,33 @@ const StudentInterviews = () => {
 
         {/* Results Count */}
         {interviews.length > 0 && (
-          <div className="ds-results-info">
+          <div className="si-results-info">
             <p>Showing <strong>{filteredInterviews.length}</strong> of <strong>{interviews.length}</strong> interviews</p>
           </div>
         )}
 
         {/* Main Content - Interviews Grid */}
         {interviews.length === 0 ? (
-          <div className="ds-empty-state">
-            <div className="ds-empty-icon-wrapper">
-              <FaCalendarAlt className="ds-empty-icon" />
+          <div className="si-empty-state">
+            <div className="si-empty-icon-wrapper">
+              <FaCalendarAlt className="si-empty-icon" />
             </div>
             <h3>No Interviews Yet</h3>
             <p>You haven't been scheduled for any interviews yet.</p>
-            <div className="ds-empty-actions">
-              <Link to="/student/jobs" className="ds-btn ds-btn-primary">
+            <div className="si-empty-actions">
+              <Link to="/student/jobs" className="si-btn si-btn-primary">
                 <FaSearch /> Browse Jobs
               </Link>
               <button 
-                className="ds-btn ds-btn-outline-primary"
+                className="si-btn si-btn-outline-primary"
                 onClick={createTestInterview}
+                disabled={ensuringProfile}
                 style={{ marginLeft: '10px' }}
               >
                 <FaPlus /> Create Test Interview
               </button>
             </div>
-            <div className="ds-empty-help" style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
+            <div className="si-empty-help" style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
               <h4 style={{ marginBottom: '10px' }}>💡 How to get interviews?</h4>
               <ul style={{ textAlign: 'left', marginBottom: 0 }}>
                 <li>1. Apply to jobs that match your skills</li>
@@ -690,42 +767,42 @@ const StudentInterviews = () => {
             </div>
           </div>
         ) : filteredInterviews.length === 0 ? (
-          <div className="ds-empty-filters">
-            <FaFilter className="ds-empty-icon" />
+          <div className="si-empty-filters">
+            <FaFilter className="si-empty-icon" />
             <h4>No interviews match your filters</h4>
             <p>Try adjusting your filters to see more results.</p>
-            <button className="ds-btn ds-btn-outline-primary" onClick={handleClearFilters}>
+            <button className="si-btn si-btn-outline-primary" onClick={handleClearFilters}>
               Clear Filters
             </button>
           </div>
         ) : (
-          <div className="ds-interviews-grid">
+          <div className="si-interviews-grid">
             {filteredInterviews.map(interview => (
-              <div key={interview.id} className="ds-interview-card">
+              <div key={interview.id} className="si-interview-card">
                 {/* Card Header */}
-                <div className="ds-card-header">
-                  <div className="ds-company-info">
-                    <div className="ds-company-logo">
+                <div className="si-card-header">
+                  <div className="si-company-info">
+                    <div className="si-company-logo">
                       {interview.companyLogo ? (
                         <img src={interview.companyLogo} alt={interview.companyName} />
                       ) : (
-                        <div className="ds-logo-placeholder">
+                        <div className="si-logo-placeholder">
                           <FaBuilding />
                         </div>
                       )}
                     </div>
-                    <div className="ds-company-details">
+                    <div className="si-company-details">
                       <h3>{interview.jobTitle}</h3>
                       <p>{interview.companyName}</p>
                       {interview.interviewerName && (
-                        <span className="ds-interviewer-name">
+                        <span className="si-interviewer-name">
                           <FaUser /> {interview.interviewerName}
                         </span>
                       )}
                     </div>
                   </div>
                   <div 
-                    className="ds-status-badge" 
+                    className="si-status-badge" 
                     style={{ backgroundColor: interview.statusColor }}
                   >
                     {interview.statusIcon}
@@ -734,45 +811,45 @@ const StudentInterviews = () => {
                 </div>
 
                 {/* Card Body */}
-                <div className="ds-card-body">
+                <div className="si-card-body">
                   {/* Date and Time */}
-                  <div className="ds-interview-datetime">
-                    <div className="ds-datetime-icon">
+                  <div className="si-interview-datetime">
+                    <div className="si-datetime-icon">
                       <FaCalendarAlt />
                     </div>
-                    <div className="ds-datetime-info">
-                      <div className="ds-date">{interview.scheduledDateFormatted}</div>
+                    <div className="si-datetime-info">
+                      <div className="si-date">{interview.scheduledDateFormatted}</div>
                       {interview.isUpcoming && interview.status !== 'cancelled' && (
-                        <div className="ds-relative-time">{interview.scheduledDateRelative}</div>
+                        <div className="si-relative-time">{interview.scheduledDateRelative}</div>
                       )}
                     </div>
                   </div>
 
                   {/* Interview Details Grid */}
-                  <div className="ds-details-grid">
-                    <div className="ds-detail-item">
-                      <div className="ds-detail-icon">{interview.modeIcon}</div>
-                      <div className="ds-detail-content">
-                        <span className="ds-detail-label">Mode</span>
+                  <div className="si-details-grid">
+                    <div className="si-detail-item">
+                      <div className="si-detail-icon">{interview.modeIcon}</div>
+                      <div className="si-detail-content">
+                        <span className="si-detail-label">Mode</span>
                         <strong className={getModeClass(interview.mode)}>
                           {interview.modeText}
                         </strong>
                       </div>
                     </div>
                     
-                    <div className="ds-detail-item">
-                      <div className="ds-detail-icon"><FaClock /></div>
-                      <div className="ds-detail-content">
-                        <span className="ds-detail-label">Duration</span>
+                    <div className="si-detail-item">
+                      <div className="si-detail-icon"><FaClock /></div>
+                      <div className="si-detail-content">
+                        <span className="si-detail-label">Duration</span>
                         <strong>{interview.durationText}</strong>
                       </div>
                     </div>
 
                     {interview.interviewerEmail && (
-                      <div className="ds-detail-item">
-                        <div className="ds-detail-icon"><FaEnvelope /></div>
-                        <div className="ds-detail-content">
-                          <span className="ds-detail-label">Contact</span>
+                      <div className="si-detail-item">
+                        <div className="si-detail-icon"><FaEnvelope /></div>
+                        <div className="si-detail-content">
+                          <span className="si-detail-label">Contact</span>
                           <a href={`mailto:${interview.interviewerEmail}`}>
                             {interview.interviewerEmail}
                           </a>
@@ -783,7 +860,7 @@ const StudentInterviews = () => {
 
                   {/* Meeting Link */}
                   {interview.meetingLink && interview.status !== 'cancelled' && (
-                    <div className="ds-meeting-link">
+                    <div className="si-meeting-link">
                       <FaVideo />
                       <a href={interview.meetingLink} target="_blank" rel="noopener noreferrer">
                         Join Meeting <FaExternalLinkAlt />
@@ -793,10 +870,10 @@ const StudentInterviews = () => {
 
                   {/* Notes */}
                   {interview.notes && (
-                    <div className="ds-notes">
+                    <div className="si-notes">
                       <FaInfoCircle />
-                      <div className="ds-notes-content">
-                        <span className="ds-notes-label">Additional Notes</span>
+                      <div className="si-notes-content">
+                        <span className="si-notes-label">Additional Notes</span>
                         <p>{interview.notes}</p>
                       </div>
                     </div>
@@ -804,17 +881,17 @@ const StudentInterviews = () => {
 
                   {/* Feedback Preview */}
                   {interview.hasFeedback && interview.status === 'completed' && (
-                    <div className="ds-feedback-preview" onClick={() => handleViewFeedback(interview)}>
-                      <div className="ds-feedback-header">
+                    <div className="si-feedback-preview" onClick={() => handleViewFeedback(interview)}>
+                      <div className="si-feedback-header">
                         <FaComment />
                         <span>Interview Feedback</span>
                       </div>
-                      <div className="ds-feedback-rating-preview">
+                      <div className="si-feedback-rating-preview">
                         {renderStars(interview.feedbackRating)}
-                        <span className="ds-rating-value">{interview.feedbackRating}/5</span>
+                        <span className="si-rating-value">{interview.feedbackRating}/5</span>
                       </div>
                       {interview.feedbackComments && (
-                        <p className="ds-feedback-preview-text">
+                        <p className="si-feedback-preview-text">
                           {interview.feedbackComments.length > 100 
                             ? `${interview.feedbackComments.substring(0, 100)}...` 
                             : interview.feedbackComments}
@@ -825,9 +902,9 @@ const StudentInterviews = () => {
                 </div>
 
                 {/* Card Footer - Actions */}
-                <div className="ds-card-footer">
+                <div className="si-card-footer">
                   <button 
-                    className="ds-btn ds-btn-outline-primary"
+                    className="si-btn si-btn-outline-primary"
                     onClick={() => handleViewDetails(interview)}
                   >
                     <FaInfoCircle /> View Details
@@ -835,18 +912,18 @@ const StudentInterviews = () => {
                   
                   {interview.canConfirm && (
                     <button 
-                      className="ds-btn ds-btn-success" 
+                      className="si-btn si-btn-success" 
                       onClick={() => handleConfirm(interview.id)}
                       disabled={confirming}
                     >
-                      {confirming ? <FaSpinner className="ds-spin" /> : <FaCheckCircle />}
+                      {confirming ? <FaSpinner className="si-spin" /> : <FaCheckCircle />}
                       Confirm
                     </button>
                   )}
                   
                   {interview.canCancel && (
                     <button 
-                      className="ds-btn ds-btn-danger" 
+                      className="si-btn si-btn-danger" 
                       onClick={() => { 
                         setSelectedInterview(interview); 
                         setShowCancelModal(true); 
@@ -861,7 +938,7 @@ const StudentInterviews = () => {
                       href={interview.meetingLink} 
                       target="_blank" 
                       rel="noopener noreferrer" 
-                      className="ds-btn ds-btn-primary"
+                      className="si-btn si-btn-primary"
                     >
                       <FaVideo /> Join Now
                     </a>
@@ -869,7 +946,7 @@ const StudentInterviews = () => {
                   
                   {interview.hasFeedback && interview.status === 'completed' && (
                     <button 
-                      className="ds-btn ds-btn-info"
+                      className="si-btn si-btn-info"
                       onClick={() => handleViewFeedback(interview)}
                     >
                       <FaComment /> View Feedback
@@ -877,7 +954,7 @@ const StudentInterviews = () => {
                   )}
                   
                   <button 
-                    className="ds-btn ds-btn-link" 
+                    className="si-btn si-btn-link" 
                     onClick={() => navigate(`/student/job/${interview.jobId?._id}`)}
                   >
                     Job Details <FaArrowRight />
@@ -891,46 +968,46 @@ const StudentInterviews = () => {
 
       {/* Interview Details Modal */}
       {showDetailsModal && selectedInterview && (
-        <div className="ds-modal-overlay" onClick={() => setShowDetailsModal(false)}>
-          <div className="ds-modal ds-modal-large" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header">
-              <FaInfoCircle className="ds-modal-icon" />
+        <div className="si-modal-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="si-modal si-modal-large" onClick={e => e.stopPropagation()}>
+            <div className="si-modal-header">
+              <FaInfoCircle className="si-modal-icon" />
               <h3>Interview Details</h3>
-              <button className="ds-modal-close" onClick={() => setShowDetailsModal(false)}>
+              <button className="si-modal-close" onClick={() => setShowDetailsModal(false)}>
                 <FaTimes />
               </button>
             </div>
-            <div className="ds-modal-body">
-              <div className="ds-details-container">
-                <div className="ds-details-section">
+            <div className="si-modal-body">
+              <div className="si-details-container">
+                <div className="si-details-section">
                   <h4>Job Information</h4>
-                  <div className="ds-detail-row">
+                  <div className="si-detail-row">
                     <strong>Position:</strong>
                     <span>{selectedInterview.jobTitle}</span>
                   </div>
-                  <div className="ds-detail-row">
+                  <div className="si-detail-row">
                     <strong>Company:</strong>
                     <span>{selectedInterview.companyName}</span>
                   </div>
                 </div>
 
-                <div className="ds-details-section">
+                <div className="si-details-section">
                   <h4>Interview Information</h4>
-                  <div className="ds-detail-row">
+                  <div className="si-detail-row">
                     <strong>Date & Time:</strong>
                     <span>{selectedInterview.scheduledDateFormatted}</span>
                   </div>
-                  <div className="ds-detail-row">
+                  <div className="si-detail-row">
                     <strong>Duration:</strong>
                     <span>{selectedInterview.durationText}</span>
                   </div>
-                  <div className="ds-detail-row">
+                  <div className="si-detail-row">
                     <strong>Mode:</strong>
                     <span className={getModeClass(selectedInterview.mode)}>
                       {selectedInterview.modeText}
                     </span>
                   </div>
-                  <div className="ds-detail-row">
+                  <div className="si-detail-row">
                     <strong>Status:</strong>
                     <span style={{ color: selectedInterview.statusColor }}>
                       {selectedInterview.statusIcon} {selectedInterview.statusText}
@@ -939,16 +1016,16 @@ const StudentInterviews = () => {
                 </div>
 
                 {(selectedInterview.interviewerName || selectedInterview.interviewerEmail) && (
-                  <div className="ds-details-section">
+                  <div className="si-details-section">
                     <h4>Interviewer Details</h4>
                     {selectedInterview.interviewerName && (
-                      <div className="ds-detail-row">
+                      <div className="si-detail-row">
                         <strong>Name:</strong>
                         <span>{selectedInterview.interviewerName}</span>
                       </div>
                     )}
                     {selectedInterview.interviewerEmail && (
-                      <div className="ds-detail-row">
+                      <div className="si-detail-row">
                         <strong>Email:</strong>
                         <a href={`mailto:${selectedInterview.interviewerEmail}`}>
                           {selectedInterview.interviewerEmail}
@@ -959,9 +1036,9 @@ const StudentInterviews = () => {
                 )}
 
                 {selectedInterview.meetingLink && (
-                  <div className="ds-details-section">
+                  <div className="si-details-section">
                     <h4>Meeting Details</h4>
-                    <div className="ds-detail-row">
+                    <div className="si-detail-row">
                       <strong>Meeting Link:</strong>
                       <a href={selectedInterview.meetingLink} target="_blank" rel="noopener noreferrer">
                         {selectedInterview.meetingLink} <FaExternalLinkAlt />
@@ -971,9 +1048,9 @@ const StudentInterviews = () => {
                 )}
 
                 {selectedInterview.location?.address && (
-                  <div className="ds-details-section">
+                  <div className="si-details-section">
                     <h4>Location</h4>
-                    <div className="ds-detail-row">
+                    <div className="si-detail-row">
                       <strong>Address:</strong>
                       <span>
                         {selectedInterview.location.address}
@@ -985,29 +1062,29 @@ const StudentInterviews = () => {
                 )}
 
                 {selectedInterview.notes && (
-                  <div className="ds-details-section">
+                  <div className="si-details-section">
                     <h4>Additional Notes</h4>
-                    <div className="ds-notes-full">
+                    <div className="si-notes-full">
                       <p>{selectedInterview.notes}</p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
-            <div className="ds-modal-footer">
+            <div className="si-modal-footer">
               {selectedInterview.canConfirm && (
                 <button 
-                  className="ds-btn ds-btn-success" 
+                  className="si-btn si-btn-success" 
                   onClick={() => handleConfirm(selectedInterview.id)}
                   disabled={confirming}
                 >
-                  {confirming ? <FaSpinner className="ds-spin" /> : <FaCheckCircle />}
+                  {confirming ? <FaSpinner className="si-spin" /> : <FaCheckCircle />}
                   Confirm Interview
                 </button>
               )}
               {selectedInterview.canCancel && (
                 <button 
-                  className="ds-btn ds-btn-danger" 
+                  className="si-btn si-btn-danger" 
                   onClick={() => {
                     setShowDetailsModal(false);
                     setShowCancelModal(true);
@@ -1016,7 +1093,7 @@ const StudentInterviews = () => {
                   <FaTimesCircle /> Cancel Interview
                 </button>
               )}
-              <button className="ds-btn ds-btn-secondary" onClick={() => setShowDetailsModal(false)}>
+              <button className="si-btn si-btn-secondary" onClick={() => setShowDetailsModal(false)}>
                 Close
               </button>
             </div>
@@ -1026,46 +1103,46 @@ const StudentInterviews = () => {
 
       {/* Feedback Modal */}
       {showFeedbackModal && selectedInterview && selectedInterview.hasFeedback && (
-        <div className="ds-modal-overlay" onClick={() => setShowFeedbackModal(false)}>
-          <div className="ds-modal ds-modal-large" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header ds-modal-header-success">
-              <FaComment className="ds-modal-icon" />
+        <div className="si-modal-overlay" onClick={() => setShowFeedbackModal(false)}>
+          <div className="si-modal si-modal-large" onClick={e => e.stopPropagation()}>
+            <div className="si-modal-header si-modal-header-success">
+              <FaComment className="si-modal-icon" />
               <h3>Interview Feedback</h3>
-              <button className="ds-modal-close" onClick={() => setShowFeedbackModal(false)}>
+              <button className="si-modal-close" onClick={() => setShowFeedbackModal(false)}>
                 <FaTimes />
               </button>
             </div>
-            <div className="ds-modal-body">
-              <div className="ds-feedback-full">
-                <div className="ds-feedback-header">
+            <div className="si-modal-body">
+              <div className="si-feedback-full">
+                <div className="si-feedback-header">
                   <h4>{selectedInterview.jobTitle}</h4>
                   <p>{selectedInterview.companyName}</p>
                 </div>
 
-                <div className="ds-feedback-rating-section">
+                <div className="si-feedback-rating-section">
                   <label>Overall Rating</label>
-                  <div className="ds-rating-large">
+                  <div className="si-rating-large">
                     {renderStars(selectedInterview.feedbackRating)}
-                    <span className="ds-rating-value-large">{selectedInterview.feedbackRating}/5</span>
+                    <span className="si-rating-value-large">{selectedInterview.feedbackRating}/5</span>
                   </div>
                 </div>
 
                 {selectedInterview.feedbackComments && (
-                  <div className="ds-feedback-comments-section">
+                  <div className="si-feedback-comments-section">
                     <label>Comments</label>
-                    <div className="ds-feedback-comments-box">
+                    <div className="si-feedback-comments-box">
                       <p>{selectedInterview.feedbackComments}</p>
                     </div>
                   </div>
                 )}
 
                 {selectedInterview.feedbackStrengths && selectedInterview.feedbackStrengths.length > 0 && (
-                  <div className="ds-feedback-strengths-section">
+                  <div className="si-feedback-strengths-section">
                     <label>Strengths</label>
-                    <ul className="ds-strengths-list">
+                    <ul className="si-strengths-list">
                       {selectedInterview.feedbackStrengths.map((strength, idx) => (
                         <li key={idx}>
-                          <FaCheckCircle className="ds-check-icon" />
+                          <FaCheckCircle className="si-check-icon" />
                           {strength}
                         </li>
                       ))}
@@ -1074,12 +1151,12 @@ const StudentInterviews = () => {
                 )}
 
                 {selectedInterview.feedbackWeaknesses && selectedInterview.feedbackWeaknesses.length > 0 && (
-                  <div className="ds-feedback-weaknesses-section">
+                  <div className="si-feedback-weaknesses-section">
                     <label>Areas for Improvement</label>
-                    <ul className="ds-weaknesses-list">
+                    <ul className="si-weaknesses-list">
                       {selectedInterview.feedbackWeaknesses.map((weakness, idx) => (
                         <li key={idx}>
-                          <FaTimesCircle className="ds-times-icon" />
+                          <FaTimesCircle className="si-times-icon" />
                           {weakness}
                         </li>
                       ))}
@@ -1088,17 +1165,17 @@ const StudentInterviews = () => {
                 )}
 
                 {selectedInterview.feedbackRecommendation && (
-                  <div className={`ds-feedback-recommendation ds-${selectedInterview.feedbackRecommendation.toLowerCase()}`}>
+                  <div className={`si-feedback-recommendation si-${selectedInterview.feedbackRecommendation.toLowerCase()}`}>
                     <label>Recommendation</label>
-                    <div className="ds-recommendation-box">
+                    <div className="si-recommendation-box">
                       <strong>{selectedInterview.feedbackRecommendation}</strong>
                     </div>
                   </div>
                 )}
               </div>
             </div>
-            <div className="ds-modal-footer">
-              <button className="ds-btn ds-btn-secondary" onClick={() => setShowFeedbackModal(false)}>
+            <div className="si-modal-footer">
+              <button className="si-btn si-btn-secondary" onClick={() => setShowFeedbackModal(false)}>
                 Close
               </button>
             </div>
@@ -1108,23 +1185,23 @@ const StudentInterviews = () => {
 
       {/* Cancel Modal */}
       {showCancelModal && selectedInterview && (
-        <div className="ds-modal-overlay" onClick={() => setShowCancelModal(false)}>
-          <div className="ds-modal" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header ds-modal-header-danger">
-              <FaTimesCircle className="ds-modal-icon" />
+        <div className="si-modal-overlay" onClick={() => setShowCancelModal(false)}>
+          <div className="si-modal" onClick={e => e.stopPropagation()}>
+            <div className="si-modal-header si-modal-header-danger">
+              <FaTimesCircle className="si-modal-icon" />
               <h3>Cancel Interview</h3>
-              <button className="ds-modal-close" onClick={() => setShowCancelModal(false)}>
+              <button className="si-modal-close" onClick={() => setShowCancelModal(false)}>
                 <FaTimes />
               </button>
             </div>
-            <div className="ds-modal-body">
+            <div className="si-modal-body">
               <p>Are you sure you want to cancel this interview?</p>
-              <div className="ds-interview-preview">
+              <div className="si-interview-preview">
                 <h4>{selectedInterview.jobTitle}</h4>
                 <p>{selectedInterview.companyName}</p>
                 <small>{selectedInterview.scheduledDateFormatted}</small>
               </div>
-              <div className="ds-form-group">
+              <div className="si-form-group">
                 <label>Reason for cancellation *</label>
                 <textarea 
                   value={cancelReason} 
@@ -1134,20 +1211,20 @@ const StudentInterviews = () => {
                 />
               </div>
             </div>
-            <div className="ds-modal-footer">
+            <div className="si-modal-footer">
               <button 
-                className="ds-btn ds-btn-secondary" 
+                className="si-btn si-btn-secondary" 
                 onClick={() => setShowCancelModal(false)}
                 disabled={cancelling}
               >
                 Keep Interview
               </button>
               <button 
-                className="ds-btn ds-btn-danger" 
+                className="si-btn si-btn-danger" 
                 onClick={handleCancel} 
                 disabled={cancelling}
               >
-                {cancelling ? <><FaSpinner className="ds-spin" /> Cancelling...</> : 'Yes, Cancel Interview'}
+                {cancelling ? <><FaSpinner className="si-spin" /> Cancelling...</> : 'Yes, Cancel Interview'}
               </button>
             </div>
           </div>

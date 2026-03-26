@@ -130,15 +130,23 @@ const ApplicantsList = () => {
       if (response.data && response.data.success) {
         const applicationsData = response.data.applications || [];
         
-        // Process applications to ensure we have student IDs
-        const processedApps = applicationsData.map(app => ({
-          ...app,
-          studentIdObj: app.studentId || {},
-          studentId: app.studentId?._id || app.studentId,
-          studentName: app.studentId?.name || app.studentId?.userId?.name || 'Unknown',
-          studentEmail: app.studentId?.email || app.studentId?.userId?.email || 'No email',
-          appliedAt: app.appliedAt || app.appliedDate || app.createdAt
-        }));
+        // Process applications to ensure student data is properly extracted
+        const processedApps = applicationsData.map(app => {
+          // Extract student data safely (handling both populated and unpopulated)
+          const studentData = app.studentId || {};
+          const studentName = studentData.name || studentData.userId?.name || 'Unknown Applicant';
+          const studentEmail = studentData.email || studentData.userId?.email || 'No email';
+          const studentId = studentData._id || studentData.userId?._id || app.studentId;
+          
+          return {
+            ...app,
+            studentIdObj: studentData,
+            studentId: studentId,
+            studentName: studentName,
+            studentEmail: studentEmail,
+            appliedAt: app.appliedAt || app.appliedDate || app.createdAt
+          };
+        });
         
         setApplications(processedApps);
         setFilteredApplications(processedApps);
@@ -317,21 +325,31 @@ const ApplicantsList = () => {
   };
 
   const handleScheduleInterview = (application) => {
+    // Ensure we have a valid application with student data
+    if (!application || !application._id) {
+      toast.error('Invalid application data');
+      return;
+    }
+    
     setSelectedApplication(application);
+    // Pre-fill interviewer details from company user
+    const interviewerName = user?.companyName || user?.name || '';
+    const interviewerEmail = user?.email || '';
     setInterviewData({
       scheduledDate: '',
       duration: 60,
       mode: 'Online',
       meetingLink: '',
       location: { address: '', city: '', country: '' },
-      interviewerName: user?.name || '',
-      interviewerEmail: user?.email || '',
+      interviewerName,
+      interviewerEmail,
       notes: ''
     });
     setShowInterviewModal(true);
   };
 
   const handleCreateInterview = async () => {
+    // Validate required fields
     if (!interviewData.scheduledDate) {
       toast.error('Please select a date and time');
       return;
@@ -350,19 +368,21 @@ const ApplicantsList = () => {
       return;
     }
 
-    // Get the actual student ID from the application
-    const studentId = selectedApplication.studentIdObj?._id || 
-                      selectedApplication.studentId || 
-                      selectedApplication.studentIdObj;
-    
-    if (!studentId) {
-      console.error('Student ID not found in application:', selectedApplication);
-      toast.error('Student information missing for this application. Please contact support.');
+    // Validate meeting link for online interviews
+    if (interviewData.mode === 'Online' && !interviewData.meetingLink) {
+      toast.error('Please provide a meeting link for online interview');
+      return;
+    }
+
+    // Validate address for in-person interviews
+    if (interviewData.mode === 'In-person' && !interviewData.location.address) {
+      toast.error('Please provide an address for in-person interview');
       return;
     }
 
     setInterviewLoading(true);
     try {
+      // Prepare payload matching backend expectations
       const interviewPayload = {
         applicationId: selectedApplication._id,
         scheduledDate: interviewData.scheduledDate,
@@ -374,12 +394,12 @@ const ApplicantsList = () => {
           city: interviewData.location.city,
           country: interviewData.location.country
         } : {},
-        interviewerName: interviewData.interviewerName || user?.name,
-        interviewerEmail: interviewData.interviewerEmail || user?.email,
+        interviewerName: interviewData.interviewerName,
+        interviewerEmail: interviewData.interviewerEmail,
         notes: interviewData.notes
       };
 
-      console.log('Sending interview payload:', interviewPayload);
+      console.log('📤 Sending interview payload:', interviewPayload);
       
       const response = await API.post('/interviews', interviewPayload);
       
@@ -387,17 +407,19 @@ const ApplicantsList = () => {
         toast.success('Interview scheduled successfully!');
         setShowInterviewModal(false);
         
+        // Reset form
         setInterviewData({
           scheduledDate: '',
           duration: 60,
           mode: 'Online',
           meetingLink: '',
           location: { address: '', city: '', country: '' },
-          interviewerName: user?.name || '',
+          interviewerName: user?.companyName || user?.name || '',
           interviewerEmail: user?.email || '',
           notes: ''
         });
         
+        // Refresh applications to update status
         await fetchApplications();
         setShowDetailsModal(false);
         setSelectedApplication(null);
@@ -405,11 +427,17 @@ const ApplicantsList = () => {
         toast.error(response.data.message || 'Failed to schedule interview');
       }
     } catch (err) {
-      console.error('Error creating interview:', err);
+      console.error('❌ Error creating interview:', err);
       
       if (err.response) {
-        const errorMessage = err.response.data?.message || `Server error: ${err.response.status}`;
-        toast.error(errorMessage);
+        // Handle specific error messages from backend
+        const errorMsg = err.response.data?.message || `Server error: ${err.response.status}`;
+        toast.error(errorMsg);
+        
+        // If the error is about existing interview, we can show more info
+        if (err.response.data?.existingInterview) {
+          toast.info('An interview is already scheduled for this application');
+        }
       } else if (err.request) {
         toast.error('Cannot connect to server. Please check if backend is running.');
       } else {
@@ -746,7 +774,7 @@ const ApplicantsList = () => {
                   <button className="ds-btn ds-btn-primary" onClick={() => handleScheduleInterview(app)}>
                     <FaCalendarPlus /> Schedule Interview
                   </button>
-                  <button className="ds-btn ds-btn-outline-secondary" onClick={() => handleViewCV(app.studentIdObj?._id || app.studentId)} disabled={cvLoading}>
+                  <button className="ds-btn ds-btn-outline-secondary" onClick={() => handleViewCV(app.studentId)} disabled={cvLoading}>
                     {cvLoading ? <FaSpinner className="ds-spin" /> : <FaFileAlt />} CV
                   </button>
                 </div>
@@ -885,7 +913,7 @@ const ApplicantsList = () => {
 
               {interviewData.mode === 'Online' && (
                 <div className="ds-form-group">
-                  <label>Meeting Link</label>
+                  <label>Meeting Link <span className="ds-required">*</span></label>
                   <input
                     type="url"
                     placeholder="https://meet.google.com/..."
@@ -897,7 +925,7 @@ const ApplicantsList = () => {
 
               {interviewData.mode === 'In-person' && (
                 <div className="ds-form-group">
-                  <label>Location</label>
+                  <label>Location <span className="ds-required">*</span></label>
                   <input
                     type="text"
                     placeholder="Address"

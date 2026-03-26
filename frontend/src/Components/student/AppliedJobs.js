@@ -57,15 +57,43 @@ const AppliedJobs = () => {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Helper to normalize status strings (capitalize first letter, rest lower)
+  const normalizeStatus = (status) => {
+    if (!status) return 'Pending';
+    // Convert to proper case: e.g., "accepted" -> "Accepted"
+    const lower = status.toLowerCase();
+    if (lower === 'pending') return 'Pending';
+    if (lower === 'reviewed') return 'Reviewed';
+    if (lower === 'shortlisted') return 'Shortlisted';
+    if (lower === 'interview') return 'Interview';
+    if (lower === 'accepted') return 'Accepted';
+    if (lower === 'rejected') return 'Rejected';
+    if (lower === 'withdrawn') return 'Withdrawn';
+    return status; // fallback
+  };
+
   useEffect(() => {
     checkAuthAndFetchApplications();
   }, []);
 
+  // Recalculate stats whenever applications change (full list)
   useEffect(() => {
     if (applications.length > 0) {
-      calculateStats();
+      calculateStats(applications);
+    } else {
+      // Reset stats if no applications
+      setStats({
+        total: 0,
+        pending: 0,
+        reviewed: 0,
+        shortlisted: 0,
+        interview: 0,
+        accepted: 0,
+        rejected: 0,
+        withdrawn: 0
+      });
     }
-  }, [applications, filters]);
+  }, [applications]);
 
   const checkAuthAndFetchApplications = async () => {
     const token = localStorage.getItem('token');
@@ -104,7 +132,7 @@ const AppliedJobs = () => {
       if (response.data && response.data.success) {
         const apps = response.data.applications || [];
         
-        // Process applications to ensure consistent data structure
+        // Normalize statuses and ensure consistent structure
         const processedApps = apps.map(app => ({
           ...app,
           appliedDate: app.appliedDate || app.appliedAt || app.createdAt,
@@ -112,7 +140,9 @@ const AppliedJobs = () => {
           jobId: app.jobId || {},
           interviewDetails: app.interviewDetails || {},
           feedback: app.feedback || null,
-          coverLetter: app.coverLetter || ''
+          coverLetter: app.coverLetter || '',
+          // Normalize status
+          status: normalizeStatus(app.status)
         }));
         
         setApplications(processedApps);
@@ -139,23 +169,24 @@ const AppliedJobs = () => {
     }
   };
 
-  const calculateStats = (apps = applications) => {
-    const filtered = applyFilters(apps);
+  // Calculate stats based on the provided list (should be the full list)
+  const calculateStats = (apps) => {
     const newStats = {
-      total: filtered.length,
-      pending: filtered.filter(app => app.status === 'Pending').length,
-      reviewed: filtered.filter(app => app.status === 'Reviewed').length,
-      shortlisted: filtered.filter(app => app.status === 'Shortlisted').length,
-      interview: filtered.filter(app => app.status === 'Interview').length,
-      accepted: filtered.filter(app => app.status === 'Accepted').length,
-      rejected: filtered.filter(app => app.status === 'Rejected').length,
-      withdrawn: filtered.filter(app => app.status === 'Withdrawn').length
+      total: apps.length,
+      pending: apps.filter(app => app.status === 'Pending').length,
+      reviewed: apps.filter(app => app.status === 'Reviewed').length,
+      shortlisted: apps.filter(app => app.status === 'Shortlisted').length,
+      interview: apps.filter(app => app.status === 'Interview').length,
+      accepted: apps.filter(app => app.status === 'Accepted').length,
+      rejected: apps.filter(app => app.status === 'Rejected').length,
+      withdrawn: apps.filter(app => app.status === 'Withdrawn').length
     };
     setStats(newStats);
   };
 
-  const applyFilters = (apps = applications) => {
-    let filtered = [...apps];
+  // Apply filters to the full list for display
+  const applyFilters = () => {
+    let filtered = [...applications];
     
     if (filters.status) {
       filtered = filtered.filter(app => app.status === filters.status);
@@ -241,7 +272,15 @@ const AppliedJobs = () => {
       'Withdrawn': { class: 'ds-status-withdrawn', icon: <FaTimesCircle />, text: 'Withdrawn' }
     };
     
-    const badge = badges[status] || badges['Pending'];
+    const badge = badges[status];
+    if (!badge) {
+      // Fallback for unknown status
+      return (
+        <span className="ds-status-badge ds-status-pending">
+          <FaRegClock /> {status}
+        </span>
+      );
+    }
     
     return (
       <span className={`ds-status-badge ${badge.class}`}>

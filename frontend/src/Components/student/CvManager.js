@@ -464,11 +464,21 @@ const CvManager = () => {
                       {formatFileSize(cv.fileSize)} • {formatDate(cv.createdAt)}
                     </p>
                   </div>
-                  {cv.isPrimary && (
-                    <span className="ds-primary-badge">
-                      <FaStar /> Primary
-                    </span>
-                  )}
+                  <div className="ds-card-actions">
+                    <button 
+                      className={`ds-star-btn ${cv.isPrimary ? 'ds-star-active' : ''}`}
+                      onClick={() => !cv.isPrimary && handleSetPrimary(cv._id)}
+                      title={cv.isPrimary ? 'Primary CV' : 'Set as primary'}
+                      disabled={cv.isPrimary}
+                    >
+                      <FaStar />
+                    </button>
+                    {cv.isPrimary && (
+                      <span className="ds-primary-badge">
+                        <FaStar /> Primary
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="ds-cv-tags">
@@ -487,11 +497,6 @@ const CvManager = () => {
                   <button className="ds-action-btn ds-analyze-btn" onClick={() => handleAnalyze(cv._id)}>
                     <FaChartLine /> Analyze
                   </button>
-                  {!cv.isPrimary && (
-                    <button className="ds-action-btn ds-primary-btn" onClick={() => handleSetPrimary(cv._id)}>
-                      <FaStar /> Set Primary
-                    </button>
-                  )}
                   <button className="ds-action-btn ds-share-btn" onClick={() => handleShare(cv)}>
                     <FaShare /> Share
                   </button>
@@ -620,13 +625,13 @@ const CvManager = () => {
                   <h4>{selectedCv.title}</h4>
                   <table className="ds-info-table">
                     <tbody>
-                      <tr><th>Filename:</th>        <td>{selectedCv.filename}</td>       </tr>
-                      <tr><th>File Type:</th>        <td>{selectedCv.fileType}</td>       </tr>
-                      <tr><th>File Size:</th>        <td>{formatFileSize(selectedCv.fileSize)}</td></tr>
-                      <tr><th>Uploaded:</th>         <td>{formatDate(selectedCv.createdAt)}</td></tr>
-                      <tr><th>Last Updated:</th>     <td>{formatDate(selectedCv.updatedAt)}</td></tr>
-                      <tr><th>Views:</th>            <td>{selectedCv.analytics?.views || 0}</td></tr>
-                      <tr><th>Downloads:</th>        <td>{selectedCv.analytics?.downloads || 0}</td></tr>
+                      <tr><th>Filename:</th><td>{selectedCv.filename}</td></tr>
+                      <tr><th>File Type:</th><td>{selectedCv.fileType}</td></tr>
+                      <tr><th>File Size:</th><td>{formatFileSize(selectedCv.fileSize)}</td></tr>
+                      <tr><th>Uploaded:</th><td>{formatDate(selectedCv.createdAt)}</td></tr>
+                      <tr><th>Last Updated:</th><td>{formatDate(selectedCv.updatedAt)}</td></tr>
+                      <tr><th>Views:</th><td>{selectedCv.analytics?.views || 0}</td></tr>
+                      <tr><th>Downloads:</th><td>{selectedCv.analytics?.downloads || 0}</td></tr>
                     </tbody>
                   </table>
                 </div>

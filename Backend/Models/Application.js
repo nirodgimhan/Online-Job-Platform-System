@@ -8,12 +8,12 @@ const ApplicationSchema = new mongoose.Schema({
     },
     studentId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Student',  // Changed from 'Student' to 'User'
+        ref: 'Student',
         required: true
     },
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Company',  // Changed from 'Company' to 'User'
+        ref: 'Company',
         required: true
     },
     status: {
@@ -166,41 +166,43 @@ ApplicationSchema.methods.addFeedback = async function(feedbackData) {
     return this;
 };
 
-// Pre-save middleware
-ApplicationSchema.pre('save', async function(next) {
-    try {
-        // Update timestamps
-        this.updatedAt = Date.now();
-        
-        // Skip validation if we're not saving due to validation (to avoid infinite loops)
-        if (this.isNew) {
-            const User = mongoose.model('User');
-            const Job = mongoose.model('Job');
-            
-            // Validate student exists
-            const student = await User.findById(this.studentId);
-            if (!student) {
-                throw new Error(`Student not found with ID: ${this.studentId}`);
-            }
-            
-            // Validate job exists
-            const job = await Job.findById(this.jobId);
-            if (!job) {
-                throw new Error(`Job not found with ID: ${this.jobId}`);
-            }
-            
-            // Validate company exists
-            const company = await User.findById(this.companyId);
-            if (!company) {
-                throw new Error(`Company not found with ID: ${this.companyId}`);
-            }
-        }
-        
-        next();
-    } catch (error) {
-        next(error);
-    }
+// ========== FIX: REMOVE VALIDATION PRE-SAVE HOOK ==========
+// The following pre-save hook caused the "Student not found" error.
+// It is now disabled because the route already validates existence.
+// If you still want to keep a pre-save hook, comment it out or modify it to only update timestamps.
+
+// ApplicationSchema.pre('save', async function(next) {
+//     try {
+//         this.updatedAt = Date.now();
+//         if (this.isNew) {
+//             const User = mongoose.model('User');
+//             const Job = mongoose.model('Job');
+//             
+//             const student = await User.findById(this.studentId);
+//             if (!student) {
+//                 throw new Error(`Student not found with ID: ${this.studentId}`);
+//             }
+//             
+//             const job = await Job.findById(this.jobId);
+//             if (!job) {
+//                 throw new Error(`Job not found with ID: ${this.jobId}`);
+//             }
+//             
+//             const company = await User.findById(this.companyId);
+//             if (!company) {
+//                 throw new Error(`Company not found with ID: ${this.companyId}`);
+//             }
+//         }
+//         next();
+//     } catch (error) {
+//         next(error);
+//     }
+// });
+
+// Optional: Keep a simple pre-save to update timestamps
+ApplicationSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
 });
 
-// Check if model already exists before creating
 module.exports = mongoose.models.Application || mongoose.model('Application', ApplicationSchema);

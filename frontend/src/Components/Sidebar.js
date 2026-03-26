@@ -1,7 +1,6 @@
-// frontend/src/Components/Sidebar.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../Components/context/AuthContext';
+import { useAuth, API } from '../Components/context/AuthContext';
 import { 
   FaTachometerAlt,
   FaUser,
@@ -34,10 +33,54 @@ import {
   FaFilter
 } from 'react-icons/fa';
 
+const getBaseUrl = () => {
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000';
+};
+
 const Sidebar = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [companyProfile, setCompanyProfile] = useState(null);
+  const [profilePicture, setProfilePicture] = useState(null);
+
+  useEffect(() => {
+    // If user is company, fetch their profile to get the logo
+    if (user?.role === 'company') {
+      fetchCompanyProfile();
+    } else {
+      // For other roles, use user.profilePicture from context
+      if (user?.profilePicture) {
+        setProfilePicture(user.profilePicture);
+      } else {
+        setProfilePicture(null);
+      }
+    }
+  }, [user]);
+
+  const fetchCompanyProfile = async () => {
+    try {
+      const response = await API.get('/companies/profile');
+      if (response.data.success) {
+        const company = response.data.company;
+        setCompanyProfile(company);
+        if (company.companyLogo) {
+          setProfilePicture(company.companyLogo);
+        } else if (user?.profilePicture) {
+          setProfilePicture(user.profilePicture);
+        } else {
+          setProfilePicture(null);
+        }
+      } else {
+        // Fallback to user.profilePicture if exists
+        if (user?.profilePicture) setProfilePicture(user.profilePicture);
+      }
+    } catch (error) {
+      console.error('Error fetching company profile for sidebar:', error);
+      // Fallback to user.profilePicture
+      if (user?.profilePicture) setProfilePicture(user.profilePicture);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -47,7 +90,12 @@ const Sidebar = ({ children }) => {
     setIsOpen(!isOpen);
   };
 
-  // Student Sidebar Items (Browse Jobs REMOVED)
+  const getProfilePictureUrl = () => {
+    if (!profilePicture) return null;
+    if (profilePicture.startsWith('http')) return profilePicture;
+    return `${getBaseUrl()}${profilePicture}`;
+  };
+
   const studentMenuItems = [
     { title: 'Dashboard', path: '/student/dashboard', icon: <FaTachometerAlt /> },
     { title: 'My Profile', path: '/student/profile', icon: <FaUser /> },
@@ -57,7 +105,6 @@ const Sidebar = ({ children }) => {
     { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' }
   ];
 
-  // Company Sidebar Items (Jobs related items are kept as is)
   const companyMenuItems = [
     { title: 'Dashboard', path: '/company/dashboard', icon: <FaTachometerAlt /> },
     { title: 'Company Profile', path: '/company/profile', icon: <FaBuilding /> },
@@ -67,7 +114,6 @@ const Sidebar = ({ children }) => {
     { title: 'Interviews', path: '/company/interviews', icon: <FaCalendarAlt /> }
   ];
 
-  // Admin Sidebar Items
   const adminMenuItems = [
     { title: 'Dashboard', path: '/admin/dashboard', icon: <FaTachometerAlt /> },
     { title: 'Admin Profile', path: '/admin/profile', icon: <FaUserTie /> },
@@ -89,22 +135,13 @@ const Sidebar = ({ children }) => {
 
   const menuItems = getMenuItems();
 
-  const isActive = (path) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
-  };
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
-  // Get user initials for avatar
   const getUserInitials = () => {
     if (!user?.name) return 'U';
-    return user.name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return user.name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Get role color for badge
   const getRoleColor = () => {
     switch(user?.role) {
       case 'student': return '#48bb78';
@@ -114,7 +151,6 @@ const Sidebar = ({ children }) => {
     }
   };
 
-  // Get role icon
   const getRoleIcon = () => {
     switch(user?.role) {
       case 'student': return <FaUserGraduate />;
@@ -126,18 +162,15 @@ const Sidebar = ({ children }) => {
 
   return (
     <div className="app-dashboard-layout">
-      {/* Mobile Toggle Button */}
       <button className="app-sidebar-toggle-btn" onClick={toggleSidebar}>
         {isOpen ? <FaTimes /> : <FaBars />}
       </button>
 
-      {/* Sidebar */}
       <div className={`app-sidebar ${isOpen ? 'open' : ''}`}>
-        {/* User Info */}
         <div className="app-sidebar-user-info">
           <div className="app-user-avatar-large" style={{ background: `linear-gradient(135deg, ${getRoleColor()}, ${getRoleColor()}cc)` }}>
-            {user?.profilePicture ? (
-              <img src={user.profilePicture} alt={user.name} className="app-avatar-image" />
+            {getProfilePictureUrl() ? (
+              <img src={getProfilePictureUrl()} alt={user.name} className="app-avatar-image" />
             ) : (
               <div className="app-avatar-placeholder">
                 {getUserInitials()}
@@ -150,7 +183,6 @@ const Sidebar = ({ children }) => {
           </div>
         </div>
 
-        {/* Navigation Menu */}
         <nav className="app-sidebar-nav">
           <ul>
             {menuItems.map((item, index) => (
@@ -162,16 +194,13 @@ const Sidebar = ({ children }) => {
                 >
                   <span className="app-nav-icon">{item.icon}</span>
                   <span className="app-nav-title">{item.title}</span>
-                  {item.badge && (
-                    <span className={`app-nav-badge ${item.badge}`}>{item.badge}</span>
-                  )}
+                  {item.badge && <span className={`app-nav-badge ${item.badge}`}>{item.badge}</span>}
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
 
-        {/* Bottom Menu */}
         <div className="app-sidebar-footer">
           <ul>
             <li>

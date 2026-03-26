@@ -1,11 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const Interview = require('../Models/Interview'); // Changed to lowercase 'models'
-const Application = require('../models/Application'); // Changed to lowercase 'models'
-const Job = require('../models/Job'); // Changed to lowercase 'models'
-const User = require('../models/User'); // Changed to lowercase 'models'
+const Interview = require('../Models/Interview');
+const Application = require('../models/Application');
+const Job = require('../models/Job');
+const User = require('../models/User');
+const Student = require('../models/Student');   // added for student profile lookup
 const auth = require('../middleware/auth');
+
+// Helper to get or create a student profile (used only in GET /)
+const getOrCreateStudent = async (userId) => {
+  let student = await Student.findOne({ userId });
+  if (!student) {
+    student = new Student({ userId });
+    await student.save();
+    console.log('✅ Created missing student profile for user:', userId);
+  }
+  return student;
+};
 
 // POST /api/interviews - Schedule a new interview
 router.post('/', auth, async (req, res) => {
@@ -234,8 +246,10 @@ router.get('/', auth, async (req, res) => {
       query.companyId = req.user.id;
       console.log('Fetching interviews for company:', req.user.id);
     } else if (req.user.role === 'student') {
-      query.studentId = req.user.id;
-      console.log('Fetching interviews for student:', req.user.id);
+      // ***** FIX: Use the student document's _id, not the user ID *****
+      const student = await getOrCreateStudent(req.user.id);
+      query.studentId = student._id;
+      console.log('Fetching interviews for student (Student ID):', student._id);
     } else {
       return res.status(403).json({
         success: false,
@@ -250,6 +264,26 @@ router.get('/', auth, async (req, res) => {
       .sort({ scheduledDate: -1 });
 
     console.log(`Found ${interviews.length} interviews for ${req.user.role}`);
+
+    // Helper function for relative time
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
+    }
 
     // Process interviews to add computed fields
     const processedInterviews = interviews.map(interview => {
@@ -275,26 +309,6 @@ router.get('/', auth, async (req, res) => {
     });
   }
 });
-
-// Helper function to get relative time
-function getRelativeTime(dateString) {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = date - now;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMs < 0) return 'Passed';
-    if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
-    if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
-    return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
-  } catch (e) {
-    return '';
-  }
-}
 
 // GET /api/interviews/:id - Get single interview by ID
 router.get('/:id', auth, async (req, res) => {
@@ -327,6 +341,25 @@ router.get('/:id', auth, async (req, res) => {
         success: false,
         message: 'Not authorized to view this interview'
       });
+    }
+
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
     }
 
     const interviewObj = interview.toObject();
@@ -439,6 +472,25 @@ router.put('/:id', auth, async (req, res) => {
       await application.save();
     }
 
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
+    }
+
     res.json({
       success: true,
       message: 'Interview updated successfully',
@@ -516,6 +568,25 @@ router.put('/:id/confirm', auth, async (req, res) => {
         confirmedAt: new Date().toISOString()
       };
       await application.save();
+    }
+
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
     }
 
     res.json({
@@ -629,6 +700,7 @@ router.post('/:id/feedback', auth, async (req, res) => {
 });
 
 // DELETE /api/interviews/:id - Cancel interview
+// DELETE /api/interviews/:id - Cancel interview
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -649,9 +721,26 @@ router.delete('/:id', auth, async (req, res) => {
       });
     }
 
-    // Check authorization
-    if (interview.companyId.toString() !== req.user.id && 
-        interview.studentId.toString() !== req.user.id) {
+    // Authorization check
+    let authorized = false;
+
+    if (req.user.role === 'company') {
+      // Company: compare with stored companyId
+      if (interview.companyId.toString() === req.user.id) {
+        authorized = true;
+      }
+    } else if (req.user.role === 'student') {
+      // Student: get student profile and compare both the user ID and the student document ID
+      const student = await getOrCreateStudent(req.user.id);
+      if (interview.studentId.toString() === student._id.toString() ||
+          interview.studentId.toString() === req.user.id) {
+        authorized = true;
+      }
+    } else if (req.user.role === 'admin') {
+      authorized = true;
+    }
+
+    if (!authorized) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to cancel this interview'
@@ -737,6 +826,25 @@ router.get('/upcoming/me', auth, async (req, res) => {
       .populate('studentId', 'name email')
       .sort({ scheduledDate: 1 })
       .limit(10);
+
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
+    }
 
     const processedInterviews = interviews.map(interview => ({
       ...interview.toObject(),

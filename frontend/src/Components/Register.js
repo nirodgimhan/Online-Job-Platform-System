@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../Components/context/AuthContext';
+import { useAuth, API } from '../Components/context/AuthContext';
 import { toast } from 'react-toastify';
 import { 
   FaUser, 
@@ -16,7 +16,10 @@ import {
   FaTimesCircle,
   FaFacebookF,
   FaGoogle,
-  FaLinkedinIn
+  FaLinkedinIn,
+  FaIndustry,
+  FaUsers,
+  FaGlobe
 } from 'react-icons/fa';
 
 const Register = () => {
@@ -26,7 +29,13 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: 'student',
-    phoneNumber: ''
+    phoneNumber: '',
+    // Company-specific fields
+    companyName: '',
+    industry: '',
+    companySize: '',
+    website: '',
+    description: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -119,7 +128,37 @@ const Register = () => {
       newErrors.phoneNumber = 'Please enter a valid phone number';
     }
 
+    // Company-specific validations
+    if (formData.role === 'company') {
+      if (!formData.companyName.trim()) {
+        newErrors.companyName = 'Company name is required';
+      }
+      if (!formData.industry.trim()) {
+        newErrors.industry = 'Industry is required';
+      }
+    }
+
     return newErrors;
+  };
+
+  // Helper to create company profile after registration
+  const createCompanyProfile = async (userId) => {
+    try {
+      const profileData = {
+        companyName: formData.companyName,
+        industry: formData.industry || null,
+        companySize: formData.companySize || null,
+        website: formData.website || null,
+        description: formData.description || null,
+        contactEmail: formData.email,
+        contactPhone: formData.phoneNumber || null
+      };
+      await API.post('/companies/profile', profileData);
+      console.log('Company profile created successfully');
+    } catch (error) {
+      console.error('Error creating company profile:', error);
+      // We don't show an error to the user because registration already succeeded
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -142,6 +181,12 @@ const Register = () => {
       
       if (result && result.success) {
         toast.success('Registration successful! Redirecting...');
+        
+        // If company, create the profile now
+        if (formData.role === 'company') {
+          await createCompanyProfile(result.data.user.id);
+        }
+        
         setTimeout(() => {
           navigate('/login');
         }, 1500);
@@ -177,6 +222,7 @@ const Register = () => {
             <h2 className="ds-register-title">Create Account</h2>
             <p className="ds-register-subtitle">To keep connected with us please sign up with your personal info</p>
             
+            {/* Social Buttons */}
             <button className="ds-social-btn ds-social-facebook">
               <FaFacebookF /> Sign up with Facebook
             </button>
@@ -192,12 +238,32 @@ const Register = () => {
             </div>
             
             <form onSubmit={handleSubmit} className="ds-register-form">
-              {/* Name Field */}
+              {/* Role Selection - Inline Centered */}
+              <div className="ds-role-selection">
+                <div 
+                  className={`ds-role-card ${formData.role === 'student' ? 'active' : ''}`}
+                  onClick={() => setFormData({...formData, role: 'student'})}
+                >
+                  <FaUserGraduate className="ds-role-icon" />
+                  <h4>Student</h4>
+                  <p>Looking for job opportunities</p>
+                </div>
+                <div 
+                  className={`ds-role-card ${formData.role === 'company' ? 'active' : ''}`}
+                  onClick={() => setFormData({...formData, role: 'company'})}
+                >
+                  <FaBuilding className="ds-role-icon" />
+                  <h4>Company</h4>
+                  <p>Hiring talent</p>
+                </div>
+              </div>
+              
+              {/* Common Fields */}
               <div className="ds-form-group">
                 <input
                   type="text"
                   name="name"
-                  placeholder="Name"
+                  placeholder={formData.role === 'student' ? "Full Name" : "Contact Person Name"}
                   value={formData.name}
                   onChange={handleChange}
                   required
@@ -206,6 +272,77 @@ const Register = () => {
                 />
                 {errors.name && <span className="ds-error-text">{errors.name}</span>}
               </div>
+              
+              {formData.role === 'company' && (
+                <>
+                  <div className="ds-form-group">
+                    <input
+                      type="text"
+                      name="companyName"
+                      placeholder="Company Name"
+                      value={formData.companyName}
+                      onChange={handleChange}
+                      required
+                      className={`ds-form-input ${errors.companyName ? 'ds-error' : ''}`}
+                      disabled={loading}
+                    />
+                    {errors.companyName && <span className="ds-error-text">{errors.companyName}</span>}
+                  </div>
+                  <div className="ds-form-group">
+                    <input
+                      type="text"
+                      name="industry"
+                      placeholder="Industry (e.g., Technology, Healthcare)"
+                      value={formData.industry}
+                      onChange={handleChange}
+                      required
+                      className={`ds-form-input ${errors.industry ? 'ds-error' : ''}`}
+                      disabled={loading}
+                    />
+                    {errors.industry && <span className="ds-error-text">{errors.industry}</span>}
+                  </div>
+                  <div className="ds-form-row">
+                    <div className="ds-form-group">
+                      <select
+                        name="companySize"
+                        value={formData.companySize}
+                        onChange={handleChange}
+                        className="ds-form-input"
+                        disabled={loading}
+                      >
+                        <option value="">Company Size</option>
+                        <option value="1-10">1-10 employees</option>
+                        <option value="11-50">11-50 employees</option>
+                        <option value="51-200">51-200 employees</option>
+                        <option value="201-500">201-500 employees</option>
+                        <option value="500+">500+ employees</option>
+                      </select>
+                    </div>
+                    <div className="ds-form-group">
+                      <input
+                        type="url"
+                        name="website"
+                        placeholder="Website (optional)"
+                        value={formData.website}
+                        onChange={handleChange}
+                        className="ds-form-input"
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                  <div className="ds-form-group">
+                    <textarea
+                      name="description"
+                      placeholder="Company Description (optional)"
+                      value={formData.description}
+                      onChange={handleChange}
+                      rows="3"
+                      className="ds-form-input"
+                      disabled={loading}
+                    />
+                  </div>
+                </>
+              )}
               
               {/* Email Field */}
               <div className="ds-form-group">
@@ -220,6 +357,20 @@ const Register = () => {
                   disabled={loading}
                 />
                 {errors.email && <span className="ds-error-text">{errors.email}</span>}
+              </div>
+              
+              {/* Phone Number (Optional) */}
+              <div className="ds-form-group">
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  placeholder="Phone Number (Optional)"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  className={`ds-form-input ${errors.phoneNumber ? 'ds-error' : ''}`}
+                  disabled={loading}
+                />
+                {errors.phoneNumber && <span className="ds-error-text">{errors.phoneNumber}</span>}
               </div>
               
               {/* Password Field */}
@@ -311,20 +462,6 @@ const Register = () => {
                     <FaCheckCircle /> Passwords match
                   </span>
                 )}
-              </div>
-              
-              {/* Phone Number (Optional) */}
-              <div className="ds-form-group">
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  placeholder="Phone Number (Optional)"
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                  className={`ds-form-input ${errors.phoneNumber ? 'ds-error' : ''}`}
-                  disabled={loading}
-                />
-                {errors.phoneNumber && <span className="ds-error-text">{errors.phoneNumber}</span>}
               </div>
               
               {/* Terms and Conditions */}
