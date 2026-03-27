@@ -154,13 +154,13 @@ const CompanyInterviews = () => {
   const getStatusBadge = (status) => {
     const statusLower = status?.toLowerCase() || 'scheduled';
     const badges = {
-      'scheduled': { class: 'ds-status-scheduled', icon: <FaClock />, text: 'Scheduled' },
-      'confirmed': { class: 'ds-status-confirmed', icon: <FaCheckCircle />, text: 'Confirmed' },
-      'completed': { class: 'ds-status-completed', icon: <FaCheckCircle />, text: 'Completed' },
-      'cancelled': { class: 'ds-status-cancelled', icon: <FaTimesCircle />, text: 'Cancelled' }
+      'scheduled': { class: 'ci-status-scheduled', icon: <FaClock />, text: 'Scheduled' },
+      'confirmed': { class: 'ci-status-confirmed', icon: <FaCheckCircle />, text: 'Confirmed' },
+      'completed': { class: 'ci-status-completed', icon: <FaCheckCircle />, text: 'Completed' },
+      'cancelled': { class: 'ci-status-cancelled', icon: <FaTimesCircle />, text: 'Cancelled' }
     };
     const badge = badges[statusLower] || badges['scheduled'];
-    return <span className={`ds-status-badge ${badge.class}`}>{badge.icon}{badge.text}</span>;
+    return <span className={`ci-status-badge ${badge.class}`}>{badge.icon}{badge.text}</span>;
   };
 
   const getModeIcon = (mode) => {
@@ -196,100 +196,115 @@ const CompanyInterviews = () => {
 
   if (loading) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
+      <div className="ci-loading-container">
+        <div className="ci-spinner"></div>
         <h4>Loading interviews...</h4>
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <div className="ci-error-container">
+        <div className="ci-error-card">
+          <FaExclamationTriangle className="ci-error-icon" />
+          <h3>Error Loading Interviews</h3>
+          <p>{error}</p>
+          <button className="ci-btn ci-btn-primary" onClick={fetchInterviews}>
+            <FaSyncAlt /> Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="ds-company-interviews">
-      <div className="ds-container">
-        <div className="ds-page-header">
-          <div className="ds-header-left">
-            <div className="ds-header-icon-wrapper"><FaCalendarAlt className="ds-header-icon" /></div>
+    <div className="ci-company-interviews">
+      <div className="ci-container">
+        <div className="ci-page-header">
+          <div className="ci-header-left">
+            <div className="ci-header-icon-wrapper"><FaCalendarAlt className="ci-header-icon" /></div>
             <div><h1>Interview Management</h1><p>Schedule, manage and provide feedback for interviews</p></div>
           </div>
-          <div className="ds-header-actions">
-            <Link to="/company/applicants" className="ds-btn ds-btn-outline-primary"><FaUsers /> View Applicants</Link>
-            <button className="ds-refresh-btn" onClick={fetchInterviews}><FaSyncAlt /> Refresh</button>
+          <div className="ci-header-actions">
+            <Link to="/company/applicants" className="ci-btn ci-btn-outline-primary"><FaUsers /> View Applicants</Link>
+            <button className="ci-refresh-btn" onClick={fetchInterviews}><FaSyncAlt /> Refresh</button>
           </div>
         </div>
 
         {interviews.length > 0 && (
-          <div className="ds-stats-grid">
-            <div className="ds-stat-card"><div className="ds-stat-icon"><FaCalendarAlt /></div><div><span className="ds-stat-value">{stats.total}</span><span>Total</span></div></div>
-            <div className="ds-stat-card"><div className="ds-stat-icon"><FaClock /></div><div><span className="ds-stat-value">{stats.scheduled}</span><span>Scheduled</span></div></div>
-            <div className="ds-stat-card"><div className="ds-stat-icon"><FaCheckCircle /></div><div><span className="ds-stat-value">{stats.completed}</span><span>Completed</span></div></div>
-            <div className="ds-stat-card"><div className="ds-stat-icon"><FaTimesCircle /></div><div><span className="ds-stat-value">{stats.cancelled}</span><span>Cancelled</span></div></div>
+          <div className="ci-stats-grid">
+            <div className="ci-stat-card"><div className="ci-stat-icon"><FaCalendarAlt /></div><div><span className="ci-stat-value">{stats.total}</span><span>Total</span></div></div>
+            <div className="ci-stat-card"><div className="ci-stat-icon"><FaClock /></div><div><span className="ci-stat-value">{stats.scheduled}</span><span>Scheduled</span></div></div>
+            <div className="ci-stat-card"><div className="ci-stat-icon"><FaCheckCircle /></div><div><span className="ci-stat-value">{stats.completed}</span><span>Completed</span></div></div>
+            <div className="ci-stat-card"><div className="ci-stat-icon"><FaTimesCircle /></div><div><span className="ci-stat-value">{stats.cancelled}</span><span>Cancelled</span></div></div>
           </div>
         )}
 
-        <div className="ds-filters-card">
-          <div className="ds-filters-row">
-            <div className="ds-filter-group">
+        <div className="ci-filters-card">
+          <div className="ci-filters-row">
+            <div className="ci-filter-group">
               <label>Status</label>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="all">All Interviews</option>
                 <option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option>
               </select>
             </div>
-            <div className="ds-filter-group">
+            <div className="ci-filter-group">
               <label>Sort By</label>
               <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="date">Sort by Date</option><option value="student">Sort by Student</option>
               </select>
             </div>
-            <div className="ds-results-info"><p>Showing <strong>{filteredInterviews.length}</strong> of <strong>{interviews.length}</strong> interviews</p></div>
+            <div className="ci-results-info"><p>Showing <strong>{filteredInterviews.length}</strong> of <strong>{interviews.length}</strong> interviews</p></div>
           </div>
         </div>
 
         {filteredInterviews.length === 0 ? (
-          <div className="ds-empty-state">
-            <FaCalendarAlt className="ds-empty-icon" />
+          <div className="ci-empty-state">
+            <FaCalendarAlt className="ci-empty-icon" />
             <h3>No Interviews Found</h3>
-            <Link to="/company/applicants" className="ds-btn ds-btn-primary">View Applicants</Link>
+            <Link to="/company/applicants" className="ci-btn ci-btn-primary">View Applicants</Link>
           </div>
         ) : (
-          <div className="ds-interviews-grid">
+          <div className="ci-interviews-grid">
             {filteredInterviews.map(interview => (
-              <div key={interview._id} className="ds-interview-card">
-                <div className="ds-card-header">
-                  <div className="ds-student-info">
-                    <div className="ds-student-avatar">{interview.studentId?.userId?.name?.charAt(0).toUpperCase() || 'S'}</div>
+              <div key={interview._id} className="ci-interview-card">
+                <div className="ci-card-header">
+                  <div className="ci-student-info">
+                    <div className="ci-student-avatar">{interview.studentId?.userId?.name?.charAt(0).toUpperCase() || 'S'}</div>
                     <div><h3>{interview.studentId?.userId?.name}</h3><p>{interview.studentId?.userId?.email}</p></div>
                   </div>
                   {getStatusBadge(interview.status)}
                 </div>
-                <div className="ds-card-body">
+                <div className="ci-card-body">
                   <h4>{interview.jobId?.title}</h4>
-                  <div className="ds-interview-details">
-                    <div className="ds-detail-item"><FaCalendarAlt /><div><span>Date & Time</span><strong>{formatDate(interview.scheduledDate)}</strong></div></div>
-                    <div className="ds-detail-item">{getModeIcon(interview.mode)}<div><span>Mode</span><strong>{interview.mode}</strong></div></div>
-                    {interview.duration && <div className="ds-detail-item"><FaClock /><div><span>Duration</span><strong>{interview.duration} min</strong></div></div>}
+                  <div className="ci-interview-details">
+                    <div className="ci-detail-item"><FaCalendarAlt /><div><span>Date & Time</span><strong>{formatDate(interview.scheduledDate)}</strong></div></div>
+                    <div className="ci-detail-item">{getModeIcon(interview.mode)}<div><span>Mode</span><strong>{interview.mode}</strong></div></div>
+                    {interview.duration && <div className="ci-detail-item"><FaClock /><div><span>Duration</span><strong>{interview.duration} min</strong></div></div>}
                   </div>
                   {interview.meetingLink && (
-                    <div className="ds-meeting-link"><FaVideo /><a href={interview.meetingLink} target="_blank">Join Meeting <FaExternalLinkAlt /></a></div>
+                    <div className="ci-meeting-link"><FaVideo /><a href={interview.meetingLink} target="_blank">Join Meeting <FaExternalLinkAlt /></a></div>
                   )}
                   {interview.notes && (
-                    <div className="ds-notes"><FaInfoCircle /><div><span>Notes</span><p>{interview.notes}</p></div></div>
+                    <div className="ci-notes"><FaInfoCircle /><div><span>Notes</span><p>{interview.notes}</p></div></div>
                   )}
                   {interview.feedback && (
-                    <div className="ds-feedback-preview"><FaStar /><div><span>Feedback</span><p>Rating: {interview.feedback.rating}/5</p><p>{interview.feedback.recommendation}</p></div></div>
+                    <div className="ci-feedback-preview"><FaStar /><div><span>Feedback</span><p>Rating: {interview.feedback.rating}/5</p><p>{interview.feedback.recommendation}</p></div></div>
                   )}
                 </div>
-                <div className="ds-card-footer">
+                <div className="ci-card-footer">
                   {(!interview.feedback || Object.keys(interview.feedback).length === 0) && interview.status?.toLowerCase() !== 'cancelled' && interview.status?.toLowerCase() !== 'completed' && (
-                    <button className="ds-btn ds-btn-primary" onClick={() => { setSelectedInterview(interview); setShowFeedbackModal(true); }}><FaStar /> Add Feedback</button>
+                    <button className="ci-btn ci-btn-primary" onClick={() => { setSelectedInterview(interview); setShowFeedbackModal(true); }}><FaStar /> Add Feedback</button>
                   )}
                   {(interview.status?.toLowerCase() === 'scheduled' || interview.status?.toLowerCase() === 'confirmed') && (
                     <>
-                      <button className="ds-btn ds-btn-outline-primary" onClick={() => { setSelectedInterview(interview); setShowRescheduleModal(true); }}><FaClock /> Reschedule</button>
-                      <button className="ds-btn ds-btn-danger" onClick={() => { setSelectedInterview(interview); setShowCancelModal(true); }}><FaTimesCircle /> Cancel</button>
+                      <button className="ci-btn ci-btn-outline-primary" onClick={() => { setSelectedInterview(interview); setShowRescheduleModal(true); }}><FaClock /> Reschedule</button>
+                      <button className="ci-btn ci-btn-danger" onClick={() => { setSelectedInterview(interview); setShowCancelModal(true); }}><FaTimesCircle /> Cancel</button>
                     </>
                   )}
-                  <button className="ds-btn ds-btn-link" onClick={() => navigate(`/company/applicant/${interview.applicationId?._id || interview.applicationId}`)}>View Application <FaArrowRight /></button>
+                  <button className="ci-btn ci-btn-link" onClick={() => navigate(`/company/applicant/${interview.applicationId?._id || interview.applicationId}`)}>View Application <FaArrowRight /></button>
                 </div>
               </div>
             ))}
@@ -299,47 +314,47 @@ const CompanyInterviews = () => {
 
       {/* Cancel Modal */}
       {showCancelModal && selectedInterview && (
-        <div className="ds-modal-overlay" onClick={() => setShowCancelModal(false)}>
-          <div className="ds-modal" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header ds-modal-header-danger"><FaTimesCircle /><h3>Cancel Interview</h3><button className="ds-modal-close" onClick={() => setShowCancelModal(false)}><FaTimes /></button></div>
-            <div className="ds-modal-body">
+        <div className="ci-modal-overlay" onClick={() => setShowCancelModal(false)}>
+          <div className="ci-modal" onClick={e => e.stopPropagation()}>
+            <div className="ci-modal-header ci-modal-header-danger"><FaTimesCircle /><h3>Cancel Interview</h3><button className="ci-modal-close" onClick={() => setShowCancelModal(false)}><FaTimes /></button></div>
+            <div className="ci-modal-body">
               <p>Are you sure you want to cancel this interview?</p>
-              <div className="ds-interview-preview"><h4>{selectedInterview.studentId?.userId?.name}</h4><p>{selectedInterview.jobId?.title}</p><small>{formatDate(selectedInterview.scheduledDate)}</small></div>
-              <div className="ds-form-group"><label>Reason *</label><textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows="3" /></div>
+              <div className="ci-interview-preview"><h4>{selectedInterview.studentId?.userId?.name}</h4><p>{selectedInterview.jobId?.title}</p><small>{formatDate(selectedInterview.scheduledDate)}</small></div>
+              <div className="ci-form-group"><label>Reason *</label><textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} rows="3" /></div>
             </div>
-            <div className="ds-modal-footer"><button className="ds-btn ds-btn-secondary" onClick={() => setShowCancelModal(false)}>Cancel</button><button className="ds-btn ds-btn-danger" onClick={handleCancel} disabled={cancelling}>{cancelling ? <FaSpinner className="ds-spin" /> : 'Confirm Cancel'}</button></div>
+            <div className="ci-modal-footer"><button className="ci-btn ci-btn-secondary" onClick={() => setShowCancelModal(false)}>Cancel</button><button className="ci-btn ci-btn-danger" onClick={handleCancel} disabled={cancelling}>{cancelling ? <FaSpinner className="ci-spin" /> : 'Confirm Cancel'}</button></div>
           </div>
         </div>
       )}
 
       {/* Reschedule Modal */}
       {showRescheduleModal && selectedInterview && (
-        <div className="ds-modal-overlay" onClick={() => setShowRescheduleModal(false)}>
-          <div className="ds-modal" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header ds-modal-header-info"><FaClock /><h3>Reschedule Interview</h3><button className="ds-modal-close" onClick={() => setShowRescheduleModal(false)}><FaTimes /></button></div>
-            <div className="ds-modal-body">
-              <div className="ds-interview-preview"><h4>{selectedInterview.studentId?.userId?.name}</h4><p>{selectedInterview.jobId?.title}</p><small>Current: {formatDate(selectedInterview.scheduledDate)}</small></div>
-              <div className="ds-form-group"><label>New Date & Time *</label><input type="datetime-local" value={proposedDate} onChange={(e) => setProposedDate(e.target.value)} min={new Date().toISOString().slice(0, 16)} /></div>
-              <div className="ds-form-group"><label>Reason *</label><textarea value={rescheduleReason} onChange={(e) => setRescheduleReason(e.target.value)} rows="3" /></div>
+        <div className="ci-modal-overlay" onClick={() => setShowRescheduleModal(false)}>
+          <div className="ci-modal" onClick={e => e.stopPropagation()}>
+            <div className="ci-modal-header ci-modal-header-info"><FaClock /><h3>Reschedule Interview</h3><button className="ci-modal-close" onClick={() => setShowRescheduleModal(false)}><FaTimes /></button></div>
+            <div className="ci-modal-body">
+              <div className="ci-interview-preview"><h4>{selectedInterview.studentId?.userId?.name}</h4><p>{selectedInterview.jobId?.title}</p><small>Current: {formatDate(selectedInterview.scheduledDate)}</small></div>
+              <div className="ci-form-group"><label>New Date & Time *</label><input type="datetime-local" value={proposedDate} onChange={(e) => setProposedDate(e.target.value)} min={new Date().toISOString().slice(0, 16)} /></div>
+              <div className="ci-form-group"><label>Reason *</label><textarea value={rescheduleReason} onChange={(e) => setRescheduleReason(e.target.value)} rows="3" /></div>
             </div>
-            <div className="ds-modal-footer"><button className="ds-btn ds-btn-secondary" onClick={() => setShowRescheduleModal(false)}>Cancel</button><button className="ds-btn ds-btn-primary" onClick={handleReschedule} disabled={rescheduling}>{rescheduling ? <FaSpinner className="ds-spin" /> : 'Confirm Reschedule'}</button></div>
+            <div className="ci-modal-footer"><button className="ci-btn ci-btn-secondary" onClick={() => setShowRescheduleModal(false)}>Cancel</button><button className="ci-btn ci-btn-primary" onClick={handleReschedule} disabled={rescheduling}>{rescheduling ? <FaSpinner className="ci-spin" /> : 'Confirm Reschedule'}</button></div>
           </div>
         </div>
       )}
 
       {/* Feedback Modal */}
       {showFeedbackModal && selectedInterview && (
-        <div className="ds-modal-overlay" onClick={() => setShowFeedbackModal(false)}>
-          <div className="ds-modal ds-modal-large" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header ds-modal-header-success"><FaStar /><h3>Interview Feedback</h3><button className="ds-modal-close" onClick={() => setShowFeedbackModal(false)}><FaTimes /></button></div>
-            <div className="ds-modal-body">
-              <div className="ds-interview-preview"><h4>{selectedInterview.studentId?.userId?.name}</h4><p>{selectedInterview.jobId?.title}</p></div>
-              <div className="ds-form-group"><label>Rating *</label><div className="ds-rating-input">{[1,2,3,4,5].map(star => (<button key={star} className={star <= feedbackData.rating ? 'ds-star-active' : ''} onClick={() => setFeedbackData({...feedbackData, rating: star})}>{star <= feedbackData.rating ? <FaStar /> : <FaRegStar />}</button>))}</div></div>
-              <div className="ds-form-group"><label>Comments *</label><textarea value={feedbackData.comments} onChange={(e) => setFeedbackData({...feedbackData, comments: e.target.value})} rows="4" /></div>
-              <div className="ds-form-row"><div className="ds-form-group"><label>Strengths</label><input type="text" value={feedbackData.strengths} onChange={(e) => setFeedbackData({...feedbackData, strengths: e.target.value})} placeholder="Technical skills, Communication" /></div><div className="ds-form-group"><label>Areas to Improve</label><input type="text" value={feedbackData.weaknesses} onChange={(e) => setFeedbackData({...feedbackData, weaknesses: e.target.value})} placeholder="Experience, Technical depth" /></div></div>
-              <div className="ds-form-group"><label>Recommendation *</label><select value={feedbackData.recommendation} onChange={(e) => setFeedbackData({...feedbackData, recommendation: e.target.value})}><option value="Hire">Hire</option><option value="Second Interview">Second Interview</option><option value="Reject">Reject</option><option value="Pending">Pending</option></select></div>
+        <div className="ci-modal-overlay" onClick={() => setShowFeedbackModal(false)}>
+          <div className="ci-modal ci-modal-large" onClick={e => e.stopPropagation()}>
+            <div className="ci-modal-header ci-modal-header-success"><FaStar /><h3>Interview Feedback</h3><button className="ci-modal-close" onClick={() => setShowFeedbackModal(false)}><FaTimes /></button></div>
+            <div className="ci-modal-body">
+              <div className="ci-interview-preview"><h4>{selectedInterview.studentId?.userId?.name}</h4><p>{selectedInterview.jobId?.title}</p></div>
+              <div className="ci-form-group"><label>Rating *</label><div className="ci-rating-input">{[1,2,3,4,5].map(star => (<button key={star} className={star <= feedbackData.rating ? 'ci-star-active' : ''} onClick={() => setFeedbackData({...feedbackData, rating: star})}>{star <= feedbackData.rating ? <FaStar /> : <FaRegStar />}</button>))}</div></div>
+              <div className="ci-form-group"><label>Comments *</label><textarea value={feedbackData.comments} onChange={(e) => setFeedbackData({...feedbackData, comments: e.target.value})} rows="4" /></div>
+              <div className="ci-form-row"><div className="ci-form-group"><label>Strengths</label><input type="text" value={feedbackData.strengths} onChange={(e) => setFeedbackData({...feedbackData, strengths: e.target.value})} placeholder="Technical skills, Communication" /></div><div className="ci-form-group"><label>Areas to Improve</label><input type="text" value={feedbackData.weaknesses} onChange={(e) => setFeedbackData({...feedbackData, weaknesses: e.target.value})} placeholder="Experience, Technical depth" /></div></div>
+              <div className="ci-form-group"><label>Recommendation *</label><select value={feedbackData.recommendation} onChange={(e) => setFeedbackData({...feedbackData, recommendation: e.target.value})}><option value="Hire">Hire</option><option value="Second Interview">Second Interview</option><option value="Reject">Reject</option><option value="Pending">Pending</option></select></div>
             </div>
-            <div className="ds-modal-footer"><button className="ds-btn ds-btn-secondary" onClick={() => setShowFeedbackModal(false)}>Cancel</button><button className="ds-btn ds-btn-primary" onClick={handleSubmitFeedback} disabled={submitting}>{submitting ? <FaSpinner className="ds-spin" /> : 'Submit Feedback'}</button></div>
+            <div className="ci-modal-footer"><button className="ci-btn ci-btn-secondary" onClick={() => setShowFeedbackModal(false)}>Cancel</button><button className="ci-btn ci-btn-primary" onClick={handleSubmitFeedback} disabled={submitting}>{submitting ? <FaSpinner className="ci-spin" /> : 'Submit Feedback'}</button></div>
           </div>
         </div>
       )}

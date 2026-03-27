@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const User = require('../models/User');
-const Student = require('../Models/Student');
+const Student = require('../models/Student');
 const Company = require('../models/Company');
 
 // @route   GET api/users

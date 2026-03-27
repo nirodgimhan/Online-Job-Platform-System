@@ -12,14 +12,20 @@ import {
   FaUserPlus, FaUserCheck, FaEllipsisH
 } from 'react-icons/fa';
 
+// Helper to get full URL for images
+const getFullImageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  return `${baseUrl}${path}`;
+};
+
 const CompanyProfile = () => {
-  const { user, updateUser } = useAuth();  // ✅ added updateUser
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
-  const coverInputRef = useRef(null);
   const logoInputRef = useRef(null);
+  const coverInputRef = useRef(null);
   
-  // ... (all other state remains the same)
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,7 +71,7 @@ const CompanyProfile = () => {
   const [logoPreview, setLogoPreview] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
 
-  // Helper function to safely render arrays
+  // Helper to safely render arrays
   const safeRenderArray = (array, renderFn) => {
     if (!array || !Array.isArray(array)) return null;
     return array.map((item, index) => {
@@ -102,9 +108,8 @@ const CompanyProfile = () => {
           address: companyData.address || { street: '', city: '', state: '', country: '', zipCode: '' },
           socialMedia: companyData.socialMedia || { linkedin: '', twitter: '', facebook: '', instagram: '' }
         });
-        if (companyData.companyLogo) setLogoPreview(`http://localhost:5000${companyData.companyLogo}`);
-        if (companyData.coverPhoto) setCoverPreview(`http://localhost:5000${companyData.coverPhoto}`);
-        toast.success('Profile loaded successfully');
+        if (companyData.companyLogo) setLogoPreview(getFullImageUrl(companyData.companyLogo));
+        if (companyData.coverPhoto) setCoverPreview(getFullImageUrl(companyData.coverPhoto));
       }
     } catch (error) {
       console.error('Error fetching company profile:', error);
@@ -126,7 +131,7 @@ const CompanyProfile = () => {
         setPosts(response.data.posts || []);
         setStats(prev => ({ ...prev, posts: response.data.posts?.length || 0 }));
       }
-    } catch (error) { setPosts([]); }
+    } catch (error) { console.error('Error fetching posts:', error); setPosts([]); }
   };
 
   const fetchJobs = async () => {
@@ -136,7 +141,7 @@ const CompanyProfile = () => {
         setJobs(response.data.jobs || []);
         setStats(prev => ({ ...prev, jobs: response.data.jobs?.length || 0 }));
       }
-    } catch (error) { setJobs([]); }
+    } catch (error) { console.error('Error fetching jobs:', error); setJobs([]); }
   };
 
   const fetchFollowers = async () => {
@@ -146,7 +151,7 @@ const CompanyProfile = () => {
         setFollowers(response.data.followers || []);
         setStats(prev => ({ ...prev, followers: response.data.followers?.length || 0 }));
       }
-    } catch (error) { setFollowers([]); }
+    } catch (error) { console.error('Error fetching followers:', error); setFollowers([]); }
   };
 
   const fetchStats = async () => {
@@ -155,7 +160,7 @@ const CompanyProfile = () => {
       if (response.data.success) {
         setStats(prev => ({ ...prev, ...response.data.stats }));
       }
-    } catch (error) {}
+    } catch (error) { console.error('Error fetching stats:', error); }
   };
 
   const handleInputChange = (e) => {
@@ -171,7 +176,6 @@ const CompanyProfile = () => {
     }
   };
 
-  // Logo Upload (UPDATED to update user context)
   const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -195,25 +199,23 @@ const CompanyProfile = () => {
 
       if (response.data.success) {
         toast.success('Logo updated successfully');
-        const newLogoUrl = response.data.logoUrl; // e.g., "/uploads/logo-xxx.jpg"
+        const newLogoUrl = response.data.logo; // the route returns { logo: url }
 
         // Update local profile state
         setProfile(prev => ({ ...prev, companyLogo: newLogoUrl }));
+        setLogoPreview(getFullImageUrl(newLogoUrl));
 
-        // ✅ Refresh user data to update sidebar
+        // Update user context
         try {
           const userResponse = await API.get('/auth/me');
           if (userResponse.data.success) {
-            const updatedUser = userResponse.data.user;
-            updateUser(updatedUser);  // This updates context and localStorage
+            updateUser(userResponse.data.user);
           } else {
-            // Fallback: manually update user object
             const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
             storedUser.profilePicture = newLogoUrl;
             updateUser(storedUser);
           }
         } catch (err) {
-          console.warn('Could not refresh user context, updating manually', err);
           const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
           storedUser.profilePicture = newLogoUrl;
           updateUser(storedUser);
@@ -246,7 +248,8 @@ const CompanyProfile = () => {
       });
       if (response.data.success) {
         toast.success('Cover photo updated successfully');
-        setProfile(prev => ({ ...prev, coverPhoto: response.data.coverUrl }));
+        setProfile(prev => ({ ...prev, coverPhoto: response.data.cover }));
+        setCoverPreview(getFullImageUrl(response.data.cover));
       }
     } catch (error) {
       toast.error('Failed to upload cover photo');
@@ -283,12 +286,19 @@ const CompanyProfile = () => {
     }
   };
 
-  const handleLikePost = (postId) => {
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { ...post, likes: post.liked ? post.likes - 1 : post.likes + 1, liked: !post.liked }
-        : post
-    ));
+  const handleLikePost = async (postId) => {
+    try {
+      const response = await API.put(`/posts/${postId}/like`);
+      if (response.data.success) {
+        setPosts(posts.map(post => 
+          post._id === postId 
+            ? { ...post, likes: response.data.likesCount, liked: response.data.isLiked }
+            : post
+        ));
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
   };
 
   const handleSubmit = async () => {
@@ -343,8 +353,8 @@ const CompanyProfile = () => {
         address: profile.address || { street: '', city: '', state: '', country: '', zipCode: '' },
         socialMedia: profile.socialMedia || { linkedin: '', twitter: '', facebook: '', instagram: '' }
       });
-      setLogoPreview(profile.companyLogo ? `http://localhost:5000${profile.companyLogo}` : null);
-      setCoverPreview(profile.coverPhoto ? `http://localhost:5000${profile.coverPhoto}` : null);
+      setLogoPreview(profile.companyLogo ? getFullImageUrl(profile.companyLogo) : null);
+      setCoverPreview(profile.coverPhoto ? getFullImageUrl(profile.coverPhoto) : null);
     } else {
       setFormData({
         companyName: '',
@@ -405,7 +415,7 @@ const CompanyProfile = () => {
 
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = job.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         job.location?.toLowerCase().includes(searchQuery.toLowerCase());
+                         job.location?.city?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = jobFilter === 'all' || job.status === jobFilter;
     return matchesSearch && matchesStatus;
   });
@@ -414,24 +424,24 @@ const CompanyProfile = () => {
 
   if (loading) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
+      <div className="cp-loading-container">
+        <div className="cp-spinner"></div>
         <h4>Loading company profile...</h4>
       </div>
     );
   }
 
   return (
-    <div className="ds-company-profile">
-      <div className="ds-company-profile-container">
+    <div className="cp-company-profile">
+      <div className="cp-container">
         {/* Cover Photo */}
-        <div className="ds-cover-photo" style={{ 
+        <div className="cp-cover-photo" style={{ 
           backgroundImage: coverPreview ? `url(${coverPreview})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
         }}>
           {!editing && (
-            <div className="ds-cover-actions">
-              <label className="ds-cover-upload-btn">
-                {uploadingCover ? <FaSpinner className="ds-fa-spin" /> : <FaCamera />}
+            <div className="cp-cover-actions">
+              <label className="cp-cover-upload-btn">
+                {uploadingCover ? <FaSpinner className="cp-spin" /> : <FaCamera />}
                 <input type="file" ref={coverInputRef} accept="image/*" onChange={handleCoverUpload} style={{ display: 'none' }} disabled={uploadingCover} />
               </label>
             </div>
@@ -439,53 +449,53 @@ const CompanyProfile = () => {
         </div>
 
         {/* Profile Header */}
-        <div className="ds-profile-header">
-          <div className="ds-profile-logo-wrapper">
-            <div className="ds-profile-logo">
+        <div className="cp-profile-header">
+          <div className="cp-logo-wrapper">
+            <div className="cp-logo">
               {logoPreview ? (
                 <img src={logoPreview} alt={formData.companyName} />
               ) : (
-                <div className="ds-logo-placeholder">
+                <div className="cp-logo-placeholder">
                   {getInitials(formData.companyName || 'Company')}
                 </div>
               )}
               {!editing && (
-                <label className="ds-logo-upload-btn">
-                  {uploadingLogo ? <FaSpinner className="ds-fa-spin" /> : <FaCamera />}
+                <label className="cp-logo-upload-btn">
+                  {uploadingLogo ? <FaSpinner className="cp-spin" /> : <FaCamera />}
                   <input type="file" ref={logoInputRef} accept="image/*" onChange={handleLogoUpload} style={{ display: 'none' }} disabled={uploadingLogo} />
                 </label>
               )}
             </div>
           </div>
 
-          <div className="ds-profile-info">
-            <div className="ds-profile-name-section">
+          <div className="cp-info">
+            <div className="cp-name-section">
               <h1>{formData.companyName || 'Company Name'}</h1>
               {profile?.verified && (
-                <span className="ds-verified-badge"><FaCheckCircle /> Verified</span>
+                <span className="cp-verified-badge"><FaCheckCircle /> Verified</span>
               )}
-              <p className="ds-profile-tagline">{formData.tagline || formData.shortDescription || 'No tagline added'}</p>
+              <p className="cp-tagline">{formData.tagline || formData.shortDescription || 'No tagline added'}</p>
             </div>
 
-            <div className="ds-profile-actions">
+            <div className="cp-actions">
               {!editing ? (
                 <>
-                  <button className="ds-follow-btn" onClick={handleFollow}>
+                  <button className="cp-follow-btn" onClick={handleFollow}>
                     {isFollowing ? <FaUserCheck /> : <FaUserPlus />}
                     {isFollowing ? 'Following' : 'Follow'}
                   </button>
-                  <button className="ds-edit-profile-btn" onClick={() => setEditing(true)}>
+                  <button className="cp-edit-btn" onClick={() => setEditing(true)}>
                     <FaEdit /> Edit Profile
                   </button>
-                  <button className="ds-post-job-btn" onClick={() => navigate('/company/post-job')}>
+                  <button className="cp-post-job-btn" onClick={() => navigate('/company/post-job')}>
                     <FaPlus /> Post Job
                   </button>
                 </>
               ) : (
-                <div className="ds-edit-actions">
-                  <button className="ds-cancel-btn" onClick={handleCancelEdit}><FaTimes /> Cancel</button>
-                  <button className="ds-save-btn" onClick={handleSubmit} disabled={saving}>
-                    {saving ? <><FaSpinner className="ds-fa-spin" /> Saving...</> : <><FaSave /> Save Changes</>}
+                <div className="cp-edit-actions">
+                  <button className="cp-cancel-btn" onClick={handleCancelEdit}><FaTimes /> Cancel</button>
+                  <button className="cp-save-btn" onClick={handleSubmit} disabled={saving}>
+                    {saving ? <><FaSpinner className="cp-spin" /> Saving...</> : <><FaSave /> Save Changes</>}
                   </button>
                 </div>
               )}
@@ -493,24 +503,24 @@ const CompanyProfile = () => {
           </div>
         </div>
 
-        {/* Basic Information Card (unchanged) */}
+        {/* Basic Information Card */}
         {!editing && (
-          <div className="ds-basic-info-card">
-            <div className="ds-basic-info-header"><h3>Basic Information</h3></div>
-            <div className="ds-basic-info-content">
-              <div className="ds-info-row">
-                <div className="ds-info-item"><span className="ds-info-label">Industry</span><span className="ds-info-value">{formData.industry || 'Not specified'}</span></div>
-                <div className="ds-info-item"><span className="ds-info-label">Company Size</span><span className="ds-info-value">{formData.companySize || 'Not specified'}</span></div>
-                <div className="ds-info-item"><span className="ds-info-label">Founded</span><span className="ds-info-value">{formData.foundedYear || 'Not specified'}</span></div>
-                <div className="ds-info-item"><span className="ds-info-label">Website</span><span className="ds-info-value">{formData.website ? <a href={formData.website} target="_blank" rel="noopener noreferrer">{formData.website} <FaExternalLinkAlt size={12} /></a> : 'Not specified'}</span></div>
+          <div className="cp-info-card">
+            <div className="cp-info-header"><h3>Basic Information</h3></div>
+            <div className="cp-info-content">
+              <div className="cp-info-row">
+                <div className="cp-info-item"><span className="cp-label">Industry</span><span className="cp-value">{formData.industry || 'Not specified'}</span></div>
+                <div className="cp-info-item"><span className="cp-label">Company Size</span><span className="cp-value">{formData.companySize || 'Not specified'}</span></div>
+                <div className="cp-info-item"><span className="cp-label">Founded</span><span className="cp-value">{formData.foundedYear || 'Not specified'}</span></div>
+                <div className="cp-info-item"><span className="cp-label">Website</span><span className="cp-value">{formData.website ? <a href={formData.website} target="_blank" rel="noopener noreferrer">{formData.website} <FaExternalLinkAlt size={12} /></a> : 'Not specified'}</span></div>
               </div>
-              <div className="ds-info-row"><div className="ds-info-item ds-full-width"><span className="ds-info-label">Description</span><p className="ds-info-description">{formData.description || 'No description provided'}</p></div></div>
-              <div className="ds-info-row">
-                <div className="ds-info-item"><span className="ds-info-label">Contact Email</span><span className="ds-info-value">{formData.contactEmail || 'Not specified'}</span></div>
-                <div className="ds-info-item"><span className="ds-info-label">Contact Phone</span><span className="ds-info-value">{formData.contactPhone || 'Not specified'}</span></div>
+              <div className="cp-info-row"><div className="cp-info-item cp-full-width"><span className="cp-label">Description</span><p className="cp-description">{formData.description || 'No description provided'}</p></div></div>
+              <div className="cp-info-row">
+                <div className="cp-info-item"><span className="cp-label">Contact Email</span><span className="cp-value">{formData.contactEmail || 'Not specified'}</span></div>
+                <div className="cp-info-item"><span className="cp-label">Contact Phone</span><span className="cp-value">{formData.contactPhone || 'Not specified'}</span></div>
               </div>
-              <div className="ds-info-row"><div className="ds-info-item ds-full-width"><span className="ds-info-label">Address</span><span className="ds-info-value">{formData.address?.street || formData.address?.city || formData.address?.country ? (<> {formData.address.street && <span>{formData.address.street}, </span>}{formData.address.city && <span>{formData.address.city}, </span>}{formData.address.state && <span>{formData.address.state}, </span>}{formData.address.country && <span>{formData.address.country}</span>}{formData.address.zipCode && <span> - {formData.address.zipCode}</span>}</>) : 'No address provided'}</span></div></div>
-              <div className="ds-info-row"><div className="ds-info-item ds-full-width"><span className="ds-info-label">Social Media</span><div className="ds-social-info">
+              <div className="cp-info-row"><div className="cp-info-item cp-full-width"><span className="cp-label">Address</span><span className="cp-value">{formData.address?.street || formData.address?.city || formData.address?.country ? (<> {formData.address.street && <span>{formData.address.street}, </span>}{formData.address.city && <span>{formData.address.city}, </span>}{formData.address.state && <span>{formData.address.state}, </span>}{formData.address.country && <span>{formData.address.country}</span>}{formData.address.zipCode && <span> - {formData.address.zipCode}</span>}</>) : 'No address provided'}</span></div></div>
+              <div className="cp-info-row"><div className="cp-info-item cp-full-width"><span className="cp-label">Social Media</span><div className="cp-social-links">
                 {formData.socialMedia?.linkedin && <a href={formData.socialMedia.linkedin} target="_blank" rel="noopener noreferrer"><FaLinkedin /> LinkedIn</a>}
                 {formData.socialMedia?.twitter && <a href={formData.socialMedia.twitter} target="_blank" rel="noopener noreferrer"><FaTwitter /> Twitter</a>}
                 {formData.socialMedia?.facebook && <a href={formData.socialMedia.facebook} target="_blank" rel="noopener noreferrer"><FaFacebook /> Facebook</a>}
@@ -521,115 +531,115 @@ const CompanyProfile = () => {
           </div>
         )}
 
-        {/* Stats Cards (unchanged) */}
+        {/* Stats Cards */}
         {!editing && (
-          <div className="ds-stats-cards">
-            <div className="ds-stat-card" onClick={() => setActiveTab('followers')}><FaUsers className="ds-stat-icon" /><div className="ds-stat-info"><span className="ds-stat-value">{formatNumber(stats.followers)}</span><span className="ds-stat-label">Followers</span></div></div>
-            <div className="ds-stat-card" onClick={() => setActiveTab('posts')}><FaFileAlt className="ds-stat-icon" /><div className="ds-stat-info"><span className="ds-stat-value">{posts.length}</span><span className="ds-stat-label">Posts</span></div></div>
-            <div className="ds-stat-card" onClick={() => setActiveTab('jobs')}><FaBriefcase className="ds-stat-icon" /><div className="ds-stat-info"><span className="ds-stat-value">{activeJobsCount}</span><span className="ds-stat-label">Open Jobs</span></div></div>
-            <div className="ds-stat-card"><FaEye className="ds-stat-icon" /><div className="ds-stat-info"><span className="ds-stat-value">{formatNumber(stats.views)}</span><span className="ds-stat-label">Profile Views</span></div></div>
+          <div className="cp-stats-grid">
+            <div className="cp-stat-card" onClick={() => setActiveTab('followers')}><FaUsers className="cp-stat-icon" /><div className="cp-stat-info"><span className="cp-stat-value">{formatNumber(stats.followers)}</span><span className="cp-stat-label">Followers</span></div></div>
+            <div className="cp-stat-card" onClick={() => setActiveTab('posts')}><FaFileAlt className="cp-stat-icon" /><div className="cp-stat-info"><span className="cp-stat-value">{posts.length}</span><span className="cp-stat-label">Posts</span></div></div>
+            <div className="cp-stat-card" onClick={() => setActiveTab('jobs')}><FaBriefcase className="cp-stat-icon" /><div className="cp-stat-info"><span className="cp-stat-value">{activeJobsCount}</span><span className="cp-stat-label">Open Jobs</span></div></div>
+            <div className="cp-stat-card"><FaEye className="cp-stat-icon" /><div className="cp-stat-info"><span className="cp-stat-value">{formatNumber(stats.views)}</span><span className="cp-stat-label">Profile Views</span></div></div>
           </div>
         )}
 
-        {/* Navigation Tabs (unchanged) */}
+        {/* Navigation Tabs */}
         {!editing && (
-          <div className="ds-profile-tabs">
-            <button className={`ds-tab-btn ${activeTab === 'jobs' ? 'active' : ''}`} onClick={() => setActiveTab('jobs')}><FaBriefcase /> Jobs ({activeJobsCount})</button>
-            <button className={`ds-tab-btn ${activeTab === 'posts' ? 'active' : ''}`} onClick={() => setActiveTab('posts')}><FaFileAlt /> Posts ({posts.length})</button>
-            <button className={`ds-tab-btn ${activeTab === 'followers' ? 'active' : ''}`} onClick={() => setActiveTab('followers')}><FaUsers /> Followers ({stats.followers})</button>
+          <div className="cp-tabs">
+            <button className={`cp-tab ${activeTab === 'jobs' ? 'active' : ''}`} onClick={() => setActiveTab('jobs')}><FaBriefcase /> Jobs ({activeJobsCount})</button>
+            <button className={`cp-tab ${activeTab === 'posts' ? 'active' : ''}`} onClick={() => setActiveTab('posts')}><FaFileAlt /> Posts ({posts.length})</button>
+            <button className={`cp-tab ${activeTab === 'followers' ? 'active' : ''}`} onClick={() => setActiveTab('followers')}><FaUsers /> Followers ({stats.followers})</button>
           </div>
         )}
 
-        {/* Main Content (jobs, posts, followers – unchanged) */}
-        <div className="ds-main-content">
+        {/* Main Content */}
+        <div className="cp-main-content">
           {!editing && activeTab === 'jobs' && (
-            <div className="ds-jobs-tab">
-              <div className="ds-jobs-header"><h2>Job Openings</h2><button className="ds-post-job-btn" onClick={() => navigate('/company/post-job')}><FaPlus /> Post New Job</button></div>
-              <div className="ds-jobs-filter"><div className="ds-search-box"><FaSearch /><input type="text" placeholder="Search jobs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><select value={jobFilter} onChange={(e) => setJobFilter(e.target.value)}><option value="all">All Jobs</option><option value="active">Active</option><option value="closed">Closed</option></select></div>
-              <div className="ds-jobs-list">
+            <div className="cp-jobs-tab">
+              <div className="cp-jobs-header"><h2>Job Openings</h2><button className="cp-post-job-btn" onClick={() => navigate('/company/post-job')}><FaPlus /> Post New Job</button></div>
+              <div className="cp-jobs-filter"><div className="cp-search-box"><FaSearch /><input type="text" placeholder="Search jobs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div><select value={jobFilter} onChange={(e) => setJobFilter(e.target.value)}><option value="all">All Jobs</option><option value="active">Active</option><option value="closed">Closed</option></select></div>
+              <div className="cp-jobs-list">
                 {filteredJobs.length > 0 ? safeRenderArray(filteredJobs, (job) => (
-                  <div key={job.id} className="ds-job-card">
-                    <div className="ds-job-header"><h3>{job.title}</h3><span className={`ds-job-status ${job.status}`}>{job.status}</span></div>
-                    <div className="ds-job-details"><span><FaBriefcase /> {job.type || 'Full-time'}</span><span><FaMapMarkerAlt /> {job.location || 'Remote'}</span><span><FaDollarSign /> {job.salary || 'Negotiable'}</span><span><FaClock /> Posted {formatDate(job.postedAt)}</span><span><FaUsers /> {job.applicants || 0} applicants</span></div>
-                    <div className="ds-job-actions"><button className="ds-view-btn" onClick={() => navigate(`/job/${job.id}`)}>View Details</button><button className="ds-edit-btn" onClick={() => navigate(`/company/edit-job/${job.id}`)}>Edit</button><button className="ds-applicants-btn" onClick={() => navigate(`/company/job/${job.id}/applicants`)}>View Applicants ({job.applicants || 0})</button></div>
+                  <div key={job._id} className="cp-job-card">
+                    <div className="cp-job-header"><h3>{job.title}</h3><span className={`cp-job-status ${job.status}`}>{job.status}</span></div>
+                    <div className="cp-job-details"><span><FaBriefcase /> {job.employmentType || 'Full-time'}</span><span><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span><span><FaDollarSign /> {job.salary?.min ? `${job.salary.currency} ${job.salary.min} - ${job.salary.max}` : 'Negotiable'}</span><span><FaClock /> Posted {formatDate(job.postedAt)}</span><span><FaUsers /> {job.applicantsCount || 0} applicants</span></div>
+                    <div className="cp-job-actions"><button className="cp-view-btn" onClick={() => navigate(`/job/${job._id}`)}>View Details</button><button className="cp-edit-btn" onClick={() => navigate(`/company/edit-job/${job._id}`)}>Edit</button><button className="cp-applicants-btn" onClick={() => navigate(`/company/job/${job._id}/applicants`)}>View Applicants ({job.applicantsCount || 0})</button></div>
                   </div>
-                )) : <div className="ds-no-data"><FaBriefcase className="ds-no-data-icon" /><h3>No jobs found</h3><p>Post your first job opening to start receiving applications</p><button className="ds-post-job-btn" onClick={() => navigate('/company/post-job')}>Post a Job</button></div>}
+                )) : <div className="cp-no-data"><FaBriefcase className="cp-no-data-icon" /><h3>No jobs found</h3><p>Post your first job opening to start receiving applications</p><button className="cp-post-job-btn" onClick={() => navigate('/company/post-job')}>Post a Job</button></div>}
               </div>
             </div>
           )}
 
           {!editing && activeTab === 'posts' && (
-            <div className="ds-posts-tab">
-              <div className="ds-posts-header"><h2>Company Posts</h2><button className="ds-create-post-btn" onClick={() => setShowPostModal(true)}><FaPlus /> Create Post</button></div>
-              <div className="ds-posts-feed">
+            <div className="cp-posts-tab">
+              <div className="cp-posts-header"><h2>Company Posts</h2><button className="cp-create-post-btn" onClick={() => setShowPostModal(true)}><FaPlus /> Create Post</button></div>
+              <div className="cp-posts-feed">
                 {posts.length > 0 ? safeRenderArray(posts, (post) => (
-                  <div key={post.id} className="ds-post-card">
-                    <div className="ds-post-header"><div className="ds-post-author"><div className="ds-post-avatar">{logoPreview ? <img src={logoPreview} alt={formData.companyName} /> : <div className="ds-avatar-placeholder">{getInitials(formData.companyName)}</div>}</div><div className="ds-post-info"><h4>{formData.companyName}</h4><span>{formatDate(post.createdAt)}</span></div></div></div>
-                    <div className="ds-post-content"><p>{post.content}</p>{post.image && <div className="ds-post-media"><img src={post.image} alt="Post" /></div>}</div>
-                    <div className="ds-post-stats"><span>{post.likes || 0} Likes</span><span>{post.comments || 0} Comments</span></div>
-                    <div className="ds-post-actions"><button className={`ds-action-btn ${post.liked ? 'liked' : ''}`} onClick={() => handleLikePost(post.id)}>{post.liked ? <FaHeart /> : <FaRegHeart />} Like</button><button className="ds-action-btn"><FaComment /> Comment</button></div>
+                  <div key={post._id} className="cp-post-card">
+                    <div className="cp-post-header"><div className="cp-post-author"><div className="cp-post-avatar">{logoPreview ? <img src={logoPreview} alt={formData.companyName} /> : <div className="cp-avatar-placeholder">{getInitials(formData.companyName)}</div>}</div><div className="cp-post-info"><h4>{formData.companyName}</h4><span>{formatDate(post.createdAt)}</span></div></div></div>
+                    <div className="cp-post-content"><p>{post.content}</p>{post.media && post.media[0] && post.media[0].type === 'image' && <div className="cp-post-media"><img src={getFullImageUrl(post.media[0].url)} alt="Post" /></div>}</div>
+                    <div className="cp-post-stats"><span>{post.likesCount || 0} Likes</span><span>{post.commentsCount || 0} Comments</span></div>
+                    <div className="cp-post-actions"><button className={`cp-action-btn ${post.liked ? 'liked' : ''}`} onClick={() => handleLikePost(post._id)}>{post.liked ? <FaHeart /> : <FaRegHeart />} Like</button><button className="cp-action-btn"><FaComment /> Comment</button></div>
                   </div>
-                )) : <div className="ds-no-data"><FaFileAlt className="ds-no-data-icon" /><h3>No posts yet</h3><p>Share updates about your company</p><button className="ds-create-post-btn" onClick={() => setShowPostModal(true)}>Create First Post</button></div>}
+                )) : <div className="cp-no-data"><FaFileAlt className="cp-no-data-icon" /><h3>No posts yet</h3><p>Share updates about your company</p><button className="cp-create-post-btn" onClick={() => setShowPostModal(true)}>Create First Post</button></div>}
               </div>
             </div>
           )}
 
           {!editing && activeTab === 'followers' && (
-            <div className="ds-followers-tab">
+            <div className="cp-followers-tab">
               <h2>Followers ({followers.length})</h2>
-              <div className="ds-followers-grid">
+              <div className="cp-followers-grid">
                 {followers.length > 0 ? safeRenderArray(followers, (follower) => (
-                  <div key={follower.id} className="ds-follower-card"><div className="ds-follower-avatar">{follower.avatar ? <img src={follower.avatar} alt={follower.name} /> : <div className="ds-avatar-placeholder">{getInitials(follower.name)}</div>}</div><h4>{follower.name}</h4><p>{follower.role || 'Student'}</p><button className="ds-view-profile-btn" onClick={() => navigate(`/profile/student/${follower.id}`)}>View Profile</button></div>
-                )) : <div className="ds-no-data"><FaUsers className="ds-no-data-icon" /><h3>No followers yet</h3><p>Share your company to get followers</p></div>}
+                  <div key={follower.id} className="cp-follower-card"><div className="cp-follower-avatar">{follower.profilePicture ? <img src={getFullImageUrl(follower.profilePicture)} alt={follower.name} /> : <div className="cp-avatar-placeholder">{getInitials(follower.name)}</div>}</div><h4>{follower.name}</h4><p>{follower.role || 'Student'}</p><button className="cp-view-profile-btn" onClick={() => navigate(`/profile/student/${follower.userId}`)}>View Profile</button></div>
+                )) : <div className="cp-no-data"><FaUsers className="cp-no-data-icon" /><h3>No followers yet</h3><p>Share your company to get followers</p></div>}
               </div>
             </div>
           )}
         </div>
 
-        {/* Edit Profile Form (unchanged) */}
+        {/* Edit Profile Form */}
         {editing && (
-          <div className="ds-edit-profile">
+          <div className="cp-edit-profile">
             <h2>Edit Company Profile</h2>
-            <div className="ds-edit-section"><h3>Basic Information</h3>
-              <div className="ds-form-group"><label>Company Name *</label><input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} placeholder="Enter company name" required /></div>
-              <div className="ds-form-row"><div className="ds-form-group"><label>Industry</label><input type="text" name="industry" value={formData.industry} onChange={handleInputChange} placeholder="e.g., Technology, Healthcare" /></div><div className="ds-form-group"><label>Company Size</label><select name="companySize" value={formData.companySize} onChange={handleInputChange}><option value="">Select size</option><option value="1-10">1-10 employees</option><option value="11-50">11-50 employees</option><option value="51-200">51-200 employees</option><option value="201-500">201-500 employees</option><option value="501-1000">501-1000 employees</option><option value="1000+">1000+ employees</option></select></div></div>
-              <div className="ds-form-row"><div className="ds-form-group"><label>Founded Year</label><input type="number" name="foundedYear" value={formData.foundedYear} onChange={handleInputChange} placeholder="e.g., 2020" min="1800" max={new Date().getFullYear()} /></div><div className="ds-form-group"><label>Website</label><input type="url" name="website" value={formData.website} onChange={handleInputChange} placeholder="https://example.com" /></div></div>
-              <div className="ds-form-group"><label>Tagline</label><input type="text" name="tagline" value={formData.tagline} onChange={handleInputChange} placeholder="Short catchy description" /></div>
-              <div className="ds-form-group"><label>Short Description</label><textarea name="shortDescription" value={formData.shortDescription} onChange={handleInputChange} placeholder="Brief overview of your company" rows="2" /></div>
-              <div className="ds-form-group"><label>Full Description</label><textarea name="description" value={formData.description} onChange={handleInputChange} placeholder="Detailed description of your company" rows="4" /></div>
+            <div className="cp-edit-section"><h3>Basic Information</h3>
+              <div className="cp-form-group"><label>Company Name *</label><input type="text" name="companyName" value={formData.companyName} onChange={handleInputChange} placeholder="Enter company name" required /></div>
+              <div className="cp-form-row"><div className="cp-form-group"><label>Industry</label><input type="text" name="industry" value={formData.industry} onChange={handleInputChange} placeholder="e.g., Technology, Healthcare" /></div><div className="cp-form-group"><label>Company Size</label><select name="companySize" value={formData.companySize} onChange={handleInputChange}><option value="">Select size</option><option value="1-10">1-10 employees</option><option value="11-50">11-50 employees</option><option value="51-200">51-200 employees</option><option value="201-500">201-500 employees</option><option value="501-1000">501-1000 employees</option><option value="1000+">1000+ employees</option></select></div></div>
+              <div className="cp-form-row"><div className="cp-form-group"><label>Founded Year</label><input type="number" name="foundedYear" value={formData.foundedYear} onChange={handleInputChange} placeholder="e.g., 2020" min="1800" max={new Date().getFullYear()} /></div><div className="cp-form-group"><label>Website</label><input type="url" name="website" value={formData.website} onChange={handleInputChange} placeholder="https://example.com" /></div></div>
+              <div className="cp-form-group"><label>Tagline</label><input type="text" name="tagline" value={formData.tagline} onChange={handleInputChange} placeholder="Short catchy description" /></div>
+              <div className="cp-form-group"><label>Short Description</label><textarea name="shortDescription" value={formData.shortDescription} onChange={handleInputChange} placeholder="Brief overview of your company" rows="2" /></div>
+              <div className="cp-form-group"><label>Full Description</label><textarea name="description" value={formData.description} onChange={handleInputChange} placeholder="Detailed description of your company" rows="4" /></div>
             </div>
 
-            <div className="ds-edit-section"><h3>Contact Information</h3>
-              <div className="ds-form-group"><label>Contact Email</label><input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleInputChange} placeholder="hr@company.com" /></div>
-              <div className="ds-form-group"><label>Contact Phone</label><input type="text" name="contactPhone" value={formData.contactPhone} onChange={handleInputChange} placeholder="+94 XX XXX XXXX" /></div>
+            <div className="cp-edit-section"><h3>Contact Information</h3>
+              <div className="cp-form-group"><label>Contact Email</label><input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleInputChange} placeholder="hr@company.com" /></div>
+              <div className="cp-form-group"><label>Contact Phone</label><input type="text" name="contactPhone" value={formData.contactPhone} onChange={handleInputChange} placeholder="+94 XX XXX XXXX" /></div>
               <h4>Address</h4>
-              <div className="ds-form-group"><input type="text" name="address.street" value={formData.address.street} onChange={handleInputChange} placeholder="Street address" /></div>
-              <div className="ds-form-row"><div className="ds-form-group"><input type="text" name="address.city" value={formData.address.city} onChange={handleInputChange} placeholder="City" /></div><div className="ds-form-group"><input type="text" name="address.state" value={formData.address.state} onChange={handleInputChange} placeholder="State" /></div></div>
-              <div className="ds-form-row"><div className="ds-form-group"><input type="text" name="address.country" value={formData.address.country} onChange={handleInputChange} placeholder="Country" /></div><div className="ds-form-group"><input type="text" name="address.zipCode" value={formData.address.zipCode} onChange={handleInputChange} placeholder="Zip Code" /></div></div>
+              <div className="cp-form-group"><input type="text" name="address.street" value={formData.address.street} onChange={handleInputChange} placeholder="Street address" /></div>
+              <div className="cp-form-row"><div className="cp-form-group"><input type="text" name="address.city" value={formData.address.city} onChange={handleInputChange} placeholder="City" /></div><div className="cp-form-group"><input type="text" name="address.state" value={formData.address.state} onChange={handleInputChange} placeholder="State" /></div></div>
+              <div className="cp-form-row"><div className="cp-form-group"><input type="text" name="address.country" value={formData.address.country} onChange={handleInputChange} placeholder="Country" /></div><div className="cp-form-group"><input type="text" name="address.zipCode" value={formData.address.zipCode} onChange={handleInputChange} placeholder="Zip Code" /></div></div>
             </div>
 
-            <div className="ds-edit-section"><h3>Social Media</h3>
-              <div className="ds-form-group"><label>LinkedIn</label><input type="url" name="socialMedia.linkedin" value={formData.socialMedia.linkedin} onChange={handleInputChange} placeholder="https://linkedin.com/company/..." /></div>
-              <div className="ds-form-group"><label>Twitter</label><input type="url" name="socialMedia.twitter" value={formData.socialMedia.twitter} onChange={handleInputChange} placeholder="https://twitter.com/..." /></div>
-              <div className="ds-form-group"><label>Facebook</label><input type="url" name="socialMedia.facebook" value={formData.socialMedia.facebook} onChange={handleInputChange} placeholder="https://facebook.com/..." /></div>
-              <div className="ds-form-group"><label>Instagram</label><input type="url" name="socialMedia.instagram" value={formData.socialMedia.instagram} onChange={handleInputChange} placeholder="https://instagram.com/..." /></div>
+            <div className="cp-edit-section"><h3>Social Media</h3>
+              <div className="cp-form-group"><label>LinkedIn</label><input type="url" name="socialMedia.linkedin" value={formData.socialMedia.linkedin} onChange={handleInputChange} placeholder="https://linkedin.com/company/..." /></div>
+              <div className="cp-form-group"><label>Twitter</label><input type="url" name="socialMedia.twitter" value={formData.socialMedia.twitter} onChange={handleInputChange} placeholder="https://twitter.com/..." /></div>
+              <div className="cp-form-group"><label>Facebook</label><input type="url" name="socialMedia.facebook" value={formData.socialMedia.facebook} onChange={handleInputChange} placeholder="https://facebook.com/..." /></div>
+              <div className="cp-form-group"><label>Instagram</label><input type="url" name="socialMedia.instagram" value={formData.socialMedia.instagram} onChange={handleInputChange} placeholder="https://instagram.com/..." /></div>
             </div>
 
-            <div className="ds-form-actions"><button className="ds-cancel-btn" onClick={handleCancelEdit}>Cancel</button><button className="ds-save-btn" onClick={handleSubmit} disabled={saving}>{saving ? <><FaSpinner className="ds-fa-spin" /> Saving...</> : 'Save Changes'}</button></div>
+            <div className="cp-form-actions"><button className="cp-cancel-btn" onClick={handleCancelEdit}>Cancel</button><button className="cp-save-btn" onClick={handleSubmit} disabled={saving}>{saving ? <><FaSpinner className="cp-spin" /> Saving...</> : 'Save Changes'}</button></div>
           </div>
         )}
 
         {/* Create Post Modal */}
         {showPostModal && (
-          <div className="ds-modal-overlay" onClick={() => setShowPostModal(false)}>
-            <div className="ds-modal" onClick={e => e.stopPropagation()}>
-              <div className="ds-modal-header"><h3>Create Post</h3><button className="ds-close-btn" onClick={() => setShowPostModal(false)}><FaTimes /></button></div>
-              <div className="ds-modal-body">
-                <textarea className="ds-post-textarea" placeholder="Share an update about your company..." value={newPost} onChange={(e) => setNewPost(e.target.value)} rows="4" />
-                {postImage && <div className="ds-image-preview"><img src={URL.createObjectURL(postImage)} alt="Preview" /><button onClick={() => setPostImage(null)}><FaTimes /></button></div>}
-                <div className="ds-post-actions"><label className="ds-media-btn"><FaImage /><input type="file" accept="image/*" onChange={(e) => setPostImage(e.target.files[0])} style={{ display: 'none' }} />Photo</label></div>
+          <div className="cp-modal-overlay" onClick={() => setShowPostModal(false)}>
+            <div className="cp-modal" onClick={e => e.stopPropagation()}>
+              <div className="cp-modal-header"><h3>Create Post</h3><button className="cp-close-btn" onClick={() => setShowPostModal(false)}><FaTimes /></button></div>
+              <div className="cp-modal-body">
+                <textarea className="cp-post-textarea" placeholder="Share an update about your company..." value={newPost} onChange={(e) => setNewPost(e.target.value)} rows="4" />
+                {postImage && <div className="cp-image-preview"><img src={URL.createObjectURL(postImage)} alt="Preview" /><button onClick={() => setPostImage(null)}><FaTimes /></button></div>}
+                <div className="cp-post-actions"><label className="cp-media-btn"><FaImage /><input type="file" accept="image/*" onChange={(e) => setPostImage(e.target.files[0])} style={{ display: 'none' }} />Photo</label></div>
               </div>
-              <div className="ds-modal-footer"><button className="ds-post-btn" onClick={handleCreatePost} disabled={uploadingPost}>{uploadingPost ? <FaSpinner className="ds-fa-spin" /> : 'Post'}</button></div>
+              <div className="cp-modal-footer"><button className="cp-post-btn" onClick={handleCreatePost} disabled={uploadingPost}>{uploadingPost ? <FaSpinner className="cp-spin" /> : 'Post'}</button></div>
             </div>
           </div>
         )}

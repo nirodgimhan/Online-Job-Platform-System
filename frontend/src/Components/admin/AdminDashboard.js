@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { useAuth, API } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import {
-  FaUsers, FaBuilding, FaBriefcase, FaChartLine, FaCheckCircle, FaTimesCircle,
-  FaClock, FaExclamationTriangle, FaSyncAlt, FaCalendarAlt, FaFileAlt,
-  FaUserGraduate, FaUserTie, FaShieldAlt, FaRegBuilding, FaSpinner,
-  FaEye, FaUserPlus
+  FaUsers, FaUserGraduate, FaBuilding, FaShieldAlt,
+  FaBriefcase, FaFileAlt, FaCalendarAlt, FaClock,
+  FaCheckCircle, FaTimesCircle, FaSyncAlt, FaEye,
+  FaSearch, FaEdit, FaTrash, FaUserCheck, FaUserTimes,
+  FaBan, FaCheck, FaChartLine, FaEnvelope, FaPhone,
+  FaMapMarkerAlt, FaSpinner, FaExclamationTriangle
 } from 'react-icons/fa';
 
 const AdminDashboard = () => {
@@ -14,6 +16,7 @@ const AdminDashboard = () => {
   const [profilePictureUrl, setProfilePictureUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Dashboard stats
   const [stats, setStats] = useState({
@@ -23,10 +26,11 @@ const AdminDashboard = () => {
     totalAdmins: 0,
     totalJobs: 0,
     activeJobs: 0,
-    totalApplications: 0,
-    totalInterviews: 0,      // ← Added missing
+    totalApplications: 0,   // Placeholder – will be updated when admin endpoint is added
+    totalInterviews: 0,      // Placeholder – will be updated when admin endpoint is added
     pendingVerifications: 0,
-    verifiedCompanies: 0
+    verifiedCompanies: 0,
+    totalPosts: 0
   });
 
   // Recent data for tables
@@ -35,6 +39,7 @@ const AdminDashboard = () => {
   const [pendingVerifications, setPendingVerifications] = useState([]);
   const [recentJobs, setRecentJobs] = useState([]);
   const [recentInterviews, setRecentInterviews] = useState([]);
+  const [recentPosts, setRecentPosts] = useState([]);
 
   useEffect(() => {
     if (user && user.role === 'admin') {
@@ -54,80 +59,87 @@ const AdminDashboard = () => {
 
   const fetchAdminData = async () => {
     setLoading(true);
+    setRefreshing(true);
     setError(null);
     try {
-      const [
-        usersRes,
-        companiesRes,
-        jobsRes,
-        applicationsRes,
-        interviewsRes
-      ] = await Promise.allSettled([
-        API.get('/admin/users'),
-        API.get('/admin/companies'),
-        API.get('/admin/jobs'),
-        API.get('/admin/applications'),
-        API.get('/admin/interviews')
+      // Parallel requests
+      const [usersRes, jobsRes, postsRes] = await Promise.allSettled([
+        API.get('/users'),
+        API.get('/jobs/admin/all'),
+        API.get('/posts/admin/all')
       ]);
 
-      // Process users
+      // 1. Process users
       if (usersRes.status === 'fulfilled') {
-        const { students, companies, admins } = usersRes.value.data;
+        const usersData = usersRes.value.data;
+        const allUsers = usersData.users || usersData.data?.users || [];
+
+        const students = allUsers.filter(u => u.role === 'student');
+        const companies = allUsers.filter(u => u.role === 'company');
+        const admins = allUsers.filter(u => u.role === 'admin');
+
+        const pendingCompanies = companies.filter(c => !c.isVerified);
+        const verifiedCompanies = companies.filter(c => c.isVerified);
+
         setStats(prev => ({
           ...prev,
-          totalUsers: (students?.length || 0) + (companies?.length || 0) + (admins?.length || 0),
-          totalStudents: students?.length || 0,
-          totalCompanies: companies?.length || 0,
-          totalAdmins: admins?.length || 0
+          totalUsers: allUsers.length,
+          totalStudents: students.length,
+          totalCompanies: companies.length,
+          totalAdmins: admins.length,
+          pendingVerifications: pendingCompanies.length,
+          verifiedCompanies: verifiedCompanies.length
         }));
-        setRecentUsers(students?.slice(0, 5) || []);
+
+        setRecentUsers(students.slice(0, 5));
+        setRecentCompanies(companies.slice(0, 5));
+        setPendingVerifications(pendingCompanies.slice(0, 5));
+      } else {
+        console.error('Failed to fetch users:', usersRes.reason);
+        toast.error('Failed to load user data');
       }
 
-      // Process companies
-      if (companiesRes.status === 'fulfilled') {
-        const { companies, pendingVerifications: pending, verified } = companiesRes.value.data;
-        setStats(prev => ({
-          ...prev,
-          totalCompanies: companies?.length || 0,
-          pendingVerifications: pending?.length || 0,
-          verifiedCompanies: verified?.length || 0
-        }));
-        setRecentCompanies(companies?.slice(0, 5) || []);
-        setPendingVerifications(pending?.slice(0, 5) || []);
-      }
-
-      // Process jobs
+      // 2. Process jobs
       if (jobsRes.status === 'fulfilled') {
-        const { jobs, activeJobs } = jobsRes.value.data;
+        const jobsData = jobsRes.value.data;
+        const jobs = jobsData.jobs || jobsData.data?.jobs || [];
+        const activeJobs = jobs.filter(j => j.status === 'active');
+
         setStats(prev => ({
           ...prev,
-          totalJobs: jobs?.length || 0,
-          activeJobs: activeJobs?.length || 0
+          totalJobs: jobs.length,
+          activeJobs: activeJobs.length
         }));
-        setRecentJobs(jobs?.slice(0, 5) || []);
+        setRecentJobs(jobs.slice(0, 5));
+      } else {
+        console.error('Failed to fetch jobs:', jobsRes.reason);
+        toast.error('Failed to load job data');
       }
 
-      // Process applications
-      if (applicationsRes.status === 'fulfilled') {
+      // 3. Process posts
+      if (postsRes.status === 'fulfilled') {
+        const postsData = postsRes.value.data;
+        const posts = postsData.posts || postsData.data?.posts || [];
+
         setStats(prev => ({
           ...prev,
-          totalApplications: applicationsRes.value.data.totalApplications || 0
+          totalPosts: posts.length
         }));
+        setRecentPosts(posts.slice(0, 5));
+      } else {
+        console.error('Failed to fetch posts:', postsRes.reason);
+        toast.error('Failed to load post data');
       }
 
-      // Process interviews
-      if (interviewsRes.status === 'fulfilled') {
-        const { totalInterviews, recentInterviews } = interviewsRes.value.data;
-        setStats(prev => ({ ...prev, totalInterviews: totalInterviews || 0 }));
-        setRecentInterviews(recentInterviews?.slice(0, 5) || []);
-      }
-
+      // Applications and interviews – to be added later when admin endpoints exist
+      // For now, they remain 0
     } catch (err) {
       console.error('Error fetching admin data:', err);
       setError('Failed to load dashboard data. Please try again later.');
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -143,13 +155,24 @@ const AdminDashboard = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      const now = new Date();
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      return date.toLocaleDateString();
+    } catch (e) {
+      return dateString;
+    }
+  };
+
+  const getFullImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `http://localhost:5000${path}`;
   };
 
   if (loading) {
@@ -200,13 +223,18 @@ const AdminDashboard = () => {
           </div>
         </div>
         <div className="admin-welcome-actions">
-          <button className="admin-icon-btn" onClick={fetchAdminData} title="Refresh Data">
-            <FaSyncAlt />
+          <button 
+            className="admin-icon-btn" 
+            onClick={fetchAdminData} 
+            disabled={refreshing}
+            title="Refresh Data"
+          >
+            <FaSyncAlt className={refreshing ? 'admin-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* Statistics Cards - 8 cards */}
+      {/* Statistics Cards */}
       <div className="admin-stats-grid">
         <div className="admin-stat-card">
           <div className="admin-stat-info">
@@ -254,7 +282,7 @@ const AdminDashboard = () => {
             <p>Active Jobs</p>
           </div>
           <div className="admin-stat-icon admin-stat-icon-primary">
-            <FaRegBuilding />
+            <FaBriefcase />
           </div>
         </div>
 
@@ -293,9 +321,10 @@ const AdminDashboard = () => {
       <div className="admin-row">
         {/* Left Column */}
         <div className="admin-col-6">
+          {/* Recent Users */}
           <div className="admin-card">
             <div className="admin-card-header">
-              <h5>Recent Users</h5>
+              <h5>Recent Users (Students)</h5>
               <Link to="/admin/users" className="admin-btn-link">View All</Link>
             </div>
             <div className="admin-card-body">
@@ -305,33 +334,33 @@ const AdminDashboard = () => {
                     <tr>
                       <th>Name</th>
                       <th>Email</th>
-                      <th>Role</th>
                       <th>Joined</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recentUsers.length > 0 ? (
-                      recentUsers.map(user => (
-                        <tr key={user._id}>
+                      recentUsers.map(userItem => (
+                        <tr key={userItem._id}>
                           <td>
                             <div className="admin-user-info">
                               <div className="admin-user-avatar-small">
-                                {user.profilePicture ? (
-                                  <img src={`http://localhost:5000${user.profilePicture}`} alt={user.name} />
+                                {userItem.profilePicture ? (
+                                  <img src={getFullImageUrl(userItem.profilePicture)} alt={userItem.name} />
                                 ) : (
-                                  <span>{getInitials(user.name)}</span>
+                                  <span>{getInitials(userItem.name)}</span>
                                 )}
                               </div>
-                              <span>{user.name}</span>
+                              <span>{userItem.name}</span>
                             </div>
                           </td>
-                          <td>{user.email}</td>
-                          <td><span className="admin-badge admin-badge-primary">Student</span></td>
-                          <td>{formatDate(user.createdAt)}</td>
+                          <td>{userItem.email}</td>
+                          <td>{formatDate(userItem.createdAt)}</td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan="4" className="admin-empty-message">No recent users</td></tr>
+                      <tr>
+                        <td colSpan="3" className="admin-empty-message">No recent users</td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -339,6 +368,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
+          {/* Recent Companies */}
           <div className="admin-card">
             <div className="admin-card-header">
               <h5>Recent Companies</h5>
@@ -362,8 +392,8 @@ const AdminDashboard = () => {
                           <td>
                             <div className="admin-user-info">
                               <div className="admin-user-avatar-small">
-                                {company.logo ? (
-                                  <img src={`http://localhost:5000${company.logo}`} alt={company.companyName} />
+                                {company.companyLogo ? (
+                                  <img src={getFullImageUrl(company.companyLogo)} alt={company.companyName} />
                                 ) : (
                                   <FaBuilding />
                                 )}
@@ -373,7 +403,7 @@ const AdminDashboard = () => {
                           </td>
                           <td>{company.industry || '—'}</td>
                           <td>
-                            {company.verified ? (
+                            {company.isVerified ? (
                               <FaCheckCircle className="admin-text-success" />
                             ) : (
                               <FaTimesCircle className="admin-text-danger" />
@@ -383,7 +413,9 @@ const AdminDashboard = () => {
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan="4" className="admin-empty-message">No recent companies</td></tr>
+                      <tr>
+                        <td colSpan="4" className="admin-empty-message">No recent companies</td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -394,6 +426,7 @@ const AdminDashboard = () => {
 
         {/* Right Column */}
         <div className="admin-col-6">
+          {/* Pending Verification Requests */}
           <div className="admin-card">
             <div className="admin-card-header">
               <h5>Pending Verification Requests</h5>
@@ -426,6 +459,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
+          {/* Recent Jobs */}
           <div className="admin-card">
             <div className="admin-card-header">
               <h5>Recent Job Posts</h5>
@@ -457,7 +491,9 @@ const AdminDashboard = () => {
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan="4" className="admin-empty-message">No recent jobs</td></tr>
+                      <tr>
+                        <td colSpan="4" className="admin-empty-message">No recent jobs</td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -465,25 +501,34 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {recentInterviews.length > 0 && (
+          {/* Recent Posts */}
+          {recentPosts.length > 0 && (
             <div className="admin-card">
               <div className="admin-card-header">
-                <h5>Recent Interviews</h5>
-                <Link to="/admin/interviews" className="admin-btn-link">View All</Link>
+                <h5>Recent Posts</h5>
+                <Link to="/admin/posts" className="admin-btn-link">View All</Link>
               </div>
               <div className="admin-card-body">
-                {recentInterviews.map(interview => (
-                  <div key={interview._id} className="admin-recommended-item">
-                    <div className="admin-recommended-content">
-                      <h6>{interview.jobTitle} - {interview.candidateName}</h6>
-                      <p>{interview.companyName}</p>
-                      <div className="admin-job-meta">
-                        <span><FaCalendarAlt /> {new Date(interview.scheduledDate).toLocaleString()}</span>
-                        <span className="admin-badge admin-badge-info">{interview.status}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                <div className="admin-table-responsive">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Author</th>
+                        <th>Content Preview</th>
+                        <th>Posted</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentPosts.map(post => (
+                        <tr key={post._id}>
+                          <td>{post.userId?.name || 'Unknown'}</td>
+                          <td>{post.content?.substring(0, 60)}{post.content?.length > 60 ? '...' : ''}</td>
+                          <td>{formatDate(post.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

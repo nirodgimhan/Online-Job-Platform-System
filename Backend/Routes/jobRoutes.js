@@ -5,7 +5,7 @@ const auth = require('../middleware/auth');
 const Job = require('../models/Job');
 const Student = require('../models/Student');
 const Company = require('../models/Company');
-const Application = require('../models/Application');
+const Application = require('../Models/Application');
 
 // ==================== PUBLIC ROUTES ====================
 
