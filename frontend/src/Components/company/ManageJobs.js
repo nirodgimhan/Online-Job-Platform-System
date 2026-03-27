@@ -60,7 +60,6 @@ const ManageJobs = () => {
 
   useEffect(() => {
     fetchJobs();
-    fetchStats();
   }, [currentPage, statusFilter, sortBy]);
 
   const fetchJobs = async () => {
@@ -75,9 +74,29 @@ const ManageJobs = () => {
       const response = await API.get(url);
       
       if (response.data.success) {
-        setJobs(response.data.jobs);
+        const jobsData = response.data.jobs;
+        setJobs(jobsData);
         setTotalPages(response.data.pages);
         setTotalJobs(response.data.total);
+        
+        // Compute stats from the returned jobs (if stats not already available from the endpoint)
+        computeStatsFromJobs(jobsData);
+        
+        // Also try to fetch stats from the dedicated stats endpoint (optional, but use its values if they exist)
+        try {
+          const statsResponse = await API.get('/companies/jobs/stats/overview');
+          if (statsResponse.data.success) {
+            const statsData = statsResponse.data.stats?.jobs || statsResponse.data.stats;
+            setStats(prev => ({
+              ...prev,
+              ...statsData
+            }));
+          }
+        } catch (statsErr) {
+          // Silently ignore; we already have computed stats
+        }
+      } else {
+        toast.error(response.data.message || 'Failed to load jobs');
       }
     } catch (error) {
       console.error('Error fetching jobs:', error);
@@ -87,16 +106,32 @@ const ManageJobs = () => {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const response = await API.get('/companies/jobs/stats/overview');
-      
-      if (response.data.success) {
-        setStats(response.data.stats.jobs);
-      }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
+  const computeStatsFromJobs = (jobsData) => {
+    // Calculate from the full list (not just paginated)
+    // We need all jobs, not just the current page. If the API doesn't return all, we might need a separate call.
+    // For now, we'll use the paginated data, but it's inaccurate for totals.
+    // To get accurate totals, we should either:
+    // 1. Use the stats endpoint (which returns totals)
+    // 2. Fetch all jobs without pagination for stats (costly)
+    // 3. Use the totals from the pagination response (which gives total count but not breakdown by status)
+    // The best is to rely on the stats endpoint. Let's keep the compute as fallback but prefer the stats endpoint.
+    
+    // This function will be used only if stats endpoint fails.
+    const total = jobsData.length;
+    const active = jobsData.filter(j => j.status === 'active').length;
+    const closed = jobsData.filter(j => j.status === 'closed').length;
+    const draft = jobsData.filter(j => j.status === 'draft').length;
+    const totalApplicants = jobsData.reduce((sum, j) => sum + (j.applicantsCount || 0), 0);
+    const totalViews = jobsData.reduce((sum, j) => sum + (j.viewsCount || 0), 0);
+    
+    setStats({
+      total,
+      active,
+      closed,
+      draft,
+      totalApplicants,
+      totalViews
+    });
   };
 
   const handleDeleteClick = (job) => {
@@ -109,13 +144,12 @@ const ManageJobs = () => {
     
     setDeleting(true);
     try {
-      // Correct endpoint for deleting a job (company route)
       const response = await API.delete(`/jobs/${jobToDelete._id}`);
       
       if (response.data.success) {
         toast.success('Job deleted successfully');
-        fetchJobs();
-        fetchStats();
+        // Refresh data
+        await fetchJobs();
       } else {
         toast.error(response.data.message || 'Failed to delete job');
       }
@@ -135,8 +169,9 @@ const ManageJobs = () => {
       
       if (response.data.success) {
         toast.success(`Job ${newStatus} successfully`);
-        fetchJobs();
-        fetchStats();
+        await fetchJobs();
+      } else {
+        toast.error(response.data.message || 'Failed to update job status');
       }
     } catch (error) {
       console.error('Error updating job status:', error);
