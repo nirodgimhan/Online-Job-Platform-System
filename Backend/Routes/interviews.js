@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Interview = require('../Models/Interview');
-const Application = require('../models/Application');
+const Application = require('../Models/Application');
 const Job = require('../models/Job');
 const User = require('../models/User');
-const Student = require('../models/Student');   // added for student profile lookup
+const Student = require('../models/Student');
 const auth = require('../middleware/auth');
 
-// Helper to get or create a student profile (used only in GET /)
+// Helper to get or create a student profile
 const getOrCreateStudent = async (userId) => {
   let student = await Student.findOne({ userId });
   if (!student) {
@@ -40,7 +40,6 @@ router.post('/', auth, async (req, res) => {
       notes
     } = req.body;
 
-    // Validate required fields
     if (!applicationId) {
       return res.status(400).json({
         success: false,
@@ -55,7 +54,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(applicationId)) {
       return res.status(400).json({
         success: false,
@@ -63,7 +61,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Check user authorization
     if (!req.user || req.user.role !== 'company') {
       return res.status(403).json({
         success: false,
@@ -71,7 +68,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Get application with populated fields
     const application = await Application.findById(applicationId)
       .populate('jobId')
       .populate('studentId');
@@ -91,7 +87,6 @@ router.post('/', auth, async (req, res) => {
       applicationStatus: application.status
     });
 
-    // Check if student exists
     if (!application.studentId) {
       console.error('Student ID missing in application:', application._id);
       return res.status(400).json({
@@ -100,7 +95,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Get student details - handle both populated and unpopulated
     let student = application.studentId;
     if (student && typeof student === 'object' && student._id) {
       student = student;
@@ -116,7 +110,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Get job details
     let job = application.jobId;
     if (job && typeof job === 'object' && job._id) {
       job = job;
@@ -131,7 +124,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Check if interview already exists
     const existingInterview = await Interview.findOne({
       applicationId: application._id,
       status: { $in: ['scheduled', 'confirmed'] }
@@ -149,7 +141,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Validate date
     const interviewDate = new Date(scheduledDate);
     if (isNaN(interviewDate.getTime())) {
       return res.status(400).json({
@@ -168,7 +159,6 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
-    // Create interview
     const interview = new Interview({
       applicationId: application._id,
       jobId: job._id,
@@ -188,7 +178,6 @@ router.post('/', auth, async (req, res) => {
     await interview.save();
     console.log('✅ Interview created:', interview._id);
 
-    // Update application status
     application.status = 'Interview';
     application.interviewDate = interviewDate;
     application.interviewDetails = {
@@ -204,7 +193,6 @@ router.post('/', auth, async (req, res) => {
     await application.save();
     console.log('✅ Application updated to Interview status');
 
-    // Return populated interview
     const populatedInterview = await Interview.findById(interview._id)
       .populate('jobId', 'title description location employmentType')
       .populate('studentId', 'name email phoneNumber')
@@ -246,7 +234,6 @@ router.get('/', auth, async (req, res) => {
       query.companyId = req.user.id;
       console.log('Fetching interviews for company:', req.user.id);
     } else if (req.user.role === 'student') {
-      // ***** FIX: Use the student document's _id, not the user ID *****
       const student = await getOrCreateStudent(req.user.id);
       query.studentId = student._id;
       console.log('Fetching interviews for student (Student ID):', student._id);
@@ -265,7 +252,6 @@ router.get('/', auth, async (req, res) => {
 
     console.log(`Found ${interviews.length} interviews for ${req.user.role}`);
 
-    // Helper function for relative time
     function getRelativeTime(dateString) {
       if (!dateString) return '';
       try {
@@ -285,7 +271,6 @@ router.get('/', auth, async (req, res) => {
       }
     }
 
-    // Process interviews to add computed fields
     const processedInterviews = interviews.map(interview => {
       const interviewObj = interview.toObject();
       interviewObj.isUpcoming = new Date(interview.scheduledDate) > new Date();
@@ -302,6 +287,127 @@ router.get('/', auth, async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching interviews:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch interviews',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/interviews/student - Get interviews for student (specific)
+router.get('/student', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only students can view this endpoint.'
+      });
+    }
+
+    const student = await getOrCreateStudent(req.user.id);
+    const query = { studentId: student._id };
+
+    const interviews = await Interview.find(query)
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'name companyName email companyLogo')
+      .sort({ scheduledDate: -1 });
+
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
+    }
+
+    const processedInterviews = interviews.map(interview => {
+      const interviewObj = interview.toObject();
+      interviewObj.isUpcoming = new Date(interview.scheduledDate) > new Date();
+      interviewObj.isPast = new Date(interview.scheduledDate) <= new Date();
+      interviewObj.relativeTime = getRelativeTime(interview.scheduledDate);
+      return interviewObj;
+    });
+
+    res.json({
+      success: true,
+      interviews: processedInterviews,
+      count: processedInterviews.length
+    });
+  } catch (error) {
+    console.error('Error fetching student interviews:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch interviews',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/interviews/company - Get interviews for company (specific)
+router.get('/company', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'company') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only companies can view this endpoint.'
+      });
+    }
+
+    const query = { companyId: req.user.id };
+
+    const interviews = await Interview.find(query)
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'name companyName email companyLogo')
+      .sort({ scheduledDate: -1 });
+
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
+    }
+
+    const processedInterviews = interviews.map(interview => {
+      const interviewObj = interview.toObject();
+      interviewObj.isUpcoming = new Date(interview.scheduledDate) > new Date();
+      interviewObj.isPast = new Date(interview.scheduledDate) <= new Date();
+      interviewObj.relativeTime = getRelativeTime(interview.scheduledDate);
+      return interviewObj;
+    });
+
+    res.json({
+      success: true,
+      interviews: processedInterviews,
+      count: processedInterviews.length
+    });
+  } catch (error) {
+    console.error('Error fetching company interviews:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch interviews',
@@ -334,7 +440,6 @@ router.get('/:id', auth, async (req, res) => {
       });
     }
 
-    // Check authorization
     if (interview.companyId._id.toString() !== req.user.id && 
         interview.studentId._id.toString() !== req.user.id) {
       return res.status(403).json({
@@ -403,7 +508,6 @@ router.put('/:id', auth, async (req, res) => {
       });
     }
 
-    // Only company can update interview details
     if (interview.companyId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -411,7 +515,6 @@ router.put('/:id', auth, async (req, res) => {
       });
     }
 
-    // Check if interview can be updated
     if (interview.status === 'completed') {
       return res.status(400).json({
         success: false,
@@ -428,7 +531,6 @@ router.put('/:id', auth, async (req, res) => {
 
     const { scheduledDate, duration, mode, meetingLink, location, notes } = req.body;
 
-    // Validate new date if provided
     if (scheduledDate) {
       const newDate = new Date(scheduledDate);
       if (isNaN(newDate.getTime())) {
@@ -437,7 +539,6 @@ router.put('/:id', auth, async (req, res) => {
           message: 'Invalid date format'
         });
       }
-      
       if (newDate <= new Date()) {
         return res.status(400).json({
           success: false,
@@ -447,7 +548,6 @@ router.put('/:id', auth, async (req, res) => {
       interview.scheduledDate = newDate;
     }
     
-    // Update other fields
     if (duration) interview.duration = duration;
     if (mode) interview.mode = mode;
     if (meetingLink !== undefined) interview.meetingLink = meetingLink;
@@ -455,9 +555,8 @@ router.put('/:id', auth, async (req, res) => {
     if (notes !== undefined) interview.notes = notes;
 
     interview.updatedAt = new Date();
-    await interview.save();
+    await interview.save({ validateModifiedOnly: true });
 
-    // Update application interview details
     const application = await Application.findById(interview.applicationId);
     if (application) {
       application.interviewDetails = {
@@ -532,8 +631,9 @@ router.put('/:id/confirm', auth, async (req, res) => {
       });
     }
 
-    // Only student can confirm
-    if (interview.studentId.toString() !== req.user.id) {
+    const student = await getOrCreateStudent(req.user.id);
+    
+    if (interview.studentId.toString() !== student._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Only the student can confirm this interview'
@@ -547,7 +647,6 @@ router.put('/:id/confirm', auth, async (req, res) => {
       });
     }
 
-    // Check if interview date is still valid
     if (new Date(interview.scheduledDate) <= new Date()) {
       return res.status(400).json({
         success: false,
@@ -557,9 +656,8 @@ router.put('/:id/confirm', auth, async (req, res) => {
 
     interview.status = 'confirmed';
     interview.updatedAt = new Date();
-    await interview.save();
+    await interview.save({ validateModifiedOnly: true });
 
-    // Update application to show interview is confirmed
     const application = await Application.findById(interview.applicationId);
     if (application) {
       application.interviewDetails = {
@@ -630,7 +728,6 @@ router.post('/:id/feedback', auth, async (req, res) => {
       });
     }
 
-    // Only company can add feedback
     if (interview.companyId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -659,9 +756,8 @@ router.post('/:id/feedback', auth, async (req, res) => {
 
     interview.status = 'completed';
     interview.updatedAt = new Date();
-    await interview.save();
+    await interview.save({ validateModifiedOnly: true });
 
-    // Update application with feedback
     const application = await Application.findById(interview.applicationId);
     if (application) {
       application.feedback = {
@@ -700,7 +796,6 @@ router.post('/:id/feedback', auth, async (req, res) => {
 });
 
 // DELETE /api/interviews/:id - Cancel interview
-// DELETE /api/interviews/:id - Cancel interview
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -721,16 +816,13 @@ router.delete('/:id', auth, async (req, res) => {
       });
     }
 
-    // Authorization check
     let authorized = false;
 
     if (req.user.role === 'company') {
-      // Company: compare with stored companyId
       if (interview.companyId.toString() === req.user.id) {
         authorized = true;
       }
     } else if (req.user.role === 'student') {
-      // Student: get student profile and compare both the user ID and the student document ID
       const student = await getOrCreateStudent(req.user.id);
       if (interview.studentId.toString() === student._id.toString() ||
           interview.studentId.toString() === req.user.id) {
@@ -747,7 +839,6 @@ router.delete('/:id', auth, async (req, res) => {
       });
     }
 
-    // Check if interview can be cancelled
     if (interview.status === 'completed') {
       return res.status(400).json({
         success: false,
@@ -769,12 +860,15 @@ router.delete('/:id', auth, async (req, res) => {
       interview.notes = `Cancelled: ${reason}\n\n${interview.notes || ''}`;
     }
     interview.updatedAt = new Date();
-    await interview.save();
+    await interview.save({ validateModifiedOnly: true });
 
-    // Update application status
     const application = await Application.findById(interview.applicationId);
     if (application) {
-      application.status = 'Shortlisted';
+      if (req.user.role === 'student') {
+        application.status = 'Withdrawn';
+      } else {
+        application.status = 'Shortlisted';
+      }
       application.interviewDetails = null;
       application.interviewDate = null;
       await application.save();

@@ -28,15 +28,33 @@ router.post('/', auth, auth.authorize('student'), async (req, res) => {
             return res.status(404).json({ success: false, message: 'Student profile not found' });
         }
 
-        // Check if already applied
+        // ========== ADDED: Allow re‑application if previous application is Withdrawn or Rejected ==========
         const existingApplication = await Application.findOne({
             jobId,
             studentId: student._id
         });
 
         if (existingApplication) {
-            return res.status(400).json({ success: false, message: 'Already applied for this job' });
+            // If the existing application is Withdrawn or Rejected, delete it and allow a new one.
+            if (['Withdrawn', 'Rejected'].includes(existingApplication.status)) {
+                console.log(`🗑️ Deleting previous ${existingApplication.status} application for job ${jobId}`);
+                
+                // Remove the application from the student's appliedJobs array
+                student.appliedJobs = student.appliedJobs.filter(
+                    app => app.applicationId?.toString() !== existingApplication._id.toString()
+                );
+                await student.save();
+                
+                // Delete the old application
+                await Application.findByIdAndDelete(existingApplication._id);
+                
+                // Continue to create a new application (fall through)
+            } else {
+                // Active application (Pending, Reviewed, Shortlisted, Interview, etc.) – block
+                return res.status(400).json({ success: false, message: 'Already applied for this job' });
+            }
         }
+        // ========== END ADDED ==========
 
         // Create application
         const newApplication = new Application({
@@ -236,24 +254,72 @@ router.get('/:id', auth, async (req, res) => {
     }
 });
 
+// ==================== UPDATED: Allow students to withdraw ====================
 // @route   PUT api/applications/:id/status
 // @desc    Update application status
-// @access  Private/Company
-router.put('/:id/status', auth, auth.authorize('company'), async (req, res) => {
+// @access  Private (Company or Student for withdrawal)
+router.put('/:id/status', auth, async (req, res) => {
     try {
         const { status, interviewDetails, feedback } = req.body;
+        let application = await Application.findById(req.params.id);
+
+        if (!application) {
+            return res.status(404).json({ success: false, message: 'Application not found' });
+        }
+
+        // ---------- STUDENT WITHDRAWAL ----------
+        if (req.user.role === 'student') {
+            const student = await Student.findOne({ userId: req.user.id });
+            if (!student) {
+                return res.status(404).json({ success: false, message: 'Student profile not found' });
+            }
+
+            // Check ownership
+            if (application.studentId.toString() !== student._id.toString()) {
+                return res.status(403).json({ success: false, message: 'Not authorized to modify this application' });
+            }
+
+            // Students can only withdraw
+            if (status !== 'Withdrawn') {
+                return res.status(403).json({ success: false, message: 'Students can only withdraw their application' });
+            }
+
+            // Update status
+            application.status = 'Withdrawn';
+            application.updatedAt = Date.now();
+            await application.save();
+
+            // (Optional) Update student's appliedJobs array
+            const studentDoc = await Student.findOne({ userId: req.user.id });
+            if (studentDoc) {
+                const appliedIndex = studentDoc.appliedJobs.findIndex(job => job.applicationId?.toString() === application._id.toString());
+                if (appliedIndex !== -1) {
+                    studentDoc.appliedJobs[appliedIndex].status = 'Withdrawn';
+                    await studentDoc.save();
+                }
+            }
+
+            // (Optional) Decrement job's applicants count
+            const job = await Job.findById(application.jobId);
+            if (job && job.applications > 0) {
+                job.applications -= 1;
+                await job.save();
+            }
+
+            return res.json({ success: true, application });
+        }
+
+        // ---------- COMPANY UPDATE ----------
+        if (req.user.role !== 'company') {
+            return res.status(403).json({ success: false, message: 'Access denied. Only companies can update application status.' });
+        }
 
         const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
             return res.status(404).json({ success: false, message: 'Company profile not found' });
         }
 
-        let application = await Application.findById(req.params.id);
-        if (!application) {
-            return res.status(404).json({ success: false, message: 'Application not found' });
-        }
-
-        // Check if application belongs to company
+        // Check ownership
         if (application.companyId.toString() !== company._id.toString()) {
             return res.status(403).json({ success: false, message: 'Not authorized' });
         }
@@ -296,6 +362,7 @@ router.put('/:id/status', auth, auth.authorize('company'), async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
+// ==================== END UPDATE ====================
 
 // @route   GET api/applications/student/applied
 // @desc    Get student's applied jobs with details

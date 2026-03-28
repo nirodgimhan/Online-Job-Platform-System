@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const auth = require('../middleware/auth');
-const Student = require('../Models/Student');
+const Student = require('../models/Student');
 const User = require('../models/User');
 const Job = require('../models/Job');
 

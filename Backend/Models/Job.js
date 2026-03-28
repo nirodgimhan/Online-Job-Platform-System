@@ -5,7 +5,7 @@ const JobSchema = new mongoose.Schema({
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Company',
-        required: true,
+        required: [true, 'Company ID is required'],
         index: true
     },
     
@@ -14,6 +14,7 @@ const JobSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Job title is required'],
         trim: true,
+        minlength: [2, 'Job title must be at least 2 characters'],
         maxlength: [100, 'Job title cannot exceed 100 characters']
     },
     
@@ -28,41 +29,66 @@ const JobSchema = new mongoose.Schema({
     // Employment Details
     employmentType: {
         type: String,
-        enum: ['Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary'],
+        enum: {
+            values: ['Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary'],
+            message: 'Employment type must be Full-time, Part-time, Contract, Internship, or Temporary'
+        },
         default: 'Full-time',
-        required: true
+        required: [true, 'Employment type is required']
     },
     
     workMode: {
         type: String,
-        enum: ['Remote', 'On-site', 'Hybrid'],
+        enum: {
+            values: ['Remote', 'On-site', 'Hybrid'],
+            message: 'Work mode must be Remote, On-site, or Hybrid'
+        },
         default: 'Remote',
-        required: true
+        required: [true, 'Work mode is required']
     },
     
     // Location
     location: {
-        city: { type: String, trim: true },
-        state: { type: String, trim: true },
-        country: { type: String, trim: true },
-        address: { type: String, trim: true }
+        city: { 
+            type: String, 
+            trim: true,
+            maxlength: [100, 'City name cannot exceed 100 characters']
+        },
+        state: { 
+            type: String, 
+            trim: true,
+            maxlength: [100, 'State name cannot exceed 100 characters']
+        },
+        country: { 
+            type: String, 
+            trim: true,
+            maxlength: [100, 'Country name cannot exceed 100 characters']
+        },
+        address: { 
+            type: String, 
+            trim: true,
+            maxlength: [255, 'Address cannot exceed 255 characters']
+        }
     },
     
     // Salary
     salary: {
         min: { 
             type: Number, 
-            min: 0,
+            min: [0, 'Minimum salary cannot be negative'],
             default: 0 
         },
         max: { 
             type: Number, 
-            min: 0,
+            min: [0, 'Maximum salary cannot be negative'],
             default: 0 
         },
         currency: { 
             type: String, 
-            enum: ['USD', 'EUR', 'GBP', 'LKR'],
+            enum: {
+                values: ['USD', 'EUR', 'GBP', 'LKR'],
+                message: 'Currency must be USD, EUR, GBP, or LKR'
+            },
             default: 'USD' 
         },
         isNegotiable: { 
@@ -75,44 +101,65 @@ const JobSchema = new mongoose.Schema({
     experience: {
         min: { 
             type: Number, 
-            min: 0,
+            min: [0, 'Minimum experience cannot be negative'],
             default: 0 
         },
         max: { 
             type: Number, 
-            min: 0,
+            min: [0, 'Maximum experience cannot be negative'],
             default: 0 
         },
         level: { 
             type: String, 
-            enum: ['Entry', 'Mid', 'Senior', 'Lead'],
+            enum: {
+                values: ['Entry', 'Mid', 'Senior', 'Lead'],
+                message: 'Experience level must be Entry, Mid, Senior, or Lead'
+            },
             default: 'Entry' 
         }
     },
     
     // Education
     education: {
-        level: { type: String, trim: true },
-        field: { type: String, trim: true }
+        level: { 
+            type: String, 
+            trim: true,
+            maxlength: [100, 'Education level cannot exceed 100 characters']
+        },
+        field: { 
+            type: String, 
+            trim: true,
+            maxlength: [100, 'Field of study cannot exceed 100 characters']
+        }
     },
     
     // Requirements and Responsibilities
     requirements: [{
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [500, 'Each requirement cannot exceed 500 characters']
     }],
     
     responsibilities: [{
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [500, 'Each responsibility cannot exceed 500 characters']
     }],
     
     // Skills
     skills: [{
-        name: { type: String, trim: true },
+        name: { 
+            type: String, 
+            trim: true,
+            maxlength: [50, 'Skill name cannot exceed 50 characters'],
+            required: [true, 'Skill name is required']
+        },
         importance: { 
             type: String, 
-            enum: ['Required', 'Preferred', 'Optional'],
+            enum: {
+                values: ['Required', 'Preferred', 'Optional'],
+                message: 'Importance must be Required, Preferred, or Optional'
+            },
             default: 'Required' 
         }
     }],
@@ -120,40 +167,55 @@ const JobSchema = new mongoose.Schema({
     // Benefits
     benefits: [{
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [200, 'Each benefit cannot exceed 200 characters']
     }],
     
     // Additional Information
     category: {
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [100, 'Category cannot exceed 100 characters']
     },
     
     tags: [{
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [50, 'Each tag cannot exceed 50 characters']
     }],
     
     applicationDeadline: {
-        type: Date
+        type: Date,
+        validate: {
+            validator: function(v) {
+                if (!v) return true;
+                return v > this.postedAt;
+            },
+            message: 'Application deadline must be after the posted date'
+        }
     },
     
     // Status
     status: {
         type: String,
-        enum: ['active', 'closed', 'draft'],
+        enum: {
+            values: ['active', 'closed', 'draft'],
+            message: 'Status must be active, closed, or draft'
+        },
         default: 'active'
     },
     
     // Statistics
     applicantsCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: [0, 'Applicants count cannot be negative']
     },
     
     viewsCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: [0, 'Views count cannot be negative']
     },
     
     isFeatured: {
@@ -174,6 +236,12 @@ const JobSchema = new mongoose.Schema({
             const date = new Date();
             date.setDate(date.getDate() + 30);
             return date;
+        },
+        validate: {
+            validator: function(v) {
+                return v > this.postedAt;
+            },
+            message: 'Expiration date must be after the posted date'
         }
     }
     
@@ -236,10 +304,22 @@ JobSchema.virtual('experienceDisplay').get(function() {
     return this.experience.level || 'Not specified';
 });
 
-// Pre-save middleware
+// Pre-save middleware for additional validations and cleanup
 JobSchema.pre('save', function(next) {
     // Update timestamps
     this.updatedAt = Date.now();
+    
+    // Validate salary ranges
+    if (this.salary.min > 0 && this.salary.max > 0 && this.salary.min > this.salary.max) {
+        next(new Error('Minimum salary cannot be greater than maximum salary'));
+        return;
+    }
+    
+    // Validate experience ranges
+    if (this.experience.min > 0 && this.experience.max > 0 && this.experience.min > this.experience.max) {
+        next(new Error('Minimum experience cannot be greater than maximum experience'));
+        return;
+    }
     
     // Set expiresAt if not set
     if (!this.expiresAt) {

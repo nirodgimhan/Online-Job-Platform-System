@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../Components/context/AuthContext';
+import { useAuth, API } from '../Components/context/AuthContext';
 import { 
   FaBriefcase,
   FaUserCircle,
@@ -31,6 +31,51 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [companyProfile, setCompanyProfile] = useState(null);
+  const [profilePictureUrl, setProfilePictureUrl] = useState(null);
+
+  // Fetch company profile if user is a company
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'company') {
+      fetchCompanyProfile();
+    } else if (isAuthenticated) {
+      // For students and admins, use user.profilePicture
+      setProfilePictureUrl(getProfilePictureUrl(user?.profilePicture));
+    } else {
+      setProfilePictureUrl(null);
+    }
+  }, [user, isAuthenticated]);
+
+  const fetchCompanyProfile = async () => {
+    try {
+      const response = await API.get('/companies/profile');
+      if (response.data.success) {
+        const company = response.data.company;
+        setCompanyProfile(company);
+        if (company.companyLogo) {
+          setProfilePictureUrl(getProfilePictureUrl(company.companyLogo));
+        } else if (user?.profilePicture) {
+          setProfilePictureUrl(getProfilePictureUrl(user.profilePicture));
+        } else {
+          setProfilePictureUrl(null);
+        }
+      } else {
+        // Fallback
+        if (user?.profilePicture) {
+          setProfilePictureUrl(getProfilePictureUrl(user.profilePicture));
+        } else {
+          setProfilePictureUrl(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching company profile for navbar:', error);
+      if (user?.profilePicture) {
+        setProfilePictureUrl(getProfilePictureUrl(user.profilePicture));
+      } else {
+        setProfilePictureUrl(null);
+      }
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -65,6 +110,12 @@ const Navbar = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  // For user initials fallback
+  const getUserInitials = () => {
+    if (!user?.name) return 'U';
+    return user.name.charAt(0).toUpperCase();
   };
 
   return (
@@ -109,10 +160,10 @@ const Navbar = () => {
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   >
                     <div className="jobline-user-avatar">
-                      {getProfilePictureUrl(user?.profilePicture) ? (
-                        <img src={getProfilePictureUrl(user?.profilePicture)} alt={user.name} />
+                      {profilePictureUrl ? (
+                        <img src={profilePictureUrl} alt={user.name} />
                       ) : (
-                        <span>{user?.name?.charAt(0) || 'U'}</span>
+                        <span>{getUserInitials()}</span>
                       )}
                     </div>
                     <span className="jobline-user-name">{user?.name?.split(' ')[0] || 'User'}</span>
@@ -178,10 +229,10 @@ const Navbar = () => {
             <>
               <div className="jobline-mobile-user-info">
                 <div className="jobline-mobile-user-avatar">
-                  {getProfilePictureUrl(user?.profilePicture) ? (
-                    <img src={getProfilePictureUrl(user?.profilePicture)} alt={user.name} />
+                  {profilePictureUrl ? (
+                    <img src={profilePictureUrl} alt={user.name} />
                   ) : (
-                    <span>{user?.name?.charAt(0) || 'U'}</span>
+                    <span>{getUserInitials()}</span>
                   )}
                 </div>
                 <div className="jobline-mobile-user-details">

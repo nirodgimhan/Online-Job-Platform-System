@@ -17,7 +17,7 @@ import {
   FaGlobe,
   FaSpinner,
   FaChevronLeft,
-  FaChevronRight,
+  FaChevronRight,FaLinkedin ,FaTwitter, FaFacebook, FaGithub,
   FaEye,
   FaCalendarAlt,
   FaStar,
@@ -623,6 +623,68 @@ const JobSearch = () => {
           )}
         </div>
       </div>
+       {/* Footer */}
+            <footer className="hp-footer">
+              <div className="hp-container">
+                <div className="hp-footer-grid">
+                  <div className="hp-footer-col">
+                    <div className="hp-footer-logo">
+                      <FaBriefcase className="hp-logo-icon" />
+                      <span>JobPortal</span>
+                    </div>
+                    <p>Connecting talented professionals with forward-thinking companies since 2020.</p>
+                    <div className="hp-social-links">
+                      <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
+                        <FaLinkedin />
+                      </a>
+                      <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
+                        <FaTwitter />
+                      </a>
+                      <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+                        <FaFacebook />
+                      </a>
+                      <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                        <FaGithub />
+                      </a>
+                    </div>
+                  </div>
+      
+                  <div className="hp-footer-col">
+                    <h4>For Job Seekers</h4>
+                    <ul>
+                      <li><Link to="/student/jobs">Browse Jobs</Link></li>
+                      <li><Link to="/student/cv-manager">CV Manager</Link></li>
+                      <li><Link to="/student/job-alerts">Job Alerts</Link></li>
+                      <li><Link to="/student/saved-jobs">Saved Jobs</Link></li>
+                    </ul>
+                  </div>
+      
+                  <div className="hp-footer-col">
+                    <h4>For Employers</h4>
+                    <ul>
+                      <li><Link to="/company/post-job">Post a Job</Link></li>
+                      <li><Link to="/company/manage-jobs">Manage Jobs</Link></li>
+                      <li><Link to="/company/applicants">Browse Candidates</Link></li>
+                      <li><Link to="/company/pricing">Pricing</Link></li>
+                    </ul>
+                  </div>
+      
+                  <div className="hp-footer-col">
+                    <h4>Company</h4>
+                    <ul>
+                      <li><Link to="/about">About Us</Link></li>
+                      <li><Link to="/contact">Contact Us</Link></li>
+                      <li><Link to="/privacy">Privacy Policy</Link></li>
+                      <li><Link to="/terms">Terms of Service</Link></li>
+                    </ul>
+                  </div>
+                </div>
+      
+                <div className="hp-footer-bottom">
+                  <p>&copy; 2024 JobPortal. All rights reserved.</p>
+                </div>
+              </div>
+            </footer>
     </div>
   );
 };

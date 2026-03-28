@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const auth = require('../middleware/auth');
 const Company = require('../models/Company');
-const Job = require('../Models/Job');
+const Job = require('../models/Job');
 const Post = require('../models/Post');
 const User = require('../models/User');
 

@@ -19,7 +19,7 @@ import Dashboard from './Components/Dashboard';
 import ProtectedRoute from './Components/ProtectedRoute';
 import Sidebar from './Components/Sidebar';
 
-// Public Job Search Component (without sidebar, accessible to everyone)
+// Public Job Search Components
 import JobSearch from './Components/student/JobSearch';
 import JobDetails from './Components/student/JobDetails';
 
@@ -38,12 +38,15 @@ import ApplicantsList from './Components/company/ApplicantsList';
 import ApplicantDetails from './Components/company/ApplicantDetails';
 import EditJob from './Components/company/EditJob';
 import CompanyInterviews from './Components/company/CompanyInterviews';
+import CompanyConfirmedInterviews from './Components/company/CompanyConfirmedInterviews';
 
 // Admin Components
 import AdminDashboard from './Components/admin/AdminDashboard';
 import ManageUsers from './Components/admin/ManageUsers';
 import ManageCompanies from './Components/admin/ManageCompanies';
 import AdminProfile from './Components/admin/AdminProfile';
+import VerificationRequests from './Components/admin/VerificationRequests'; // ✅ New
+import AdminReports from './Components/admin/AdminReports'; // ✅ New
 
 // Wrapper component to apply Sidebar to protected routes
 const DashboardPage = ({ children }) => {
@@ -159,6 +162,11 @@ function App() {
                     <CompanyInterviews />
                   </DashboardPage>
                 } />
+                <Route path="confirmed-interviews" element={
+                  <DashboardPage>
+                    <CompanyConfirmedInterviews />
+                  </DashboardPage>
+                } />
               </Route>
 
               {/* Admin Routes with Sidebar (Requires Authentication) */}
@@ -182,6 +190,16 @@ function App() {
                 <Route path="companies" element={
                   <DashboardPage>
                     <ManageCompanies />
+                  </DashboardPage>
+                } />
+                <Route path="verifications" element={
+                  <DashboardPage>
+                    <VerificationRequests />
+                  </DashboardPage>
+                } />
+                <Route path="reports" element={
+                  <DashboardPage>
+                    <AdminReports />
                   </DashboardPage>
                 } />
               </Route>

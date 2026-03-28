@@ -59,7 +59,6 @@ const ManageCompanies = () => {
       filterCompanies();
       calculateStats();
     } else {
-      // If no companies, reset filtered and stats
       setFilteredCompanies([]);
       setStats({
         total: 0,
@@ -95,26 +94,95 @@ const ManageCompanies = () => {
       setLoading(true);
       setError(null);
       
-      const response = await API.get('/companies');
-      
-      if (response.data && response.data.success) {
-        const companiesData = response.data.companies || [];
-        setCompanies(companiesData);
-        setFilteredCompanies(companiesData);
-        calculateStats(companiesData);
-        
-        if (companiesData.length === 0) {
-          toast.info('No companies found');
-        } else {
-          toast.success(`Found ${companiesData.length} companies`);
-        }
-      } else {
-        setError(response.data?.message || 'Failed to load companies');
-        setCompanies([]);
+      // Step 1: Get all users
+      const usersResponse = await API.get('/users');
+      if (!usersResponse.data.success) {
+        throw new Error(usersResponse.data.message || 'Failed to load users');
       }
+
+      const allUsers = usersResponse.data.users || [];
+      const companyUsers = allUsers.filter(u => u.role === 'company');
+      
+      if (companyUsers.length === 0) {
+        setCompanies([]);
+        toast.info('No companies found');
+        return;
+      }
+
+      // Step 2: For each company user, fetch their full profile
+      const companyPromises = companyUsers.map(async (companyUser) => {
+        try {
+          // Fetch company profile from public endpoint
+          const profileRes = await API.get(`/companies/public/${companyUser._id}`);
+          if (profileRes.data.success && profileRes.data.company) {
+            // Merge user data with company profile
+            return {
+              ...profileRes.data.company,
+              userId: {
+                ...companyUser,
+                _id: companyUser._id,
+                name: companyUser.name,
+                email: companyUser.email,
+                isVerified: companyUser.isVerified,
+                isActive: companyUser.isActive
+              },
+              // Ensure verification status matches user's isVerified (since company.verified might be separate)
+              verified: companyUser.isVerified || false,
+              isActive: companyUser.isActive !== false,
+              createdAt: companyUser.createdAt,
+              updatedAt: companyUser.updatedAt,
+              // Override contactEmail/Phone if not in profile
+              contactEmail: profileRes.data.company.contactEmail || companyUser.email,
+              contactPhone: profileRes.data.company.contactPhone || '',
+            };
+          } else {
+            // No profile found – return basic user info
+            return {
+              _id: companyUser._id,
+              companyName: companyUser.name,
+              industry: '',
+              description: '',
+              companySize: '',
+              foundedYear: '',
+              website: '',
+              contactEmail: companyUser.email,
+              contactPhone: '',
+              locations: [],
+              userId: companyUser,
+              verified: companyUser.isVerified || false,
+              isActive: companyUser.isActive !== false,
+              createdAt: companyUser.createdAt,
+              updatedAt: companyUser.updatedAt,
+            };
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch profile for company ${companyUser._id}:`, err);
+          // Return basic info
+          return {
+            _id: companyUser._id,
+            companyName: companyUser.name,
+            industry: '',
+            description: '',
+            companySize: '',
+            foundedYear: '',
+            website: '',
+            contactEmail: companyUser.email,
+            contactPhone: '',
+            locations: [],
+            userId: companyUser,
+            verified: companyUser.isVerified || false,
+            isActive: companyUser.isActive !== false,
+            createdAt: companyUser.createdAt,
+            updatedAt: companyUser.updatedAt,
+          };
+        }
+      });
+
+      const companiesData = await Promise.all(companyPromises);
+      setCompanies(companiesData);
+      
     } catch (err) {
       console.error('Error fetching companies:', err);
-      
       if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
         localStorage.removeItem('token');
@@ -122,9 +190,6 @@ const ManageCompanies = () => {
         setTimeout(() => navigate('/login'), 2000);
       } else if (err.response?.status === 403) {
         setError('You are not authorized to view companies.');
-      } else if (err.response?.status === 404) {
-        setCompanies([]);
-        toast.info('No companies found');
       } else {
         setError(err.response?.data?.message || 'Failed to load companies. Please try again.');
       }
@@ -160,13 +225,13 @@ const ManageCompanies = () => {
     setFilteredCompanies(filtered);
   };
 
-  const calculateStats = (data = companies) => {
+  const calculateStats = () => {
     const newStats = {
-      total: data.length,
-      verified: data.filter(c => c.verified).length,
-      pending: data.filter(c => !c.verified).length,
-      active: data.filter(c => c.isActive !== false).length,
-      inactive: data.filter(c => c.isActive === false).length
+      total: companies.length,
+      verified: companies.filter(c => c.verified).length,
+      pending: companies.filter(c => !c.verified).length,
+      active: companies.filter(c => c.isActive !== false).length,
+      inactive: companies.filter(c => c.isActive === false).length
     };
     setStats(newStats);
   };

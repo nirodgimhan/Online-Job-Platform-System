@@ -179,73 +179,73 @@ const Home = () => {
   };
 
   return (
-    <div className="home-page">
+    <div className="hp-home-page">
       {/* Hero Section */}
-      <section className="hero-section">
-        <div className="container">
-          <div className="hero-content">
+      <section className="hp-hero-section">
+        <div className="hp-container">
+          <div className="hp-hero-content">
             <h1>
-              Find Your <span className="gradient-text">Dream Job</span> Today
+              Find Your <span className="hp-gradient-text">Dream Job</span> Today
             </h1>
-            <p className="hero-subtitle">
+            <p className="hp-hero-subtitle">
               Connect with thousands of employers and find the perfect opportunity that matches your skills and aspirations.
             </p>
 
-            <div className="hero-buttons">
+            <div className="hp-hero-buttons">
               {user ? (
-                <Link to={user.role === 'student' ? '/student/dashboard' : '/company/dashboard'} className="btn btn-primary btn-lg">
+                <Link to={user.role === 'student' ? '/student/dashboard' : '/company/dashboard'} className="hp-btn hp-btn-primary hp-btn-lg">
                   Go to Dashboard <FaArrowRight />
                 </Link>
               ) : (
                 <>
-                  <Link to="/register" className="btn btn-primary btn-lg">
+                  <Link to="/register" className="hp-btn hp-btn-primary hp-btn-lg">
                     Get Started <FaArrowRight />
                   </Link>
-                  <Link to="/about" className="btn btn-outline btn-lg">
+                  <Link to="/about" className="hp-btn hp-btn-outline hp-btn-lg">
                     Learn More
                   </Link>
                 </>
               )}
             </div>
 
-            <div className="hero-stats">
-              <div className="stat-item">
-                <div className="stat-number">{stats.jobs.toLocaleString()}+</div>
-                <div className="stat-label">Active Jobs</div>
+            <div className="hp-hero-stats">
+              <div className="hp-stat-item">
+                <div className="hp-stat-number">{stats.jobs.toLocaleString()}+</div>
+                <div className="hp-stat-label">Active Jobs</div>
               </div>
-              <div className="stat-item">
-                <div className="stat-number">{stats.companies.toLocaleString()}+</div>
-                <div className="stat-label">Companies</div>
+              <div className="hp-stat-item">
+                <div className="hp-stat-number">{stats.companies.toLocaleString()}+</div>
+                <div className="hp-stat-label">Companies</div>
               </div>
-              <div className="stat-item">
-                <div className="stat-number">{stats.students.toLocaleString()}+</div>
-                <div className="stat-label">Students</div>
+              <div className="hp-stat-item">
+                <div className="hp-stat-number">{stats.students.toLocaleString()}+</div>
+                <div className="hp-stat-label">Students</div>
               </div>
-              <div className="stat-item">
-                <div className="stat-number">{stats.placements.toLocaleString()}+</div>
-                <div className="stat-label">Placements</div>
+              <div className="hp-stat-item">
+                <div className="hp-stat-number">{stats.placements.toLocaleString()}+</div>
+                <div className="hp-stat-label">Placements</div>
               </div>
             </div>
           </div>
 
-          <div className="hero-image">
+          <div className="hp-hero-image">
             <img src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80" alt="Hero" />
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="features-section">
-        <div className="container">
-          <div className="section-header">
+      <section className="hp-features-section">
+        <div className="hp-container">
+          <div className="hp-section-header">
             <h2>Why Choose JobPortal?</h2>
             <p>We provide the best tools and features to help you succeed</p>
           </div>
 
-          <div className="features-grid">
+          <div className="hp-features-grid">
             {features.map((feature, index) => (
-              <div key={index} className="feature-card">
-                <div className="feature-icon">{feature.icon}</div>
+              <div key={index} className="hp-feature-card">
+                <div className="hp-feature-icon">{feature.icon}</div>
                 <h3>{feature.title}</h3>
                 <p>{feature.description}</p>
               </div>
@@ -255,59 +255,59 @@ const Home = () => {
       </section>
 
       {/* Featured Jobs Section */}
-      <section className="jobs-section">
-        <div className="container">
-          <div className="section-header">
+      <section className="hp-jobs-section">
+        <div className="hp-container">
+          <div className="hp-section-header">
             <h2>Featured Jobs</h2>
             <p>Discover the latest opportunities from top companies</p>
           </div>
 
           {loading ? (
-            <div className="loading-spinner">
-              <div className="spinner"></div>
+            <div className="hp-loading-spinner">
+              <div className="hp-spinner"></div>
             </div>
           ) : (
             <>
-              <div className="jobs-grid">
+              <div className="hp-jobs-grid">
                 {featuredJobs.map((job) => (
-                  <div key={job.id} className="job-card">
-                    <div className="job-card-header">
-                      <div className="company-logo">
+                  <div key={job.id} className="hp-job-card">
+                    <div className="hp-job-card-header">
+                      <div className="hp-company-logo">
                         {job.logo ? (
                           <img src={job.logo} alt={job.company} />
                         ) : (
-                          <div className="logo-placeholder">
+                          <div className="hp-logo-placeholder">
                             {job.company.charAt(0)}
                           </div>
                         )}
                       </div>
-                      <div className="job-title">
+                      <div className="hp-job-title">
                         <h3>{job.title}</h3>
-                        <p className="company-name">{job.company}</p>
+                        <p className="hp-company-name">{job.company}</p>
                       </div>
                     </div>
 
-                    <div className="job-details">
-                      <div className="job-detail">
+                    <div className="hp-job-details">
+                      <div className="hp-job-detail">
                         <FaMapMarkerAlt />
                         <span>{job.location}</span>
                       </div>
-                      <div className="job-detail">
+                      <div className="hp-job-detail">
                         <FaBriefcase />
                         <span>{job.type}</span>
                       </div>
-                      <div className="job-detail">
+                      <div className="hp-job-detail">
                         <FaDollarSign />
                         <span>{job.salary}</span>
                       </div>
-                      <div className="job-detail">
+                      <div className="hp-job-detail">
                         <FaClock />
                         <span>{job.posted}</span>
                       </div>
                     </div>
 
-                    <div className="job-card-footer">
-                      <Link to={`/job/${job.id}`} className="btn btn-outline-primary btn-sm">
+                    <div className="hp-job-card-footer">
+                      <Link to={`/job/${job.id}`} className="hp-btn hp-btn-outline-primary hp-btn-sm">
                         View Details
                       </Link>
                     </div>
@@ -315,8 +315,8 @@ const Home = () => {
                 ))}
               </div>
 
-              <div className="view-more">
-                <Link to="/jobs" className="btn btn-outline-primary">
+              <div className="hp-view-more">
+                <Link to="/jobs" className="hp-btn hp-btn-outline-primary">
                   View All Jobs <FaArrowRight />
                 </Link>
               </div>
@@ -326,35 +326,35 @@ const Home = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="how-it-works">
-        <div className="container">
-          <div className="section-header">
+      <section className="hp-how-it-works">
+        <div className="hp-container">
+          <div className="hp-section-header">
             <h2>How It Works</h2>
             <p>Three simple steps to your dream job</p>
           </div>
 
-          <div className="steps-grid">
-            <div className="step-card">
-              <div className="step-number">1</div>
-              <div className="step-icon">
+          <div className="hp-steps-grid">
+            <div className="hp-step-card">
+              <div className="hp-step-number">1</div>
+              <div className="hp-step-icon">
                 <FaUserGraduate />
               </div>
               <h3>Create Account</h3>
               <p>Sign up as a student or company in minutes with your email or social media.</p>
             </div>
 
-            <div className="step-card">
-              <div className="step-number">2</div>
-              <div className="step-icon">
+            <div className="hp-step-card">
+              <div className="hp-step-number">2</div>
+              <div className="hp-step-icon">
                 <FaFileAlt />
               </div>
               <h3>Build Profile</h3>
               <p>Complete your profile with education, experience, skills, and upload your CV.</p>
             </div>
 
-            <div className="step-card">
-              <div className="step-number">3</div>
-              <div className="step-icon">
+            <div className="hp-step-card">
+              <div className="hp-step-number">3</div>
+              <div className="hp-step-icon">
                 <FaCheckCircle />
               </div>
               <h3>Start Applying</h3>
@@ -365,39 +365,39 @@ const Home = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section className="testimonials-section">
-        <div className="container">
-          <div className="section-header">
+      <section className="hp-testimonials-section">
+        <div className="hp-container">
+          <div className="hp-section-header">
             <h2>What Our Users Say</h2>
             <p>Success stories from our community</p>
           </div>
 
-          <div className="testimonials-grid">
+          <div className="hp-testimonials-grid">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="testimonial-card">
-                <div className="quote-icon">
+              <div key={index} className="hp-testimonial-card">
+                <div className="hp-quote-icon">
                   <FaQuoteLeft />
                 </div>
-                <p className="testimonial-content">{testimonial.content}</p>
-                <div className="testimonial-rating">
+                <p className="hp-testimonial-content">{testimonial.content}</p>
+                <div className="hp-testimonial-rating">
                   {renderStars(testimonial.rating)}
                 </div>
-                <div className="testimonial-author">
-                  <div className="author-avatar">
+                <div className="hp-testimonial-author">
+                  <div className="hp-author-avatar">
                     {testimonial.image ? (
                       <img src={testimonial.image} alt={testimonial.name} />
                     ) : (
-                      <div className="avatar-placeholder">
+                      <div className="hp-avatar-placeholder">
                         {testimonial.name.charAt(0)}
                       </div>
                     )}
                   </div>
-                  <div className="author-info">
+                  <div className="hp-author-info">
                     <h4>{testimonial.name}</h4>
                     <p>{testimonial.role} at {testimonial.company}</p>
                   </div>
                 </div>
-                <div className="quote-icon-end">
+                <div className="hp-quote-icon-end">
                   <FaQuoteRight />
                 </div>
               </div>
@@ -407,20 +407,20 @@ const Home = () => {
       </section>
 
       {/* Trusted Companies Section */}
-      <section className="companies-section">
-        <div className="container">
-          <div className="section-header">
+      <section className="hp-companies-section">
+        <div className="hp-container">
+          <div className="hp-section-header">
             <h2>Trusted By Leading Companies</h2>
             <p>Join thousands of companies hiring through JobPortal</p>
           </div>
 
-          <div className="companies-grid">
+          <div className="hp-companies-grid">
             {companies.map((company, index) => (
-              <div key={index} className="company-card">
+              <div key={index} className="hp-company-card">
                 {company.logo ? (
                   <img src={company.logo} alt={company.name} />
                 ) : (
-                  <div className="company-logo-placeholder">
+                  <div className="hp-company-logo-placeholder">
                     <FaBuilding />
                     <span>{company.name}</span>
                   </div>
@@ -432,22 +432,22 @@ const Home = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="cta-section">
-        <div className="container">
-          <div className="cta-card">
+      <section className="hp-cta-section">
+        <div className="hp-container">
+          <div className="hp-cta-card">
             <h2>Ready to Start Your Journey?</h2>
             <p>Join thousands of professionals and companies already using JobPortal</p>
-            <div className="cta-buttons">
+            <div className="hp-cta-buttons">
               {user ? (
-                <Link to={user.role === 'student' ? '/student/dashboard' : '/company/dashboard'} className="btn btn-primary btn-lg">
+                <Link to={user.role === 'student' ? '/student/dashboard' : '/company/dashboard'} className="hp-btn hp-btn-primary hp-btn-lg">
                   Go to Dashboard
                 </Link>
               ) : (
                 <>
-                  <Link to="/register" className="btn btn-primary btn-lg">
+                  <Link to="/register" className="hp-btn hp-btn-primary hp-btn-lg">
                     Get Started Now
                   </Link>
-                  <Link to="/contact" className="btn btn-outline-light btn-lg">
+                  <Link to="/contact" className="hp-btn hp-btn-outline-light hp-btn-lg">
                     Contact Us
                   </Link>
                 </>
@@ -458,16 +458,16 @@ const Home = () => {
       </section>
 
       {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-grid">
-            <div className="footer-col">
-              <div className="footer-logo">
-                <FaBriefcase className="logo-icon" />
+      <footer className="hp-footer">
+        <div className="hp-container">
+          <div className="hp-footer-grid">
+            <div className="hp-footer-col">
+              <div className="hp-footer-logo">
+                <FaBriefcase className="hp-logo-icon" />
                 <span>JobPortal</span>
               </div>
               <p>Connecting talented professionals with forward-thinking companies since 2020.</p>
-              <div className="social-links">
+              <div className="hp-social-links">
                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
                   <FaLinkedin />
                 </a>
@@ -483,7 +483,7 @@ const Home = () => {
               </div>
             </div>
 
-            <div className="footer-col">
+            <div className="hp-footer-col">
               <h4>For Job Seekers</h4>
               <ul>
                 <li><Link to="/student/jobs">Browse Jobs</Link></li>
@@ -493,7 +493,7 @@ const Home = () => {
               </ul>
             </div>
 
-            <div className="footer-col">
+            <div className="hp-footer-col">
               <h4>For Employers</h4>
               <ul>
                 <li><Link to="/company/post-job">Post a Job</Link></li>
@@ -503,7 +503,7 @@ const Home = () => {
               </ul>
             </div>
 
-            <div className="footer-col">
+            <div className="hp-footer-col">
               <h4>Company</h4>
               <ul>
                 <li><Link to="/about">About Us</Link></li>
@@ -514,7 +514,7 @@ const Home = () => {
             </div>
           </div>
 
-          <div className="footer-bottom">
+          <div className="hp-footer-bottom">
             <p>&copy; 2024 JobPortal. All rights reserved.</p>
           </div>
         </div>

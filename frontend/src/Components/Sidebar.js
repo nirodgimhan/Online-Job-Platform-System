@@ -42,45 +42,79 @@ const Sidebar = ({ children }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [companyProfile, setCompanyProfile] = useState(null);
+  const [studentProfile, setStudentProfile] = useState(null);
   const [profilePicture, setProfilePicture] = useState(null);
 
   useEffect(() => {
-    // If user is company, fetch their profile to get the logo
-    if (user?.role === 'company') {
-      fetchCompanyProfile();
-    } else {
-      // For other roles, use user.profilePicture from context
-      if (user?.profilePicture) {
+    const loadProfilePicture = async () => {
+      // For students, try to get from user first, else fetch profile
+      if (user?.role === 'student') {
+        if (user.profilePicture) {
+          setProfilePicture(user.profilePicture);
+        } else {
+          // Fetch student profile to get photo
+          try {
+            const response = await API.get('/students/profile');
+            if (response.data.success) {
+              const studentData = response.data.student;
+              setStudentProfile(studentData);
+              if (studentData.profilePhoto) {
+                setProfilePicture(studentData.profilePhoto);
+              } else {
+                setProfilePicture(null);
+              }
+            } else {
+              setProfilePicture(null);
+            }
+          } catch (error) {
+            console.error('Error fetching student profile for sidebar:', error);
+            setProfilePicture(null);
+          }
+        }
+        return;
+      }
+
+      // For companies: try user.companyLogo first, else fetch profile
+      if (user?.role === 'company') {
+        if (user.companyLogo) {
+          setProfilePicture(user.companyLogo);
+          return;
+        }
+        // Fetch company profile
+        try {
+          const response = await API.get('/companies/profile');
+          if (response.data.success) {
+            const company = response.data.company;
+            setCompanyProfile(company);
+            if (company.companyLogo) {
+              setProfilePicture(company.companyLogo);
+            } else if (user?.profilePicture) {
+              setProfilePicture(user.profilePicture);
+            } else {
+              setProfilePicture(null);
+            }
+          } else {
+            if (user?.profilePicture) setProfilePicture(user.profilePicture);
+          }
+        } catch (error) {
+          console.error('Error fetching company profile for sidebar:', error);
+          if (user?.profilePicture) setProfilePicture(user.profilePicture);
+        }
+        return;
+      }
+
+      // For admin: use user.profilePicture directly
+      if (user?.role === 'admin' && user.profilePicture) {
         setProfilePicture(user.profilePicture);
       } else {
         setProfilePicture(null);
       }
-    }
-  }, [user]);
+    };
 
-  const fetchCompanyProfile = async () => {
-    try {
-      const response = await API.get('/companies/profile');
-      if (response.data.success) {
-        const company = response.data.company;
-        setCompanyProfile(company);
-        if (company.companyLogo) {
-          setProfilePicture(company.companyLogo);
-        } else if (user?.profilePicture) {
-          setProfilePicture(user.profilePicture);
-        } else {
-          setProfilePicture(null);
-        }
-      } else {
-        // Fallback to user.profilePicture if exists
-        if (user?.profilePicture) setProfilePicture(user.profilePicture);
-      }
-    } catch (error) {
-      console.error('Error fetching company profile for sidebar:', error);
-      // Fallback to user.profilePicture
-      if (user?.profilePicture) setProfilePicture(user.profilePicture);
+    if (user) {
+      loadProfilePicture();
     }
-  };
+  }, [user]); // Re-run when user changes (e.g., after login or photo update)
 
   const handleLogout = () => {
     logout();
@@ -102,7 +136,8 @@ const Sidebar = ({ children }) => {
     { title: 'My Applications', path: '/student/applied-jobs', icon: <FaClipboardList />, badge: 'new' },
     { title: 'Saved Jobs', path: '/student/saved-jobs', icon: <FaHeart /> },
     { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> },
-    { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' }
+    { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' },
+    
   ];
 
   const companyMenuItems = [
@@ -111,7 +146,8 @@ const Sidebar = ({ children }) => {
     { title: 'Post New Job', path: '/company/post-job', icon: <FaPlusCircle /> },
     { title: 'Manage Jobs', path: '/company/manage-jobs', icon: <FaListAlt /> },
     { title: 'Applications', path: '/company/applicants', icon: <FaUsers />, badge: 'new' },
-    { title: 'Interviews', path: '/company/interviews', icon: <FaCalendarAlt /> }
+    { title: 'Interviews', path: '/company/interviews', icon: <FaCalendarAlt /> },
+    { title: 'Confirmed Interviews', path: '/company/confirmed-interviews', icon: <FaCheckCircle /> }  // ✅ New
   ];
 
   const adminMenuItems = [

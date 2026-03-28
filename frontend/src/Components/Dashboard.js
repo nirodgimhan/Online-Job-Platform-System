@@ -33,7 +33,10 @@ const Dashboard = () => {
     totalViews: 0,
     companyFollowers: 0,
     notifications: 0,
-    unreadMessages: 0
+    unreadMessages: 0,
+    // Student specific
+    savedJobs: 0,
+    reviewedApplications: 0
   });
   
   const [recentApplications, setRecentApplications] = useState([]);
@@ -53,26 +56,34 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
+      loadProfilePicture();
       fetchAllDashboardData();
-      loadCompanyLogo();
     }
   }, [user]);
 
-  const loadCompanyLogo = () => {
-    if (user?.companyLogo) {
-      const url = user.companyLogo.startsWith('http') ? user.companyLogo : `http://localhost:5000${user.companyLogo}`;
-      setProfilePictureUrl(url);
-      return;
-    }
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        if (parsedUser.companyLogo) {
-          const url = parsedUser.companyLogo.startsWith('http') ? parsedUser.companyLogo : `http://localhost:5000${parsedUser.companyLogo}`;
-          setProfilePictureUrl(url);
-        }
-      } catch (e) {}
+  const loadProfilePicture = () => {
+    if (user?.role === 'company') {
+      if (user?.companyLogo) {
+        const url = user.companyLogo.startsWith('http') ? user.companyLogo : `http://localhost:5000${user.companyLogo}`;
+        setProfilePictureUrl(url);
+        return;
+      }
+      // Fallback: try to get from localStorage
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          if (parsedUser.companyLogo) {
+            const url = parsedUser.companyLogo.startsWith('http') ? parsedUser.companyLogo : `http://localhost:5000${parsedUser.companyLogo}`;
+            setProfilePictureUrl(url);
+          }
+        } catch (e) {}
+      }
+    } else if (user?.role === 'student') {
+      if (user?.profilePicture) {
+        const url = user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`;
+        setProfilePictureUrl(url);
+      }
     }
   };
 
@@ -80,7 +91,11 @@ const Dashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      await fetchCompanyDashboardData();
+      if (user?.role === 'student') {
+        await fetchStudentDashboardData();
+      } else if (user?.role === 'company') {
+        await fetchCompanyDashboardData();
+      }
       await fetchNotifications();
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -90,6 +105,96 @@ const Dashboard = () => {
     }
   };
 
+  // ==================== STUDENT DASHBOARD ====================
+  const fetchStudentDashboardData = async () => {
+    try {
+      // 1. Fetch applications
+      let applications = [];
+      try {
+        const appsRes = await API.get('/applications/student');
+        applications = appsRes.data.applications || [];
+      } catch (e) {
+        console.log('Applications fetch failed:', e);
+      }
+
+      // 2. Fetch saved jobs
+      let savedJobsList = [];
+      try {
+        const savedRes = await API.get('/students/saved-jobs');
+        savedJobsList = savedRes.data.savedJobs || [];
+      } catch (e) {
+        console.log('Saved jobs fetch failed:', e);
+      }
+
+      // 3. Fetch upcoming interviews
+      let interviews = [];
+      try {
+        const interviewsRes = await API.get('/interviews/student');
+        interviews = interviewsRes.data.interviews || [];
+      } catch (e) {
+        console.log('Interviews fetch failed:', e);
+      }
+
+      // Compute stats from applications
+      const pending = applications.filter(app => app.status === 'pending' || app.status === 'Pending').length;
+      const reviewed = applications.filter(app => app.status === 'reviewed' || app.status === 'Reviewed').length;
+      const shortlisted = applications.filter(app => app.status === 'shortlisted' || app.status === 'Shortlisted').length;
+      const interviewed = applications.filter(app => app.status === 'interview' || app.status === 'Interview').length;
+      const accepted = applications.filter(app => app.status === 'accepted' || app.status === 'Accepted').length;
+      const rejected = applications.filter(app => app.status === 'rejected' || app.status === 'Rejected').length;
+
+      const upcomingInterviewsList = interviews.filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled');
+      const upcomingCount = upcomingInterviewsList.length;
+
+      // Set recent applications (last 5)
+      const recentApps = applications.slice(0, 5);
+      setRecentApplications(recentApps);
+
+      // Set upcoming interviews (first 3)
+      setUpcomingInterviews(upcomingInterviewsList.slice(0, 3));
+
+      // 4. Fetch recommended jobs (recent jobs)
+      let recommendedJobs = [];
+      try {
+        const jobsRes = await API.get('/jobs?limit=3&sort=recent');
+        recommendedJobs = jobsRes.data.jobs || [];
+      } catch (e) {
+        console.log('Recommended jobs fetch failed:', e);
+      }
+      setActiveJobs(recommendedJobs);
+
+      // Update stats
+      setStats({
+        ...stats,
+        totalApplications: applications.length,
+        savedJobs: savedJobsList.length,
+        pendingApplications: pending,
+        reviewedApplications: reviewed,
+        shortlistedApplications: shortlisted,
+        interviewedApplications: interviewed,
+        acceptedApplications: accepted,
+        rejectedApplications: rejected,
+        upcomingInterviews: upcomingCount,
+        completedInterviews: interviews.filter(i => i.status === 'completed').length,
+        notifications: 5, // placeholder
+        unreadMessages: 3
+      });
+
+      // Also set companyStats for student (optional)
+      setCompanyStats({
+        profileViews: 0,
+        jobViews: 0,
+        applicationRate: applications.length ? Math.round((shortlisted / applications.length) * 100) : 0,
+        hireRate: applications.length ? Math.round((accepted / applications.length) * 100) : 0
+      });
+
+    } catch (error) {
+      console.error('Error in student dashboard:', error);
+      throw error;
+    }
+  };
+
+  // ==================== COMPANY DASHBOARD ====================
   const fetchCompanyDashboardData = async () => {
     try {
       // Fetch company profile
@@ -97,7 +202,10 @@ const Dashboard = () => {
       try {
         const profileRes = await API.get('/companies/profile');
         company = profileRes.data.company;
-        if (company?.logo) setProfilePictureUrl(`http://localhost:5000${company.logo}`);
+        if (company?.companyLogo) {
+          const url = company.companyLogo.startsWith('http') ? company.companyLogo : `http://localhost:5000${company.companyLogo}`;
+          setProfilePictureUrl(url);
+        }
       } catch (e) {
         console.log('Company profile fetch failed:', e);
       }
@@ -194,9 +302,11 @@ const Dashboard = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await API.get('/notifications/company');
+      const endpoint = user?.role === 'student' ? '/notifications/student' : '/notifications/company';
+      const response = await API.get(endpoint);
       setRecentNotifications(response.data.notifications?.slice(0, 5) || []);
     } catch (error) {
+      // Fallback notifications
       setRecentNotifications([
         { _id: '1', message: 'New application received for Software Engineer position', time: '2 hours ago', read: false },
         { _id: '2', message: 'Your job post has been viewed 50 times', time: '1 day ago', read: false }
@@ -205,12 +315,12 @@ const Dashboard = () => {
   };
 
   const getInitials = (name) => {
-    if (!name) return 'C';
+    if (!name) return 'U';
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const getStatusBadge = (status) => {
-    const badges = {
+    const statusMap = {
       'pending': 'ds-badge ds-badge-warning', 'Pending': 'ds-badge ds-badge-warning',
       'reviewed': 'ds-badge ds-badge-info', 'Reviewed': 'ds-badge ds-badge-info',
       'shortlisted': 'ds-badge ds-badge-primary', 'Shortlisted': 'ds-badge ds-badge-primary',
@@ -218,7 +328,7 @@ const Dashboard = () => {
       'accepted': 'ds-badge ds-badge-success', 'Accepted': 'ds-badge ds-badge-success',
       'rejected': 'ds-badge ds-badge-danger', 'Rejected': 'ds-badge ds-badge-danger'
     };
-    return badges[status] || 'ds-badge ds-badge-secondary';
+    return statusMap[status] || 'ds-badge ds-badge-secondary';
   };
 
   const formatDate = (dateString) => {
@@ -276,20 +386,14 @@ const Dashboard = () => {
     );
   }
 
-  // Student Dashboard
+  // ==================== STUDENT DASHBOARD RENDER ====================
   if (user?.role === 'student') {
     return (
       <div className="ds-student-dashboard">
         {/* Welcome Header with User Logo */}
         <div className="ds-welcome-header">
           <div className="ds-welcome-content">
-            <div className="ds-user-avatar-large">
-              {profilePictureUrl ? (
-                <img src={profilePictureUrl} alt={user.name} className="ds-avatar-image" />
-              ) : (
-                <div className="ds-avatar-placeholder">{getInitials(user.name)}</div>
-              )}
-            </div>
+            
             <div className="ds-welcome-text">
               <h2>Welcome back, {user.name}! 👋</h2>
               <p>Your career journey continues here. Let's find your dream job!</p>
@@ -362,8 +466,8 @@ const Dashboard = () => {
           
           <div className="ds-stat-card">
             <div className="ds-stat-info">
-              <h3>{stats.interviewedApplications}</h3>
-              <p>Interviews</p>
+              <h3>{stats.upcomingInterviews}</h3>
+              <p>Upcoming Interviews</p>
             </div>
             <div className="ds-stat-icon ds-stat-icon-warning">
               <FaCalendarAlt />
@@ -389,7 +493,7 @@ const Dashboard = () => {
                 </div>
                 <div className="ds-status-item">
                   <span><FaEye className="ds-text-info" /> Reviewed</span>
-                  <span className="ds-status-value">{stats.reviewedApplications || 0}</span>
+                  <span className="ds-status-value">{stats.reviewedApplications}</span>
                 </div>
                 <div className="ds-status-item">
                   <span><FaTimesCircle className="ds-text-danger" /> Rejected</span>
@@ -414,10 +518,10 @@ const Dashboard = () => {
                     <div key={job._id} className="ds-recommended-item">
                       <div className="ds-recommended-content">
                         <h6>{job.title}</h6>
-                        <p>{user?.companyName || 'Your Company'}</p>
+                        <p>{job.companyId?.companyName || 'Company'}</p>
                         <div className="ds-job-meta">
                           <span><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span>
-                          <span><FaDollarSign /> ${job.salary?.min?.toLocaleString() || 'Negotiable'}</span>
+                          <span><FaDollarSign /> {job.salary?.min ? `$${job.salary.min.toLocaleString()}` : 'Negotiable'}</span>
                         </div>
                       </div>
                       <Link to={`/student/job/${job._id}`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
@@ -469,22 +573,14 @@ const Dashboard = () => {
     );
   }
 
-  // Company Dashboard
+  // ==================== COMPANY DASHBOARD RENDER ====================
   if (user?.role === 'company') {
     return (
       <div className="ds-company-dashboard">
         {/* Welcome Header */}
         <div className="ds-welcome-header">
           <div className="ds-welcome-content">
-            <div className="ds-user-avatar-large">
-              {profilePictureUrl ? (
-                <img src={profilePictureUrl} alt={user.companyName} className="ds-avatar-image" />
-              ) : (
-                <div className="ds-avatar-placeholder">
-                  <FaBuilding size={32} />
-                </div>
-              )}
-            </div>
+            
             <div className="ds-welcome-text">
               <h2>Welcome back, {user.companyName || user.name}! 🏢</h2>
               <p>Find the best talent for your company. Post jobs and review applications.</p>

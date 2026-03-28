@@ -4,9 +4,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const auth = require('../middleware/auth');
-const Post = require('../Models/Post');
+const Post = require('../models/Post');
 const Student = require('../models/Student');
-const Company = require('../Models/Company');
+const Company = require('../models/Company');
 const User = require('../models/User');
 
 // Ensure uploads directory exists

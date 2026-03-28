@@ -14,7 +14,6 @@ const StudentProfile = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const coverInputRef = useRef(null);
-  const cvInputRef = useRef(null);
   
   // State
   const [profile, setProfile] = useState(null);
@@ -25,7 +24,6 @@ const StudentProfile = () => {
   const [following, setFollowing] = useState(0);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingCV, setUploadingCV] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [missingFields, setMissingFields] = useState([]);
@@ -43,8 +41,7 @@ const StudentProfile = () => {
     portfolio: '',
     phoneNumber: '',
     address: { street: '', city: '', state: '', country: '', zipCode: '' },
-    socialLinks: { linkedin: '', github: '', portfolio: '', twitter: '' },
-    cv: { url: '', filename: '', uploadedAt: null }
+    socialLinks: { linkedin: '', github: '', portfolio: '', twitter: '' }
   });
 
   // Preview URLs
@@ -106,8 +103,7 @@ const StudentProfile = () => {
           portfolio: studentData.portfolio || '',
           phoneNumber: studentData.phoneNumber || user?.phoneNumber || '',
           address: studentData.address || { street: '', city: '', state: '', country: '', zipCode: '' },
-          socialLinks: studentData.socialLinks || { linkedin: '', github: '', portfolio: '', twitter: '' },
-          cv: studentData.cv || { url: '', filename: '', uploadedAt: null }
+          socialLinks: studentData.socialLinks || { linkedin: '', github: '', portfolio: '', twitter: '' }
         });
         if (studentData.profilePhoto) setProfilePreview(`http://localhost:5000${studentData.profilePhoto}`);
         if (studentData.coverPhoto) setCoverPreview(`http://localhost:5000${studentData.coverPhoto}`);
@@ -178,21 +174,21 @@ const StudentProfile = () => {
     }
   };
 
-const handleProfilePhotoUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { toast.error('Photo must be less than 5MB'); return; }
-  try {
-    setUploadingPhoto(true);
-    const reader = new FileReader();
-    reader.onloadend = () => setProfilePreview(reader.result);
-    reader.readAsDataURL(file);
-    const formData = new FormData();
-    formData.append('profilePhoto', file);
-    const response = await API.post('/students/profile/photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-    if (response.data.success) toast.success('Profile photo updated successfully');
-  } catch (error) { toast.error('Failed to upload photo'); } finally { setUploadingPhoto(false); }
-};
+  const handleProfilePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('Photo must be less than 5MB'); return; }
+    try {
+      setUploadingPhoto(true);
+      const reader = new FileReader();
+      reader.onloadend = () => setProfilePreview(reader.result);
+      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append('profilePhoto', file);
+      const response = await API.post('/students/profile/photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (response.data.success) toast.success('Profile photo updated successfully');
+    } catch (error) { toast.error('Failed to upload photo'); } finally { setUploadingPhoto(false); }
+  };
 
   const handleCoverPhotoUpload = async (e) => {
     const file = e.target.files[0];
@@ -208,22 +204,6 @@ const handleProfilePhotoUpload = async (e) => {
       const response = await API.post('/students/profile/cover', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.success) toast.success('Cover photo updated successfully');
     } catch (error) { toast.error('Failed to upload cover'); } finally { setUploadingCover(false); }
-  };
-
-  const handleCVUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { toast.error('CV must be less than 10MB'); return; }
-    try {
-      setUploadingCV(true);
-      const formData = new FormData();
-      formData.append('cv', file);
-      const response = await API.post('/students/cv/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (response.data.success) {
-        setFormData(prev => ({ ...prev, cv: response.data.cv }));
-        toast.success('CV uploaded successfully');
-      }
-    } catch (error) { toast.error('Failed to upload CV'); } finally { setUploadingCV(false); }
   };
 
   const handleAddEducation = () => {
@@ -501,8 +481,7 @@ const handleProfilePhotoUpload = async (e) => {
         portfolio: profile.portfolio || '',
         phoneNumber: profile.phoneNumber || user?.phoneNumber || '',
         address: profile.address || { street: '', city: '', state: '', country: '', zipCode: '' },
-        socialLinks: profile.socialLinks || { linkedin: '', github: '', portfolio: '', twitter: '' },
-        cv: profile.cv || { url: '', filename: '', uploadedAt: null }
+        socialLinks: profile.socialLinks || { linkedin: '', github: '', portfolio: '', twitter: '' }
       });
     }
     if (profile?.profilePhoto) setProfilePreview(`http://localhost:5000${profile.profilePhoto}`);
@@ -661,51 +640,19 @@ const handleProfilePhotoUpload = async (e) => {
           </div>
         </div>
 
-        {/* About Me Section */}
-        <div className="sp-profile-section">
-          <div className="sp-section-title">
-            <div className="sp-section-title-icon"><FaFileAlt /></div>
-            <h2>About Me</h2>
-          </div>
-          <div className="sp-section-content">
-            <p className="sp-bio-content">{formData.summary || 'No bio provided'}</p>
-          </div>
-        </div>
-
-        {/* CV & Portfolio Section */}
-        <div className="sp-profile-section">
-          <div className="sp-section-title">
-            <div className="sp-section-title-icon"><FaFilePdf /></div>
-            <h2>CV & Portfolio</h2>
-          </div>
-          <div className="sp-section-content">
-            <div className="sp-cv-portfolio">
-              {formData.cv?.url ? (
-                <a href={formData.cv.url} target="_blank" rel="noopener noreferrer" className="sp-cv-link"><FaFilePdf /> {formData.cv.filename || 'Download CV'} <FaDownload /></a>
-              ) : (
-                <span className="sp-empty-text">No CV uploaded</span>
-              )}
-              {formData.portfolio ? (
-                <a href={formData.portfolio} target="_blank" rel="noopener noreferrer" className="sp-portfolio-link"><FaGlobe /> Portfolio Website</a>
-              ) : (
-                <span className="sp-empty-text">No portfolio added</span>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Social Links Section */}
         <div className="sp-profile-section">
           <div className="sp-section-title">
             <div className="sp-section-title-icon"><FaGlobe /></div>
-            <h2>Social Links</h2>
+            <h2>Social Links & Portfolio</h2>
           </div>
           <div className="sp-section-content">
             <div className="sp-social-links">
               {formData.socialLinks?.linkedin && <a href={formData.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="sp-social-link sp-linkedin"><FaLinkedin /> LinkedIn</a>}
               {formData.socialLinks?.github && <a href={formData.socialLinks.github} target="_blank" rel="noopener noreferrer" className="sp-social-link sp-github"><FaGithub /> GitHub</a>}
               {formData.socialLinks?.twitter && <a href={formData.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="sp-social-link sp-twitter"><FaTwitter /> Twitter</a>}
-              {!formData.socialLinks?.linkedin && !formData.socialLinks?.github && !formData.socialLinks?.twitter && <span className="sp-empty-text">No social links added</span>}
+              {formData.portfolio && <a href={formData.portfolio} target="_blank" rel="noopener noreferrer" className="sp-social-link sp-portfolio"><FaGlobe /> Portfolio Website</a>}
+              {!formData.socialLinks?.linkedin && !formData.socialLinks?.github && !formData.socialLinks?.twitter && !formData.portfolio && <span className="sp-empty-text">No links added</span>}
             </div>
           </div>
         </div>
@@ -920,16 +867,6 @@ const handleProfilePhotoUpload = async (e) => {
                   <div className="sp-form-row">
                     <div className="sp-form-group"><input type="text" name="address.city" value={formData.address.city} onChange={handleInputChange} placeholder="City" /></div>
                     <div className="sp-form-group"><input type="text" name="address.country" value={formData.address.country} onChange={handleInputChange} placeholder="Country" /></div>
-                  </div>
-                  <div className="sp-form-group">
-                    <label>CV / Resume</label>
-                    <div className="sp-file-upload">
-                      <input type="file" ref={cvInputRef} accept=".pdf,.doc,.docx" onChange={handleCVUpload} style={{ display: 'none' }} />
-                      <button type="button" className="sp-upload-btn" onClick={() => cvInputRef.current.click()} disabled={uploadingCV}>
-                        {uploadingCV ? <FaSpinner className="sp-fa-spin" /> : <FaUpload />}{formData.cv?.url ? 'Update CV' : 'Upload CV'}
-                      </button>
-                      {formData.cv?.url && <a href={formData.cv.url} target="_blank" rel="noopener noreferrer" className="sp-view-link"><FaFilePdf /> View Current CV</a>}
-                    </div>
                   </div>
                   <div className="sp-form-group"><label>Portfolio Website</label><input type="url" name="portfolio" value={formData.portfolio} onChange={handleInputChange} placeholder="https://yourportfolio.com" /></div>
                 </div>

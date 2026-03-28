@@ -56,11 +56,10 @@ const AppliedJobs = () => {
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
-  // Helper to normalize status strings (capitalize first letter, rest lower)
   const normalizeStatus = (status) => {
     if (!status) return 'Pending';
-    // Convert to proper case: e.g., "accepted" -> "Accepted"
     const lower = status.toLowerCase();
     if (lower === 'pending') return 'Pending';
     if (lower === 'reviewed') return 'Reviewed';
@@ -69,19 +68,17 @@ const AppliedJobs = () => {
     if (lower === 'accepted') return 'Accepted';
     if (lower === 'rejected') return 'Rejected';
     if (lower === 'withdrawn') return 'Withdrawn';
-    return status; // fallback
+    return status;
   };
 
   useEffect(() => {
     checkAuthAndFetchApplications();
   }, []);
 
-  // Recalculate stats whenever applications change (full list)
   useEffect(() => {
     if (applications.length > 0) {
       calculateStats(applications);
     } else {
-      // Reset stats if no applications
       setStats({
         total: 0,
         pending: 0,
@@ -132,7 +129,6 @@ const AppliedJobs = () => {
       if (response.data && response.data.success) {
         const apps = response.data.applications || [];
         
-        // Normalize statuses and ensure consistent structure
         const processedApps = apps.map(app => ({
           ...app,
           appliedDate: app.appliedDate || app.appliedAt || app.createdAt,
@@ -141,7 +137,6 @@ const AppliedJobs = () => {
           interviewDetails: app.interviewDetails || {},
           feedback: app.feedback || null,
           coverLetter: app.coverLetter || '',
-          // Normalize status
           status: normalizeStatus(app.status)
         }));
         
@@ -169,7 +164,6 @@ const AppliedJobs = () => {
     }
   };
 
-  // Calculate stats based on the provided list (should be the full list)
   const calculateStats = (apps) => {
     const newStats = {
       total: apps.length,
@@ -184,7 +178,6 @@ const AppliedJobs = () => {
     setStats(newStats);
   };
 
-  // Apply filters to the full list for display
   const applyFilters = () => {
     let filtered = [...applications];
     
@@ -255,6 +248,33 @@ const AppliedJobs = () => {
     setSelectedApplication(null);
   };
 
+  // NEW: Withdraw application
+  const handleWithdrawApplication = async (applicationId) => {
+    if (!window.confirm('Are you sure you want to withdraw this application? This action cannot be undone.')) {
+      return;
+    }
+
+    setWithdrawing(true);
+    try {
+      const response = await API.put(`/applications/${applicationId}/status`, { status: 'Withdrawn' });
+      if (response.data.success) {
+        toast.success('Application withdrawn successfully');
+        
+        // Remove the application from state
+        const updatedApplications = applications.filter(app => app._id !== applicationId);
+        setApplications(updatedApplications);
+        // Stats will automatically recalculate because of the useEffect dependency on applications
+      } else {
+        toast.error(response.data.message || 'Failed to withdraw application');
+      }
+    } catch (err) {
+      console.error('Error withdrawing application:', err);
+      toast.error(err.response?.data?.message || 'Failed to withdraw application');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   const getCompanyLogoUrl = (company) => {
     if (!company || !company.companyLogo) return null;
     if (company.companyLogo.startsWith('http')) return company.companyLogo;
@@ -263,27 +283,26 @@ const AppliedJobs = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      'Pending': { class: 'ds-status-pending', icon: <FaRegClock />, text: 'Pending' },
-      'Reviewed': { class: 'ds-status-reviewed', icon: <FaEye />, text: 'Reviewed' },
-      'Shortlisted': { class: 'ds-status-shortlisted', icon: <FaRegStar />, text: 'Shortlisted' },
-      'Interview': { class: 'ds-status-interview', icon: <FaCalendarAlt />, text: 'Interview' },
-      'Accepted': { class: 'ds-status-accepted', icon: <FaRegCheckCircle />, text: 'Accepted' },
-      'Rejected': { class: 'ds-status-rejected', icon: <FaRegTimesCircle />, text: 'Rejected' },
-      'Withdrawn': { class: 'ds-status-withdrawn', icon: <FaTimesCircle />, text: 'Withdrawn' }
+      'Pending': { class: 'aj-status-pending', icon: <FaRegClock />, text: 'Pending' },
+      'Reviewed': { class: 'aj-status-reviewed', icon: <FaEye />, text: 'Reviewed' },
+      'Shortlisted': { class: 'aj-status-shortlisted', icon: <FaRegStar />, text: 'Shortlisted' },
+      'Interview': { class: 'aj-status-interview', icon: <FaCalendarAlt />, text: 'Interview' },
+      'Accepted': { class: 'aj-status-accepted', icon: <FaRegCheckCircle />, text: 'Accepted' },
+      'Rejected': { class: 'aj-status-rejected', icon: <FaRegTimesCircle />, text: 'Rejected' },
+      'Withdrawn': { class: 'aj-status-withdrawn', icon: <FaTimesCircle />, text: 'Withdrawn' }
     };
     
     const badge = badges[status];
     if (!badge) {
-      // Fallback for unknown status
       return (
-        <span className="ds-status-badge ds-status-pending">
+        <span className="aj-status-badge aj-status-pending">
           <FaRegClock /> {status}
         </span>
       );
     }
     
     return (
-      <span className={`ds-status-badge ${badge.class}`}>
+      <span className={`aj-status-badge ${badge.class}`}>
         {badge.icon}
         {badge.text}
       </span>
@@ -309,8 +328,8 @@ const AppliedJobs = () => {
 
   if (loading) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
+      <div className="aj-loading-container">
+        <div className="aj-spinner"></div>
         <h4>Loading your applications...</h4>
         <p>Please wait while we fetch your data</p>
       </div>
@@ -319,16 +338,16 @@ const AppliedJobs = () => {
 
   if (error) {
     return (
-      <div className="ds-error-container">
-        <div className="ds-error-card">
-          <FaExclamationTriangle className="ds-error-icon" />
+      <div className="aj-error-container">
+        <div className="aj-error-card">
+          <FaExclamationTriangle className="aj-error-icon" />
           <h3>Error Loading Applications</h3>
           <p>{error}</p>
-          <div className="ds-error-actions">
-            <button className="ds-btn ds-btn-primary" onClick={handleRetry}>
+          <div className="aj-error-actions">
+            <button className="aj-btn aj-btn-primary" onClick={handleRetry}>
               <FaSyncAlt /> Try Again
             </button>
-            <button className="ds-btn ds-btn-outline-secondary" onClick={handleGoToLogin}>
+            <button className="aj-btn aj-btn-outline-secondary" onClick={handleGoToLogin}>
               Go to Login
             </button>
           </div>
@@ -339,13 +358,13 @@ const AppliedJobs = () => {
 
   if (applications.length === 0) {
     return (
-      <div className="ds-empty-state">
-        <div className="ds-empty-icon-wrapper">
-          <FaBriefcase className="ds-empty-icon" />
+      <div className="aj-empty-state">
+        <div className="aj-empty-icon-wrapper">
+          <FaBriefcase className="aj-empty-icon" />
         </div>
         <h3>No Applications Yet</h3>
         <p>You haven't applied to any jobs. Start your job search today!</p>
-        <Link to="/student/jobs" className="ds-btn ds-btn-primary ds-btn-lg">
+        <Link to="/student/jobs" className="aj-btn aj-btn-primary aj-btn-lg">
           <FaBriefcase /> Browse Jobs
         </Link>
       </div>
@@ -353,64 +372,64 @@ const AppliedJobs = () => {
   }
 
   return (
-    <div className="ds-applied-jobs">
-      <div className="ds-applied-jobs-container">
+    <div className="aj-applied-jobs">
+      <div className="aj-applied-jobs-container">
         {/* Header */}
-        <div className="ds-page-header">
-          <div className="ds-header-left">
-            <div className="ds-header-icon-wrapper">
-              <FaBriefcase className="ds-header-icon" />
+        <div className="aj-page-header">
+          <div className="aj-header-left">
+            <div className="aj-header-icon-wrapper">
+              <FaBriefcase className="aj-header-icon" />
             </div>
             <div>
               <h1>My Applications</h1>
-              <p className="ds-header-subtitle">
+              <p className="aj-header-subtitle">
                 You have applied to {applications.length} job{applications.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
-          <button className="ds-refresh-btn" onClick={handleRefresh} disabled={refreshing}>
-            <FaSyncAlt className={refreshing ? 'ds-spin' : ''} />
+          <button className="aj-refresh-btn" onClick={handleRefresh} disabled={refreshing}>
+            <FaSyncAlt className={refreshing ? 'aj-spin' : ''} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
 
         {/* Stats Cards */}
-        <div className="ds-stats-grid">
-          <div className="ds-stat-card ds-stat-total">
-            <div className="ds-stat-icon"><FaBriefcase /></div>
-            <div className="ds-stat-info">
-              <span className="ds-stat-value">{stats.total}</span>
-              <span className="ds-stat-label">Total Applications</span>
+        <div className="aj-stats-grid">
+          <div className="aj-stat-card aj-stat-total">
+            <div className="aj-stat-icon"><FaBriefcase /></div>
+            <div className="aj-stat-info">
+              <span className="aj-stat-value">{stats.total}</span>
+              <span className="aj-stat-label">Total Applications</span>
             </div>
           </div>
-          <div className="ds-stat-card ds-stat-pending">
-            <div className="ds-stat-icon"><FaClock /></div>
-            <div className="ds-stat-info">
-              <span className="ds-stat-value">{stats.pending}</span>
-              <span className="ds-stat-label">Pending Review</span>
+          <div className="aj-stat-card aj-stat-pending">
+            <div className="aj-stat-icon"><FaClock /></div>
+            <div className="aj-stat-info">
+              <span className="aj-stat-value">{stats.pending}</span>
+              <span className="aj-stat-label">Pending Review</span>
             </div>
           </div>
-          <div className="ds-stat-card ds-stat-interview">
-            <div className="ds-stat-icon"><FaCalendarAlt /></div>
-            <div className="ds-stat-info">
-              <span className="ds-stat-value">{stats.interview}</span>
-              <span className="ds-stat-label">Interviews</span>
+          <div className="aj-stat-card aj-stat-interview">
+            <div className="aj-stat-icon"><FaCalendarAlt /></div>
+            <div className="aj-stat-info">
+              <span className="aj-stat-value">{stats.interview}</span>
+              <span className="aj-stat-label">Interviews</span>
             </div>
           </div>
-          <div className="ds-stat-card ds-stat-accepted">
-            <div className="ds-stat-icon"><FaCheckCircle /></div>
-            <div className="ds-stat-info">
-              <span className="ds-stat-value">{stats.accepted}</span>
-              <span className="ds-stat-label">Accepted</span>
+          <div className="aj-stat-card aj-stat-accepted">
+            <div className="aj-stat-icon"><FaCheckCircle /></div>
+            <div className="aj-stat-info">
+              <span className="aj-stat-value">{stats.accepted}</span>
+              <span className="aj-stat-label">Accepted</span>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="ds-filters-card">
-          <div className="ds-filters-content">
-            <div className="ds-filters-row">
-              <div className="ds-filter-group">
+        <div className="aj-filters-card">
+          <div className="aj-filters-content">
+            <div className="aj-filters-row">
+              <div className="aj-filter-group">
                 <label>Status</label>
                 <select name="status" value={filters.status} onChange={handleFilterChange}>
                   <option value="">All Statuses</option>
@@ -420,9 +439,10 @@ const AppliedJobs = () => {
                   <option value="Interview">Interview</option>
                   <option value="Accepted">Accepted</option>
                   <option value="Rejected">Rejected</option>
+                  <option value="Withdrawn">Withdrawn</option>
                 </select>
               </div>
-              <div className="ds-filter-group">
+              <div className="aj-filter-group">
                 <label>Date Range</label>
                 <select name="dateRange" value={filters.dateRange} onChange={handleFilterChange}>
                   <option value="">All Time</option>
@@ -431,7 +451,7 @@ const AppliedJobs = () => {
                   <option value="3months">Last 3 Months</option>
                 </select>
               </div>
-              <button className="ds-clear-filters" onClick={handleClearFilters}>
+              <button className="aj-clear-filters" onClick={handleClearFilters}>
                 <FaFilter /> Clear Filters
               </button>
             </div>
@@ -439,30 +459,30 @@ const AppliedJobs = () => {
         </div>
 
         {/* Results Count */}
-        <div className="ds-results-info">
+        <div className="aj-results-info">
           <p>Showing <strong>{filteredApplications.length}</strong> of <strong>{applications.length}</strong> applications</p>
         </div>
 
         {/* Applications Grid */}
         {filteredApplications.length === 0 ? (
-          <div className="ds-empty-filters">
-            <FaFilter className="ds-empty-icon" />
+          <div className="aj-empty-filters">
+            <FaFilter className="aj-empty-icon" />
             <h4>No applications match your filters</h4>
             <p>Try adjusting your filters to see more results.</p>
-            <button className="ds-btn ds-btn-outline-primary" onClick={handleClearFilters}>
+            <button className="aj-btn aj-btn-outline-primary" onClick={handleClearFilters}>
               Clear Filters
             </button>
           </div>
         ) : (
-          <div className="ds-applications-grid">
+          <div className="aj-applications-grid">
             {filteredApplications.map((app) => {
               const companyLogoUrl = getCompanyLogoUrl(app.jobId?.companyId);
               
               return (
-                <div key={app._id} className="ds-application-card">
+                <div key={app._id} className="aj-application-card">
                   {/* Header */}
-                  <div className="ds-card-header">
-                    <div className="ds-company-logo">
+                  <div className="aj-card-header">
+                    <div className="aj-company-logo">
                       {companyLogoUrl ? (
                         <img 
                           src={companyLogoUrl}
@@ -475,33 +495,46 @@ const AppliedJobs = () => {
                           }}
                         />
                       ) : null}
-                      <div className="ds-logo-placeholder" style={{ display: companyLogoUrl ? 'none' : 'flex' }}>
+                      <div className="aj-logo-placeholder" style={{ display: companyLogoUrl ? 'none' : 'flex' }}>
                         <FaBuilding />
                       </div>
                     </div>
-                    <div className="ds-job-info">
-                      <h3 className="ds-job-title">{app.jobId?.title || 'Unknown Position'}</h3>
-                      <p className="ds-company-name">{app.jobId?.companyId?.companyName || 'Unknown Company'}</p>
-                      <div className="ds-job-meta">
+                    <div className="aj-job-info">
+                      <h3 className="aj-job-title">{app.jobId?.title || 'Unknown Position'}</h3>
+                      <p className="aj-company-name">{app.jobId?.companyId?.companyName || 'Unknown Company'}</p>
+                      <div className="aj-job-meta">
                         <span><FaMapMarkerAlt /> {app.jobId?.location?.city || 'Remote'}</span>
                         <span><FaBriefcase /> {app.jobId?.employmentType || 'Full-time'}</span>
                       </div>
                     </div>
-                    <div className="ds-status">
-                      {getStatusBadge(app.status)}
+                    <div className="aj-status-wrapper">
+                      <div className="aj-status">
+                        {getStatusBadge(app.status)}
+                      </div>
+                      {/* Withdraw button - only show for active (non‑final) statuses */}
+                      {app.status !== 'Withdrawn' && app.status !== 'Rejected' && app.status !== 'Accepted' && (
+                        <button 
+                          className="aj-withdraw-btn"
+                          onClick={() => handleWithdrawApplication(app._id)}
+                          disabled={withdrawing}
+                          title="Withdraw application"
+                        >
+                          <FaTimesCircle />
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {/* Details */}
-                  <div className="ds-card-details">
-                    <div className="ds-detail-item">
+                  <div className="aj-card-details">
+                    <div className="aj-detail-item">
                       <FaCalendarAlt />
                       <div>
                         <span>Applied Date</span>
                         <strong>{formatDate(app.appliedDate)}</strong>
                       </div>
                     </div>
-                    <div className="ds-detail-item">
+                    <div className="aj-detail-item">
                       <FaClock />
                       <div>
                         <span>Last Updated</span>
@@ -512,7 +545,7 @@ const AppliedJobs = () => {
 
                   {/* Cover Letter Preview */}
                   {app.coverLetter && (
-                    <div className="ds-cover-letter">
+                    <div className="aj-cover-letter">
                       <FaFileAlt />
                       <div>
                         <span>Cover Letter</span>
@@ -522,17 +555,17 @@ const AppliedJobs = () => {
                   )}
 
                   {/* Actions */}
-                  <div className="ds-card-actions">
-                    <Link to={`/student/job/${app.jobId?._id}`} className="ds-action-btn ds-view-btn">
+                  <div className="aj-card-actions">
+                    <Link to={`/student/job/${app.jobId?._id}`} className="aj-action-btn aj-view-btn">
                       <FaEye /> View Job
                     </Link>
                     {app.status === 'Interview' && app.interviewDetails && Object.keys(app.interviewDetails).length > 0 && (
-                      <button className="ds-action-btn ds-interview-btn" onClick={() => handleViewInterviewDetails(app)}>
+                      <button className="aj-action-btn aj-interview-btn" onClick={() => handleViewInterviewDetails(app)}>
                         <FaCalendarAlt /> Interview
                       </button>
                     )}
                     {app.feedback && app.feedback.comments && (
-                      <button className="ds-action-btn ds-feedback-btn" onClick={() => handleViewFeedback(app)}>
+                      <button className="aj-action-btn aj-feedback-btn" onClick={() => handleViewFeedback(app)}>
                         <FaComment /> Feedback
                       </button>
                     )}
@@ -546,59 +579,59 @@ const AppliedJobs = () => {
 
       {/* Interview Modal */}
       {showInterviewModal && selectedApplication && (
-        <div className="ds-modal-overlay" onClick={handleCloseModals}>
-          <div className="ds-modal ds-modal-interview" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header ds-modal-header-success">
-              <FaCalendarAlt className="ds-modal-icon" />
+        <div className="aj-modal-overlay" onClick={handleCloseModals}>
+          <div className="aj-modal aj-modal-interview" onClick={e => e.stopPropagation()}>
+            <div className="aj-modal-header aj-modal-header-success">
+              <FaCalendarAlt className="aj-modal-icon" />
               <h3>Interview Details</h3>
-              <button className="ds-modal-close" onClick={handleCloseModals}>
+              <button className="aj-modal-close" onClick={handleCloseModals}>
                 <FaTimesCircle />
               </button>
             </div>
-            <div className="ds-modal-body">
-              <div className="ds-info-row">
+            <div className="aj-modal-body">
+              <div className="aj-info-row">
                 <label>Position</label>
                 <p>{selectedApplication.jobId?.title || 'Unknown Position'}</p>
               </div>
-              <div className="ds-info-row">
+              <div className="aj-info-row">
                 <label>Company</label>
                 <p>{selectedApplication.jobId?.companyId?.companyName || 'Unknown Company'}</p>
               </div>
-              <div className="ds-info-row">
+              <div className="aj-info-row">
                 <label>Date & Time</label>
                 <p>{formatDate(selectedApplication.interviewDetails?.date || selectedApplication.interviewDate)}</p>
               </div>
-              <div className="ds-info-row">
+              <div className="aj-info-row">
                 <label>Mode</label>
                 <p>
-                  <span className={`ds-mode-badge ${selectedApplication.interviewDetails?.mode === 'Online' ? 'ds-online' : 'ds-inperson'}`}>
+                  <span className={`aj-mode-badge ${selectedApplication.interviewDetails?.mode === 'Online' ? 'aj-online' : 'aj-inperson'}`}>
                     {selectedApplication.interviewDetails?.mode || 'Not specified'}
                   </span>
                 </p>
               </div>
               {selectedApplication.interviewDetails?.mode === 'Online' && selectedApplication.interviewDetails?.link && (
-                <div className="ds-info-row">
+                <div className="aj-info-row">
                   <label>Meeting Link</label>
-                  <a href={selectedApplication.interviewDetails.link} target="_blank" rel="noopener noreferrer" className="ds-meeting-link">
+                  <a href={selectedApplication.interviewDetails.link} target="_blank" rel="noopener noreferrer" className="aj-meeting-link">
                     <FaExternalLinkAlt /> Join Meeting
                   </a>
                 </div>
               )}
               {selectedApplication.interviewDetails?.mode === 'In-person' && selectedApplication.interviewDetails?.address && (
-                <div className="ds-info-row">
+                <div className="aj-info-row">
                   <label>Address</label>
                   <p>{selectedApplication.interviewDetails.address}</p>
                 </div>
               )}
               {selectedApplication.interviewDetails?.notes && (
-                <div className="ds-info-row">
+                <div className="aj-info-row">
                   <label>Additional Notes</label>
-                  <p className="ds-notes">{selectedApplication.interviewDetails.notes}</p>
+                  <p className="aj-notes">{selectedApplication.interviewDetails.notes}</p>
                 </div>
               )}
             </div>
-            <div className="ds-modal-footer">
-              <button className="ds-btn ds-btn-secondary" onClick={handleCloseModals}>Close</button>
+            <div className="aj-modal-footer">
+              <button className="aj-btn aj-btn-secondary" onClick={handleCloseModals}>Close</button>
             </div>
           </div>
         </div>
@@ -606,36 +639,36 @@ const AppliedJobs = () => {
 
       {/* Feedback Modal */}
       {showFeedbackModal && selectedApplication && (
-        <div className="ds-modal-overlay" onClick={handleCloseModals}>
-          <div className="ds-modal ds-modal-feedback" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header ds-modal-header-info">
-              <FaComment className="ds-modal-icon" />
+        <div className="aj-modal-overlay" onClick={handleCloseModals}>
+          <div className="aj-modal aj-modal-feedback" onClick={e => e.stopPropagation()}>
+            <div className="aj-modal-header aj-modal-header-info">
+              <FaComment className="aj-modal-icon" />
               <h3>Employer Feedback</h3>
-              <button className="ds-modal-close" onClick={handleCloseModals}>
+              <button className="aj-modal-close" onClick={handleCloseModals}>
                 <FaTimesCircle />
               </button>
             </div>
-            <div className="ds-modal-body">
-              <div className="ds-info-row">
+            <div className="aj-modal-body">
+              <div className="aj-info-row">
                 <label>Position</label>
                 <p>{selectedApplication.jobId?.title || 'Unknown Position'}</p>
               </div>
-              <div className="ds-info-row">
+              <div className="aj-info-row">
                 <label>Company</label>
                 <p>{selectedApplication.jobId?.companyId?.companyName || 'Unknown Company'}</p>
               </div>
-              <div className="ds-feedback-content">
+              <div className="aj-feedback-content">
                 <label>Feedback</label>
-                <div className="ds-feedback-text">
+                <div className="aj-feedback-text">
                   {selectedApplication.feedback?.comments || 'No feedback provided'}
                 </div>
               </div>
               {selectedApplication.feedback?.rating && (
-                <div className="ds-feedback-rating">
+                <div className="aj-feedback-rating">
                   <label>Rating</label>
-                  <div className="ds-rating-stars">
+                  <div className="aj-rating-stars">
                     {[1, 2, 3, 4, 5].map(star => (
-                      <span key={star} className={star <= selectedApplication.feedback.rating ? 'ds-star-filled' : 'ds-star-empty'}>
+                      <span key={star} className={star <= selectedApplication.feedback.rating ? 'aj-star-filled' : 'aj-star-empty'}>
                         {star <= selectedApplication.feedback.rating ? '★' : '☆'}
                       </span>
                     ))}
@@ -643,13 +676,13 @@ const AppliedJobs = () => {
                 </div>
               )}
               {selectedApplication.feedback?.providedDate && (
-                <div className="ds-feedback-date">
+                <div className="aj-feedback-date">
                   <small>Provided on: {formatDate(selectedApplication.feedback.providedDate)}</small>
                 </div>
               )}
             </div>
-            <div className="ds-modal-footer">
-              <button className="ds-btn ds-btn-secondary" onClick={handleCloseModals}>Close</button>
+            <div className="aj-modal-footer">
+              <button className="aj-btn aj-btn-secondary" onClick={handleCloseModals}>Close</button>
             </div>
           </div>
         </div>
