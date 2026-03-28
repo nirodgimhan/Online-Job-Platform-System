@@ -4,72 +4,129 @@ const interviewSchema = new mongoose.Schema({
   applicationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Application',
-    required: true
+    required: [true, 'Application ID is required']
   },
   jobId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Job',
-    required: true
+    required: [true, 'Job ID is required']
   },
   companyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Company',
-    required: true
+    required: [true, 'Company ID is required']
   },
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student',
-    required: true
+    required: [true, 'Student ID is required']
   },
   scheduledDate: {
     type: Date,
-    required: true
+    required: [true, 'Scheduled date is required']
   },
   duration: {
     type: Number,
-    default: 60
+    default: 60,
+    min: [15, 'Duration must be at least 15 minutes'],
+    max: [480, 'Duration cannot exceed 480 minutes (8 hours)']
   },
   mode: {
     type: String,
-    enum: ['Online', 'In-person', 'Phone'],
+    enum: {
+      values: ['Online', 'In-person', 'Phone'],
+      message: 'Mode must be Online, In-person, or Phone'
+    },
     default: 'Online'
   },
   meetingLink: {
     type: String,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        // Basic URL validation for meeting links
+        return /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/.test(v);
+      },
+      message: 'Please enter a valid URL for the meeting link'
+    },
+    maxlength: [500, 'Meeting link cannot exceed 500 characters']
   },
   location: {
-    address: String,
-    city: String,
-    country: String
+    address: {
+      type: String,
+      trim: true,
+      maxlength: [255, 'Address cannot exceed 255 characters']
+    },
+    city: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'City name cannot exceed 100 characters']
+    },
+    country: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Country name cannot exceed 100 characters']
+    }
   },
   interviewerName: {
-    type: String
+    type: String,
+    trim: true,
+    maxlength: [100, 'Interviewer name cannot exceed 100 characters']
   },
   interviewerEmail: {
-    type: String
+    type: String,
+    trim: true,
+    lowercase: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+      },
+      message: 'Please enter a valid email address'
+    },
+    maxlength: [100, 'Email cannot exceed 100 characters']
   },
   notes: {
     type: String,
-    trim: true
+    trim: true,
+    maxlength: [1000, 'Notes cannot exceed 1000 characters']
   },
   status: {
     type: String,
-    enum: ['scheduled', 'confirmed', 'completed', 'cancelled'],
+    enum: {
+      values: ['scheduled', 'confirmed', 'completed', 'cancelled'],
+      message: 'Status must be scheduled, confirmed, completed, or cancelled'
+    },
     default: 'scheduled'
   },
   feedback: {
     rating: {
       type: Number,
-      min: 1,
-      max: 5
+      min: [1, 'Rating must be at least 1'],
+      max: [5, 'Rating cannot exceed 5']
     },
-    comments: String,
-    strengths: [String],
-    weaknesses: [String],
+    comments: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Feedback comments cannot exceed 1000 characters']
+    },
+    strengths: [{
+      type: String,
+      trim: true,
+      maxlength: [255, 'Each strength cannot exceed 255 characters']
+    }],
+    weaknesses: [{
+      type: String,
+      trim: true,
+      maxlength: [255, 'Each weakness cannot exceed 255 characters']
+    }],
     recommendation: {
       type: String,
-      enum: ['Hire', 'Second Interview', 'Reject', 'Pending'],
+      enum: {
+        values: ['Hire', 'Second Interview', 'Reject', 'Pending'],
+        message: 'Recommendation must be Hire, Second Interview, Reject, or Pending'
+      },
       default: 'Pending'
     },
     providedBy: {
@@ -319,4 +376,4 @@ interviewSchema.set('toJSON', {
 });
 interviewSchema.set('toObject', { virtuals: true });
 
-module.exports = mongoose.model('Interview', interviewSchema);
+module.exports = mongoose.models.Interview || mongoose.model('Interview', interviewSchema);

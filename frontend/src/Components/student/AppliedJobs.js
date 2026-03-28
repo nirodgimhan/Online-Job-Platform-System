@@ -56,8 +56,8 @@ const AppliedJobs = () => {
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
-  // Helper to normalize status strings (capitalize first letter, rest lower)
   const normalizeStatus = (status) => {
     if (!status) return 'Pending';
     const lower = status.toLowerCase();
@@ -248,6 +248,33 @@ const AppliedJobs = () => {
     setSelectedApplication(null);
   };
 
+  // NEW: Withdraw application
+  const handleWithdrawApplication = async (applicationId) => {
+    if (!window.confirm('Are you sure you want to withdraw this application? This action cannot be undone.')) {
+      return;
+    }
+
+    setWithdrawing(true);
+    try {
+      const response = await API.put(`/applications/${applicationId}/status`, { status: 'Withdrawn' });
+      if (response.data.success) {
+        toast.success('Application withdrawn successfully');
+        
+        // Remove the application from state
+        const updatedApplications = applications.filter(app => app._id !== applicationId);
+        setApplications(updatedApplications);
+        // Stats will automatically recalculate because of the useEffect dependency on applications
+      } else {
+        toast.error(response.data.message || 'Failed to withdraw application');
+      }
+    } catch (err) {
+      console.error('Error withdrawing application:', err);
+      toast.error(err.response?.data?.message || 'Failed to withdraw application');
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
   const getCompanyLogoUrl = (company) => {
     if (!company || !company.companyLogo) return null;
     if (company.companyLogo.startsWith('http')) return company.companyLogo;
@@ -412,6 +439,7 @@ const AppliedJobs = () => {
                   <option value="Interview">Interview</option>
                   <option value="Accepted">Accepted</option>
                   <option value="Rejected">Rejected</option>
+                  <option value="Withdrawn">Withdrawn</option>
                 </select>
               </div>
               <div className="aj-filter-group">
@@ -479,8 +507,21 @@ const AppliedJobs = () => {
                         <span><FaBriefcase /> {app.jobId?.employmentType || 'Full-time'}</span>
                       </div>
                     </div>
-                    <div className="aj-status">
-                      {getStatusBadge(app.status)}
+                    <div className="aj-status-wrapper">
+                      <div className="aj-status">
+                        {getStatusBadge(app.status)}
+                      </div>
+                      {/* Withdraw button - only show for active (non‑final) statuses */}
+                      {app.status !== 'Withdrawn' && app.status !== 'Rejected' && app.status !== 'Accepted' && (
+                        <button 
+                          className="aj-withdraw-btn"
+                          onClick={() => handleWithdrawApplication(app._id)}
+                          disabled={withdrawing}
+                          title="Withdraw application"
+                        >
+                          <FaTimesCircle />
+                        </button>
+                      )}
                     </div>
                   </div>
 

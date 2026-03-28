@@ -60,7 +60,6 @@ const StudentInterviews = () => {
       return;
     }
 
-    // Ensure student profile exists before fetching
     await ensureStudentProfile();
     await fetchInterviews();
   };
@@ -68,21 +67,14 @@ const StudentInterviews = () => {
   const ensureStudentProfile = async () => {
     setEnsuringProfile(true);
     try {
-      // Try to get the student profile
       const response = await API.get('/students/profile');
-      if (response.data.success) {
-        return true;
-      }
+      if (response.data.success) return true;
     } catch (error) {
       if (error.response?.status === 404) {
-        // Student profile doesn't exist, create it
         console.log('Student profile not found, creating one...');
         try {
           const createResponse = await API.post('/students/profile', {});
-          if (createResponse.data.success) {
-            console.log('Student profile created successfully');
-            return true;
-          }
+          if (createResponse.data.success) return true;
         } catch (createError) {
           console.error('Failed to create student profile:', createError);
           toast.error('Could not create student profile. Please try again later.');
@@ -105,12 +97,10 @@ const StudentInterviews = () => {
       
       console.log('Fetching interviews for student:', user?.id);
       
-      // Try student-specific endpoint first
       let response;
       try {
         response = await API.get('/interviews/student');
       } catch (err) {
-        // Fallback to general interviews endpoint
         console.warn('Student endpoint failed, trying general endpoint', err);
         response = await API.get('/interviews');
       }
@@ -129,7 +119,6 @@ const StudentInterviews = () => {
       if (response.data.success) {
         let interviewsData = response.data.interviews || [];
         
-        // If data is nested differently (e.g., response.data.data.interviews)
         if (!interviewsData.length && response.data.data?.interviews) {
           interviewsData = response.data.data.interviews;
         }
@@ -140,7 +129,6 @@ const StudentInterviews = () => {
           const scheduledDate = new Date(interview.scheduledDate);
           const now = new Date();
           
-          // Extract job and company data safely
           const jobTitle = interview.jobId?.title || 
                            interview.job?.title || 
                            interview.position || 

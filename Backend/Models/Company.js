@@ -50,11 +50,26 @@ const hiringTeamSchema = new mongoose.Schema({
     email: {
         type: String,
         trim: true,
-        lowercase: true
+        lowercase: true,
+        validate: {
+            validator: function(v) {
+                if (!v) return true;
+                return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+            },
+            message: 'Please enter a valid email address'
+        }
     },
     phone: {
         type: String,
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                if (!v) return true;
+                // Basic international phone number pattern (optional)
+                return /^[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{3,4}[-\s\.]?[0-9]{3,4}$/.test(v);
+            },
+            message: 'Please enter a valid phone number'
+        }
     },
     profilePicture: String,
     linkedin: String,
@@ -124,8 +139,10 @@ const CompanySchema = new mongoose.Schema({
     // Core Information
     companyName: {
         type: String,
-        required: true,
-        trim: true
+        required: [true, 'Company name is required'],
+        trim: true,
+        minlength: [2, 'Company name must be at least 2 characters'],
+        maxlength: [100, 'Company name cannot exceed 100 characters']
     },
     companyLogo: {
         type: String,
@@ -139,7 +156,8 @@ const CompanySchema = new mongoose.Schema({
     // Company Details
     industry: {
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [100, 'Industry name cannot exceed 100 characters']
     },
     companySize: {
         type: String,
@@ -147,8 +165,8 @@ const CompanySchema = new mongoose.Schema({
     },
     foundedYear: {
         type: Number,
-        min: 1800,
-        max: new Date().getFullYear()
+        min: [1800, 'Founded year cannot be before 1800'],
+        max: [new Date().getFullYear(), 'Founded year cannot be in the future']
     },
     website: {
         type: String,
@@ -163,17 +181,17 @@ const CompanySchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        maxlength: 5000,
+        maxlength: [5000, 'Description cannot exceed 5000 characters'],
         trim: true
     },
     shortDescription: {
         type: String,
-        maxlength: 300,
+        maxlength: [300, 'Short description cannot exceed 300 characters'],
         trim: true
     },
     tagline: {
         type: String,
-        maxlength: 100,
+        maxlength: [100, 'Tagline cannot exceed 100 characters'],
         trim: true
     },
     
@@ -182,11 +200,11 @@ const CompanySchema = new mongoose.Schema({
     
     // Primary Address
     address: {
-        street: String,
-        city: String,
-        state: String,
-        country: String,
-        zipCode: String
+        street: { type: String, trim: true, maxlength: 200 },
+        city: { type: String, trim: true, maxlength: 100 },
+        state: { type: String, trim: true, maxlength: 100 },
+        country: { type: String, trim: true, maxlength: 100 },
+        zipCode: { type: String, trim: true, maxlength: 20 }
     },
     
     // Contact Information
@@ -199,12 +217,20 @@ const CompanySchema = new mongoose.Schema({
                 if (!v) return true;
                 return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
             },
-            message: 'Please enter a valid email'
+            message: 'Please enter a valid email address'
         }
     },
     contactPhone: {
         type: String,
-        trim: true
+        trim: true,
+        validate: {
+            validator: function(v) {
+                if (!v) return true;
+                // Basic international phone number pattern
+                return /^[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{3,4}[-\s\.]?[0-9]{3,4}$/.test(v);
+            },
+            message: 'Please enter a valid phone number'
+        }
     },
     
     // Social Media Links
@@ -325,24 +351,29 @@ const CompanySchema = new mongoose.Schema({
     // Job statistics
     totalJobsPosted: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     activeJobsCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     
     // Job categories this company typically hires for
     jobCategories: [{
         type: String,
-        trim: true
+        trim: true,
+        maxlength: 50
     }],
     
     // Default job settings (optional)
     defaultJobSettings: {
         applicationDeadlineDays: {
             type: Number,
-            default: 30
+            default: 30,
+            min: 1,
+            max: 365
         },
         autoCloseExpired: {
             type: Boolean,
@@ -362,26 +393,30 @@ const CompanySchema = new mongoose.Schema({
     }],
     postsCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     
     followers: [followerSchema],
     followersCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     
     following: [followingSchema],
     followingCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     
     // ==================== PROFILE STATISTICS ====================
     
     profileViews: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     profileCompleteness: {
         type: Number,
@@ -394,19 +429,23 @@ const CompanySchema = new mongoose.Schema({
     engagementMetrics: {
         weeklyViews: {
             type: Number,
-            default: 0
+            default: 0,
+            min: 0
         },
         monthlyViews: {
             type: Number,
-            default: 0
+            default: 0,
+            min: 0
         },
         totalApplications: {
             type: Number,
-            default: 0
+            default: 0,
+            min: 0
         },
         averageResponseTime: {
             type: Number, // in hours
-            default: 0
+            default: 0,
+            min: 0
         }
     },
     
@@ -418,7 +457,18 @@ const CompanySchema = new mongoose.Schema({
             enum: ['free', 'basic', 'premium', 'enterprise'],
             default: 'free'
         },
-        billingEmail: String,
+        billingEmail: {
+            type: String,
+            trim: true,
+            lowercase: true,
+            validate: {
+                validator: function(v) {
+                    if (!v) return true;
+                    return /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v);
+                },
+                message: 'Please enter a valid email address'
+            }
+        },
         paymentMethod: String,
         validUntil: Date,
         autoRenew: {
@@ -427,11 +477,13 @@ const CompanySchema = new mongoose.Schema({
         },
         maxJobsAllowed: {
             type: Number,
-            default: 5 // Free plan allows 5 active jobs
+            default: 5,
+            min: 0
         },
         maxFeaturedJobs: {
             type: Number,
-            default: 1
+            default: 1,
+            min: 0
         }
     },
     
@@ -560,6 +612,16 @@ CompanySchema.virtual('totalApplicationsReceived').get(function() {
 CompanySchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     this.lastActive = Date.now();
+    
+    // Trim string fields (optional)
+    if (this.companyName) this.companyName = this.companyName.trim();
+    if (this.industry) this.industry = this.industry.trim();
+    if (this.tagline) this.tagline = this.tagline.trim();
+    if (this.shortDescription) this.shortDescription = this.shortDescription.trim();
+    if (this.description) this.description = this.description.trim();
+    if (this.website) this.website = this.website.trim();
+    if (this.contactEmail) this.contactEmail = this.contactEmail.trim().toLowerCase();
+    if (this.contactPhone) this.contactPhone = this.contactPhone.trim();
     
     // Calculate profile completeness
     let totalFields = 0;

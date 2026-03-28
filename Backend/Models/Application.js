@@ -166,42 +166,47 @@ ApplicationSchema.methods.addFeedback = async function(feedbackData) {
     return this;
 };
 
-// ========== FIX: REMOVE VALIDATION PRE-SAVE HOOK ==========
-// The following pre-save hook caused the "Student not found" error.
-// It is now disabled because the route already validates existence.
-// If you still want to keep a pre-save hook, comment it out or modify it to only update timestamps.
-
-// ApplicationSchema.pre('save', async function(next) {
-//     try {
-//         this.updatedAt = Date.now();
-//         if (this.isNew) {
-//             const User = mongoose.model('User');
-//             const Job = mongoose.model('Job');
-//             
-//             const student = await User.findById(this.studentId);
-//             if (!student) {
-//                 throw new Error(`Student not found with ID: ${this.studentId}`);
-//             }
-//             
-//             const job = await Job.findById(this.jobId);
-//             if (!job) {
-//                 throw new Error(`Job not found with ID: ${this.jobId}`);
-//             }
-//             
-//             const company = await User.findById(this.companyId);
-//             if (!company) {
-//                 throw new Error(`Company not found with ID: ${this.companyId}`);
-//             }
-//         }
-//         next();
-//     } catch (error) {
-//         next(error);
-//     }
-// });
-
-// Optional: Keep a simple pre-save to update timestamps
-ApplicationSchema.pre('save', function(next) {
+// Pre-save hook for validation
+ApplicationSchema.pre('save', async function(next) {
+    // Always update timestamps
     this.updatedAt = Date.now();
+    
+    // Only run validation when the document is new
+    if (this.isNew) {
+        try {
+            const User = mongoose.model('User');
+            const Job = mongoose.model('Job');
+            const Student = mongoose.model('Student');
+            const Company = mongoose.model('Company');
+
+            // Validate student exists
+            const student = await Student.findById(this.studentId);
+            if (!student) {
+                const err = new Error(`Student not found with ID: ${this.studentId}`);
+                err.status = 400;
+                return next(err);
+            }
+
+            // Validate job exists
+            const job = await Job.findById(this.jobId);
+            if (!job) {
+                const err = new Error(`Job not found with ID: ${this.jobId}`);
+                err.status = 400;
+                return next(err);
+            }
+
+            // Validate company exists
+            const company = await Company.findById(this.companyId);
+            if (!company) {
+                const err = new Error(`Company not found with ID: ${this.companyId}`);
+                err.status = 400;
+                return next(err);
+            }
+        } catch (error) {
+            return next(error);
+        }
+    }
+    
     next();
 });
 

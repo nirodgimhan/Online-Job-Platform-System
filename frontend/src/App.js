@@ -38,6 +38,7 @@ import ApplicantsList from './Components/company/ApplicantsList';
 import ApplicantDetails from './Components/company/ApplicantDetails';
 import EditJob from './Components/company/EditJob';
 import CompanyInterviews from './Components/company/CompanyInterviews';
+import CompanyConfirmedInterviews from './Components/company/CompanyConfirmedInterviews';
 
 // Admin Components
 import AdminDashboard from './Components/admin/AdminDashboard';
@@ -159,6 +160,11 @@ function App() {
                 <Route path="interviews" element={
                   <DashboardPage>
                     <CompanyInterviews />
+                  </DashboardPage>
+                } />
+                <Route path="confirmed-interviews" element={
+                  <DashboardPage>
+                    <CompanyConfirmedInterviews />
                   </DashboardPage>
                 } />
               </Route>

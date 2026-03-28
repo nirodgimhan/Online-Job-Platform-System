@@ -173,17 +173,23 @@ const JobDetails = () => {
     }
   };
 
+  // ========== MODIFIED ==========
   const checkIfApplied = async () => {
     try {
       const response = await API.get('/applications/student');
       if (response.data.success) {
         const applications = response.data.applications || [];
-        setHasApplied(applications.some(app => app.jobId?._id === id));
+        // Only consider applications that are NOT Withdrawn or Rejected
+        const activeApplications = applications.filter(app => 
+          app.status !== 'Withdrawn' && app.status !== 'Rejected'
+        );
+        setHasApplied(activeApplications.some(app => app.jobId?._id === id));
       }
     } catch (error) {
       console.error('Error checking application status:', error);
     }
   };
+  // ========== END MODIFIED ==========
 
   const fetchUserCVs = async () => {
     setFetchingCVs(true);

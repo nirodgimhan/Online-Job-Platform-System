@@ -136,7 +136,8 @@ const Sidebar = ({ children }) => {
     { title: 'My Applications', path: '/student/applied-jobs', icon: <FaClipboardList />, badge: 'new' },
     { title: 'Saved Jobs', path: '/student/saved-jobs', icon: <FaHeart /> },
     { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> },
-    { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' }
+    { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' },
+    
   ];
 
   const companyMenuItems = [
@@ -145,7 +146,8 @@ const Sidebar = ({ children }) => {
     { title: 'Post New Job', path: '/company/post-job', icon: <FaPlusCircle /> },
     { title: 'Manage Jobs', path: '/company/manage-jobs', icon: <FaListAlt /> },
     { title: 'Applications', path: '/company/applicants', icon: <FaUsers />, badge: 'new' },
-    { title: 'Interviews', path: '/company/interviews', icon: <FaCalendarAlt /> }
+    { title: 'Interviews', path: '/company/interviews', icon: <FaCalendarAlt /> },
+    { title: 'Confirmed Interviews', path: '/company/confirmed-interviews', icon: <FaCheckCircle /> }  // ✅ New
   ];
 
   const adminMenuItems = [

@@ -5,17 +5,22 @@ const replySchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: [true, 'User ID is required']
     },
     userType: {
         type: String,
-        enum: ['student', 'company'],
-        required: true
+        enum: {
+            values: ['student', 'company'],
+            message: 'User type must be either student or company'
+        },
+        required: [true, 'User type is required']
     },
     content: {
         type: String,
-        required: true,
-        maxlength: 500
+        required: [true, 'Reply content is required'],
+        trim: true,
+        minlength: [1, 'Reply must be at least 1 character'],
+        maxlength: [500, 'Reply cannot exceed 500 characters']
     },
     likes: [{
         userId: {
@@ -42,17 +47,22 @@ const commentSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: [true, 'User ID is required']
     },
     userType: {
         type: String,
-        enum: ['student', 'company'],
-        required: true
+        enum: {
+            values: ['student', 'company'],
+            message: 'User type must be either student or company'
+        },
+        required: [true, 'User type is required']
     },
     content: {
         type: String,
-        required: true,
-        maxlength: 1000
+        required: [true, 'Comment content is required'],
+        trim: true,
+        minlength: [1, 'Comment must be at least 1 character'],
+        maxlength: [1000, 'Comment cannot exceed 1000 characters']
     },
     likes: [{
         userId: {
@@ -79,19 +89,38 @@ const commentSchema = new mongoose.Schema({
 const mediaSchema = new mongoose.Schema({
     type: {
         type: String,
-        enum: ['image', 'video', 'document'],
-        required: true
+        enum: {
+            values: ['image', 'video', 'document'],
+            message: 'Media type must be image, video, or document'
+        },
+        required: [true, 'Media type is required']
     },
     url: {
         type: String,
-        required: true
+        required: [true, 'Media URL is required'],
+        trim: true,
+        maxlength: [500, 'Media URL cannot exceed 500 characters']
     },
     thumbnail: {
-        type: String
+        type: String,
+        trim: true,
+        maxlength: [500, 'Thumbnail URL cannot exceed 500 characters']
     },
-    filename: String,
-    size: Number,
-    mimeType: String
+    filename: {
+        type: String,
+        trim: true,
+        maxlength: [255, 'Filename cannot exceed 255 characters']
+    },
+    size: {
+        type: Number,
+        min: [0, 'File size cannot be negative'],
+        max: [100 * 1024 * 1024, 'File size cannot exceed 100MB'] // 100MB limit
+    },
+    mimeType: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'MIME type cannot exceed 100 characters']
+    }
 }, { _id: true });
 
 // Main Post Schema
@@ -99,19 +128,23 @@ const PostSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: [true, 'User ID is required'],
         index: true
     },
     userType: {
         type: String,
-        enum: ['student', 'company'],
-        required: true
+        enum: {
+            values: ['student', 'company'],
+            message: 'User type must be either student or company'
+        },
+        required: [true, 'User type is required']
     },
     content: {
         type: String,
-        required: true,
-        maxlength: 5000,
-        trim: true
+        required: [true, 'Post content is required'],
+        trim: true,
+        minlength: [1, 'Post content must be at least 1 character'],
+        maxlength: [5000, 'Post content cannot exceed 5000 characters']
     },
     media: [mediaSchema],
     likes: [{
@@ -130,16 +163,19 @@ const PostSchema = new mongoose.Schema({
     }],
     likesCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: [0, 'Likes count cannot be negative']
     },
     comments: [commentSchema],
     commentsCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: [0, 'Comments count cannot be negative']
     },
     shares: {
         type: Number,
-        default: 0
+        default: 0,
+        min: [0, 'Shares count cannot be negative']
     },
     sharedBy: [{
         userId: {
@@ -157,12 +193,16 @@ const PostSchema = new mongoose.Schema({
     }],
     visibility: {
         type: String,
-        enum: ['public', 'followers', 'private'],
+        enum: {
+            values: ['public', 'followers', 'private'],
+            message: 'Visibility must be public, followers, or private'
+        },
         default: 'public'
     },
     tags: [{
         type: String,
-        trim: true
+        trim: true,
+        maxlength: [50, 'Each tag cannot exceed 50 characters']
     }],
     mentionedUsers: [{
         userId: {
@@ -193,14 +233,19 @@ const PostSchema = new mongoose.Schema({
     },
     reportCount: {
         type: Number,
-        default: 0
+        default: 0,
+        min: [0, 'Report count cannot be negative']
     },
     reports: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'
         },
-        reason: String,
+        reason: {
+            type: String,
+            trim: true,
+            maxlength: [500, 'Report reason cannot exceed 500 characters']
+        },
         reportedAt: {
             type: Date,
             default: Date.now
@@ -209,15 +254,18 @@ const PostSchema = new mongoose.Schema({
     engagement: {
         reach: {
             type: Number,
-            default: 0
+            default: 0,
+            min: [0, 'Reach cannot be negative']
         },
         clicks: {
             type: Number,
-            default: 0
+            default: 0,
+            min: [0, 'Clicks cannot be negative']
         },
         uniqueViews: {
             type: Number,
-            default: 0
+            default: 0,
+            min: [0, 'Unique views cannot be negative']
         }
     },
     createdAt: {
@@ -248,6 +296,12 @@ PostSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     this.likesCount = this.likes.length;
     this.commentsCount = this.comments.length;
+    
+    // Clean tags: remove empty strings and trim each
+    if (this.tags) {
+        this.tags = this.tags.filter(tag => tag && tag.trim() !== '');
+    }
+    
     next();
 });
 
