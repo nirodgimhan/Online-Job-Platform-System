@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { 
   FaEnvelope,
   FaPhone,
-  FaMapMarkerAlt,
+  FaMapMarkerAlt,FaGithub,
   FaClock,
   FaUser,
   FaComment,
@@ -16,7 +16,7 @@ import {
   FaYoutube,
   FaCheckCircle,
   FaHeadset,
-  FaQuestionCircle,
+  FaQuestionCircle,FaBriefcase,
   FaArrowRight,
   FaBuilding
 } from 'react-icons/fa';
@@ -142,24 +142,24 @@ const ContactUs = () => {
   };
 
   return (
-    <div className="ds-contact-us">
+    <div className="cu-contact-us">
       {/* Hero Section */}
-      <section className="ds-contact-hero">
-        <div className="ds-container">
-          <h1>Contact <span className="ds-highlight">Us</span></h1>
-          <p className="ds-subtitle">
+      <section className="cu-hero">
+        <div className="cu-container">
+          <h1>Contact <span className="cu-highlight">Us</span></h1>
+          <p className="cu-subtitle">
             Have questions? We're here to help! Reach out to us anytime.
           </p>
         </div>
       </section>
 
       {/* Info Cards */}
-      <section className="ds-contact-info">
-        <div className="ds-container">
-          <div className="ds-contact-info-grid">
+      <section className="cu-info-section">
+        <div className="cu-container">
+          <div className="cu-info-grid">
             {contactInfo.map((item, index) => (
-              <div key={index} className="ds-contact-info-card">
-                <div className="ds-contact-info-icon">{item.icon}</div>
+              <div key={index} className="cu-info-card">
+                <div className="cu-info-icon">{item.icon}</div>
                 <h3>{item.title}</h3>
                 {item.details.map((detail, i) => (
                   <p key={i}>{detail}</p>
@@ -171,21 +171,21 @@ const ContactUs = () => {
       </section>
 
       {/* Form Section */}
-      <section className="ds-contact-form-section">
-        <div className="ds-container">
-          <div className="ds-contact-form-grid">
+      <section className="cu-form-section">
+        <div className="cu-container">
+          <div className="cu-form-grid">
             {/* Contact Form */}
-            <div className="ds-contact-form-container">
+            <div className="cu-form-container">
               <h2>Send Us a Message</h2>
               <p>We'll get back to you within 24 hours</p>
 
               {submitted ? (
-                <div className="ds-contact-success">
+                <div className="cu-success-message">
                   <FaCheckCircle />
                   <h3>Thank You!</h3>
                   <p>Your message has been sent successfully. We'll contact you soon.</p>
                   <button 
-                    className="ds-btn ds-btn-primary"
+                    className="cu-btn cu-btn-primary"
                     onClick={() => setSubmitted(false)}
                   >
                     Send Another Message
@@ -193,7 +193,7 @@ const ContactUs = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  <div className="ds-form-group">
+                  <div className="cu-form-group">
                     <label htmlFor="name">
                       <FaUser /> Full Name *
                     </label>
@@ -201,15 +201,15 @@ const ContactUs = () => {
                       type="text"
                       id="name"
                       name="name"
-                      className={`ds-form-control ${errors.name ? 'ds-is-invalid' : ''}`}
+                      className={`cu-form-control ${errors.name ? 'cu-is-invalid' : ''}`}
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="Enter your full name"
                     />
-                    {errors.name && <div className="ds-invalid-feedback">{errors.name}</div>}
+                    {errors.name && <div className="cu-invalid-feedback">{errors.name}</div>}
                   </div>
 
-                  <div className="ds-form-group">
+                  <div className="cu-form-group">
                     <label htmlFor="email">
                       <FaEnvelope /> Email Address *
                     </label>
@@ -217,15 +217,15 @@ const ContactUs = () => {
                       type="email"
                       id="email"
                       name="email"
-                      className={`ds-form-control ${errors.email ? 'ds-is-invalid' : ''}`}
+                      className={`cu-form-control ${errors.email ? 'cu-is-invalid' : ''}`}
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="Enter your email"
                     />
-                    {errors.email && <div className="ds-invalid-feedback">{errors.email}</div>}
+                    {errors.email && <div className="cu-invalid-feedback">{errors.email}</div>}
                   </div>
 
-                  <div className="ds-form-group">
+                  <div className="cu-form-group">
                     <label htmlFor="subject">
                       <FaComment /> Subject *
                     </label>
@@ -233,15 +233,15 @@ const ContactUs = () => {
                       type="text"
                       id="subject"
                       name="subject"
-                      className={`ds-form-control ${errors.subject ? 'ds-is-invalid' : ''}`}
+                      className={`cu-form-control ${errors.subject ? 'cu-is-invalid' : ''}`}
                       value={formData.subject}
                       onChange={handleChange}
                       placeholder="What is this about?"
                     />
-                    {errors.subject && <div className="ds-invalid-feedback">{errors.subject}</div>}
+                    {errors.subject && <div className="cu-invalid-feedback">{errors.subject}</div>}
                   </div>
 
-                  <div className="ds-form-group">
+                  <div className="cu-form-group">
                     <label htmlFor="message">
                       <FaComment /> Message *
                     </label>
@@ -249,22 +249,22 @@ const ContactUs = () => {
                       id="message"
                       name="message"
                       rows="5"
-                      className={`ds-form-control ${errors.message ? 'ds-is-invalid' : ''}`}
+                      className={`cu-form-control ${errors.message ? 'cu-is-invalid' : ''}`}
                       value={formData.message}
                       onChange={handleChange}
                       placeholder="Type your message here..."
                     />
-                    {errors.message && <div className="ds-invalid-feedback">{errors.message}</div>}
+                    {errors.message && <div className="cu-invalid-feedback">{errors.message}</div>}
                   </div>
 
                   <button 
                     type="submit" 
-                    className="ds-btn ds-btn-primary ds-btn-block"
+                    className="cu-btn cu-btn-primary cu-btn-block"
                     disabled={submitting}
                   >
                     {submitting ? (
                       <>
-                        <span className="ds-spinner-small"></span> 
+                        <span className="cu-spinner-small"></span> 
                         Sending...
                       </>
                     ) : (
@@ -278,41 +278,39 @@ const ContactUs = () => {
             </div>
 
             {/* Map & Info */}
-            <div className="ds-contact-info-container">
-              <div className="ds-contact-map">
-                <div className="ds-map-placeholder">
-                  <FaBuilding className="ds-map-icon" />
-                  <p>Our Office Location</p>
-                  <small>123 Business Avenue, Colombo 03, Sri Lanka</small>
-                </div>
+            <div className="cu-info-container">
+              <div className="cu-map-placeholder">
+                <FaBuilding className="cu-map-icon" />
+                <p>Our Office Location</p>
+                <small>123 Business Avenue, Colombo 03, Sri Lanka</small>
               </div>
 
-              <div className="ds-contact-social">
+              <div className="cu-social-section">
                 <h3>Connect With Us</h3>
-                <div className="ds-contact-social-icons">
-                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="ds-contact-social-icon facebook">
+                <div className="cu-social-icons">
+                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="cu-social-icon cu-facebook">
                     <FaFacebook />
                   </a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="ds-contact-social-icon twitter">
+                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="cu-social-icon cu-twitter">
                     <FaTwitter />
                   </a>
-                  <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="ds-contact-social-icon linkedin">
+                  <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="cu-social-icon cu-linkedin">
                     <FaLinkedin />
                   </a>
-                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="ds-contact-social-icon instagram">
+                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="cu-social-icon cu-instagram">
                     <FaInstagram />
                   </a>
-                  <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="ds-contact-social-icon youtube">
+                  <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="cu-social-icon cu-youtube">
                     <FaYoutube />
                   </a>
                 </div>
               </div>
 
-              <div className="ds-contact-support">
+              <div className="cu-support-box">
                 <FaHeadset />
                 <h4>24/7 Customer Support</h4>
                 <p>Our support team is always ready to help you with any questions or concerns.</p>
-                <Link to="/faq" className="ds-btn ds-btn-outline-light">
+                <Link to="/faq" className="cu-btn cu-btn-outline-light">
                   <FaQuestionCircle /> Visit FAQ
                 </Link>
               </div>
@@ -322,21 +320,21 @@ const ContactUs = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="ds-contact-faq">
-        <div className="ds-container">
-          <h2 className="ds-section-title">Frequently Asked Questions</h2>
-          <p className="ds-section-subtitle">Quick answers to common questions</p>
-          <div className="ds-contact-faq-grid">
+      <section className="cu-faq-section">
+        <div className="cu-container">
+          <h2 className="cu-section-title">Frequently Asked Questions</h2>
+          <p className="cu-section-subtitle">Quick answers to common questions</p>
+          <div className="cu-faq-grid">
             {faqs.map((faq, index) => (
-              <div key={index} className="ds-contact-faq-card">
+              <div key={index} className="cu-faq-card">
                 <h3>{faq.question}</h3>
                 <p>{faq.answer}</p>
               </div>
             ))}
           </div>
-          <div className="ds-contact-faq-more">
+          <div className="cu-faq-more">
             <p>Didn't find what you're looking for?</p>
-            <Link to="/faq" className="ds-btn ds-btn-outline-primary">
+            <Link to="/faq" className="cu-btn cu-btn-outline-primary">
               View All FAQs <FaArrowRight />
             </Link>
           </div>
@@ -344,24 +342,86 @@ const ContactUs = () => {
       </section>
 
       {/* Newsletter Section */}
-      <section className="ds-contact-newsletter">
-        <div className="ds-container">
-          <div className="ds-contact-newsletter-content">
+      <section className="cu-newsletter">
+        <div className="cu-container">
+          <div className="cu-newsletter-content">
             <h2>Stay Updated</h2>
             <p>Subscribe to our newsletter for the latest job opportunities and career tips</p>
-            <form className="ds-contact-newsletter-form">
+            <form className="cu-newsletter-form">
               <input
                 type="email"
                 placeholder="Enter your email address"
-                className="ds-form-control"
+                className="cu-form-control"
               />
-              <button type="submit" className="ds-btn ds-btn-primary">
+              <button type="submit" className="cu-btn cu-btn-primary">
                 Subscribe
               </button>
             </form>
           </div>
         </div>
       </section>
+        {/* Footer */}
+             <footer className="hp-footer">
+               <div className="hp-container">
+                 <div className="hp-footer-grid">
+                   <div className="hp-footer-col">
+                     <div className="hp-footer-logo">
+                       <FaBriefcase className="hp-logo-icon" />
+                       <span>JobPortal</span>
+                     </div>
+                     <p>Connecting talented professionals with forward-thinking companies since 2020.</p>
+                     <div className="hp-social-links">
+                       <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
+                         <FaLinkedin />
+                       </a>
+                       <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
+                         <FaTwitter />
+                       </a>
+                       <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+                         <FaFacebook />
+                       </a>
+                       <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                         <FaGithub />
+                       </a>
+                     </div>
+                   </div>
+       
+                   <div className="hp-footer-col">
+                     <h4>For Job Seekers</h4>
+                     <ul>
+                       <li><Link to="/student/jobs">Browse Jobs</Link></li>
+                       <li><Link to="/student/cv-manager">CV Manager</Link></li>
+                       <li><Link to="/student/job-alerts">Job Alerts</Link></li>
+                       <li><Link to="/student/saved-jobs">Saved Jobs</Link></li>
+                     </ul>
+                   </div>
+       
+                   <div className="hp-footer-col">
+                     <h4>For Employers</h4>
+                     <ul>
+                       <li><Link to="/company/post-job">Post a Job</Link></li>
+                       <li><Link to="/company/manage-jobs">Manage Jobs</Link></li>
+                       <li><Link to="/company/applicants">Browse Candidates</Link></li>
+                       <li><Link to="/company/pricing">Pricing</Link></li>
+                     </ul>
+                   </div>
+       
+                   <div className="hp-footer-col">
+                     <h4>Company</h4>
+                     <ul>
+                       <li><Link to="/about">About Us</Link></li>
+                       <li><Link to="/contact">Contact Us</Link></li>
+                       <li><Link to="/privacy">Privacy Policy</Link></li>
+                       <li><Link to="/terms">Terms of Service</Link></li>
+                     </ul>
+                   </div>
+                 </div>
+       
+                 <div className="hp-footer-bottom">
+                   <p>&copy; 2024 JobPortal. All rights reserved.</p>
+                 </div>
+               </div>
+             </footer>
     </div>
   );
 };

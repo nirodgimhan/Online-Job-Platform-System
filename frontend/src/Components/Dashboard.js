@@ -393,13 +393,7 @@ const Dashboard = () => {
         {/* Welcome Header with User Logo */}
         <div className="ds-welcome-header">
           <div className="ds-welcome-content">
-            <div className="ds-user-avatar-large">
-              {profilePictureUrl ? (
-                <img src={profilePictureUrl} alt={user.name} className="ds-avatar-image" />
-              ) : (
-                <div className="ds-avatar-placeholder">{getInitials(user.name)}</div>
-              )}
-            </div>
+            
             <div className="ds-welcome-text">
               <h2>Welcome back, {user.name}! 👋</h2>
               <p>Your career journey continues here. Let's find your dream job!</p>
@@ -586,15 +580,7 @@ const Dashboard = () => {
         {/* Welcome Header */}
         <div className="ds-welcome-header">
           <div className="ds-welcome-content">
-            <div className="ds-user-avatar-large">
-              {profilePictureUrl ? (
-                <img src={profilePictureUrl} alt={user.companyName} className="ds-avatar-image" />
-              ) : (
-                <div className="ds-avatar-placeholder">
-                  <FaBuilding size={32} />
-                </div>
-              )}
-            </div>
+            
             <div className="ds-welcome-text">
               <h2>Welcome back, {user.companyName || user.name}! 🏢</h2>
               <p>Find the best talent for your company. Post jobs and review applications.</p>

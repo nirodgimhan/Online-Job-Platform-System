@@ -10,11 +10,11 @@ import {
   FaHandshake,
   FaGlobe,
   FaHeart,
-  FaGraduationCap,
+  FaGraduationCap,FaFacebook,FaTwitter,FaGithub,
   FaBriefcase,
   FaUsers,
   FaClock,
-  FaCheckCircle,
+  FaCheckCircle,FaLinkedin,
   FaArrowRight
 } from 'react-icons/fa';
 
@@ -77,29 +77,29 @@ const Services = () => {
   ];
 
   return (
-    <div className="ds-services">
+    <div className="sv-services">
       {/* Hero Section */}
-      <section className="ds-services-hero">
-        <div className="ds-container">
-          <h1>Our <span className="ds-highlight">Services</span></h1>
-          <p className="ds-subtitle">
+      <section className="sv-hero">
+        <div className="sv-container">
+          <h1>Our <span className="sv-highlight">Services</span></h1>
+          <p className="sv-subtitle">
             Comprehensive career solutions for job seekers and employers
           </p>
         </div>
       </section>
 
       {/* Services Grid */}
-      <section className="ds-services-grid-section">
-        <div className="ds-container">
-          <div className="ds-services-grid">
+      <section className="sv-grid-section">
+        <div className="sv-container">
+          <div className="sv-services-grid">
             {services.map((service, index) => (
-              <div key={index} className="ds-service-card">
-                <div className="ds-service-icon">{service.icon}</div>
+              <div key={index} className="sv-service-card">
+                <div className="sv-service-icon">{service.icon}</div>
                 <h3>{service.title}</h3>
                 <p>{service.description}</p>
-                <div className="ds-service-features">
+                <div className="sv-service-features">
                   {service.features.map((feature, i) => (
-                    <div key={i} className="ds-service-feature">
+                    <div key={i} className="sv-service-feature">
                       <FaCheckCircle /> {feature}
                     </div>
                   ))}
@@ -111,13 +111,13 @@ const Services = () => {
       </section>
 
       {/* For Students Section */}
-      <section className="ds-services-students">
-        <div className="ds-container">
-          <div className="ds-services-students-grid">
-            <div className="ds-services-students-content">
+      <section className="sv-students-section">
+        <div className="sv-container">
+          <div className="sv-students-grid">
+            <div className="sv-students-content">
               <h2>For Job Seekers</h2>
-              <p className="ds-lead">Everything you need to land your dream job</p>
-              <ul className="ds-services-list">
+              <p className="sv-lead">Everything you need to land your dream job</p>
+              <ul className="sv-feature-list">
                 <li><FaCheckCircle /> Create a professional profile</li>
                 <li><FaCheckCircle /> Upload and manage multiple CVs</li>
                 <li><FaCheckCircle /> Get AI-powered job recommendations</li>
@@ -125,13 +125,13 @@ const Services = () => {
                 <li><FaCheckCircle /> Receive job alerts</li>
                 <li><FaCheckCircle /> Access career resources</li>
               </ul>
-              <Link to="/register" className="ds-btn ds-btn-primary">
+              <Link to="/register" className="sv-btn sv-btn-primary">
                 Get Started <FaArrowRight />
               </Link>
             </div>
-            <div className="ds-services-students-image">
-              <div className="ds-image-placeholder">
-                <FaGraduationCap className="ds-placeholder-icon" />
+            <div className="sv-students-image">
+              <div className="sv-image-placeholder">
+                <FaGraduationCap className="sv-placeholder-icon" />
               </div>
             </div>
           </div>
@@ -139,18 +139,18 @@ const Services = () => {
       </section>
 
       {/* For Companies Section */}
-      <section className="ds-services-companies">
-        <div className="ds-container">
-          <div className="ds-services-companies-grid">
-            <div className="ds-services-companies-image">
-              <div className="ds-image-placeholder">
-                <FaBuilding className="ds-placeholder-icon" />
+      <section className="sv-companies-section">
+        <div className="sv-container">
+          <div className="sv-companies-grid">
+            <div className="sv-companies-image">
+              <div className="sv-image-placeholder">
+                <FaBuilding className="sv-placeholder-icon" />
               </div>
             </div>
-            <div className="ds-services-companies-content">
+            <div className="sv-companies-content">
               <h2>For Employers</h2>
-              <p className="ds-lead">Find the best talent for your organization</p>
-              <ul className="ds-services-list">
+              <p className="sv-lead">Find the best talent for your organization</p>
+              <ul className="sv-feature-list">
                 <li><FaCheckCircle /> Post jobs and manage applications</li>
                 <li><FaCheckCircle /> Access candidate database</li>
                 <li><FaCheckCircle /> AI-powered candidate matching</li>
@@ -158,7 +158,7 @@ const Services = () => {
                 <li><FaCheckCircle /> Company branding and profiles</li>
                 <li><FaCheckCircle /> Analytics and insights</li>
               </ul>
-              <Link to="/register" className="ds-btn ds-btn-primary">
+              <Link to="/register" className="sv-btn sv-btn-primary">
                 Start Hiring <FaArrowRight />
               </Link>
             </div>
@@ -167,20 +167,82 @@ const Services = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="ds-services-cta">
-        <div className="ds-container">
+      <section className="sv-cta">
+        <div className="sv-container">
           <h2>Ready to Transform Your Career?</h2>
           <p>Join thousands of satisfied users who have found success with JobPortal</p>
-          <div className="ds-services-cta-buttons">
-            <Link to="/register" className="ds-btn ds-btn-primary ds-btn-lg">
+          <div className="sv-cta-buttons">
+            <Link to="/register" className="sv-btn sv-btn-primary sv-btn-lg">
               Sign Up Now
             </Link>
-            <Link to="/contact" className="ds-btn ds-btn-outline-light ds-btn-lg">
+            <Link to="/contact" className="sv-btn sv-btn-outline-light sv-btn-lg">
               Contact Sales
             </Link>
           </div>
         </div>
       </section>
+     {/* Footer */}
+          <footer className="hp-footer">
+            <div className="hp-container">
+              <div className="hp-footer-grid">
+                <div className="hp-footer-col">
+                  <div className="hp-footer-logo">
+                    <FaBriefcase className="hp-logo-icon" />
+                    <span>JobPortal</span>
+                  </div>
+                  <p>Connecting talented professionals with forward-thinking companies since 2020.</p>
+                  <div className="hp-social-links">
+                    <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
+                      <FaLinkedin />
+                    </a>
+                    <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
+                      <FaTwitter />
+                    </a>
+                    <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+                      <FaFacebook />
+                    </a>
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                      <FaGithub />
+                    </a>
+                  </div>
+                </div>
+    
+                <div className="hp-footer-col">
+                  <h4>For Job Seekers</h4>
+                  <ul>
+                    <li><Link to="/student/jobs">Browse Jobs</Link></li>
+                    <li><Link to="/student/cv-manager">CV Manager</Link></li>
+                    <li><Link to="/student/job-alerts">Job Alerts</Link></li>
+                    <li><Link to="/student/saved-jobs">Saved Jobs</Link></li>
+                  </ul>
+                </div>
+    
+                <div className="hp-footer-col">
+                  <h4>For Employers</h4>
+                  <ul>
+                    <li><Link to="/company/post-job">Post a Job</Link></li>
+                    <li><Link to="/company/manage-jobs">Manage Jobs</Link></li>
+                    <li><Link to="/company/applicants">Browse Candidates</Link></li>
+                    <li><Link to="/company/pricing">Pricing</Link></li>
+                  </ul>
+                </div>
+    
+                <div className="hp-footer-col">
+                  <h4>Company</h4>
+                  <ul>
+                    <li><Link to="/about">About Us</Link></li>
+                    <li><Link to="/contact">Contact Us</Link></li>
+                    <li><Link to="/privacy">Privacy Policy</Link></li>
+                    <li><Link to="/terms">Terms of Service</Link></li>
+                  </ul>
+                </div>
+              </div>
+    
+              <div className="hp-footer-bottom">
+                <p>&copy; 2024 JobPortal. All rights reserved.</p>
+              </div>
+            </div>
+          </footer>
     </div>
   );
 };
