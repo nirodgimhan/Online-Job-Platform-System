@@ -35,7 +35,9 @@ const Register = () => {
     industry: '',
     companySize: '',
     website: '',
-    description: ''
+    description: '',
+    // Admin-specific field
+    adminSecretKey: ''
   });
   
   const [errors, setErrors] = useState({});
@@ -138,6 +140,13 @@ const Register = () => {
       }
     }
 
+    // Admin-specific validations
+    if (formData.role === 'admin') {
+      if (!formData.adminSecretKey.trim()) {
+        newErrors.adminSecretKey = 'Secret key is required for admin registration';
+      }
+    }
+
     return newErrors;
   };
 
@@ -174,7 +183,19 @@ const Register = () => {
 
     setLoading(true);
 
-    const { confirmPassword, ...userData } = formData;
+    // Prepare data for backend
+    const userData = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+      phoneNumber: formData.phoneNumber
+    };
+
+    // If admin, add secret key
+    if (formData.role === 'admin') {
+      userData.adminSecretKey = formData.adminSecretKey;
+    }
     
     try {
       const result = await register(userData);
@@ -256,6 +277,14 @@ const Register = () => {
                   <h4>Company</h4>
                   <p>Hiring talent</p>
                 </div>
+                <div 
+                  className={`ds-role-card ${formData.role === 'admin' ? 'active' : ''}`}
+                  onClick={() => setFormData({...formData, role: 'admin'})}
+                >
+                  <FaShieldAlt className="ds-role-icon" />
+                  <h4>Admin</h4>
+                  <p>Platform administrator</p>
+                </div>
               </div>
               
               {/* Common Fields */}
@@ -263,7 +292,7 @@ const Register = () => {
                 <input
                   type="text"
                   name="name"
-                  placeholder={formData.role === 'student' ? "Full Name" : "Contact Person Name"}
+                  placeholder={formData.role === 'student' ? "Full Name" : (formData.role === 'company' ? "Contact Person Name" : "Admin Name")}
                   value={formData.name}
                   onChange={handleChange}
                   required
@@ -372,6 +401,24 @@ const Register = () => {
                 />
                 {errors.phoneNumber && <span className="ds-error-text">{errors.phoneNumber}</span>}
               </div>
+              
+              {/* Admin Secret Key Field (only for admin role) */}
+              {formData.role === 'admin' && (
+                <div className="ds-form-group">
+                  <input
+                    type="password"
+                    name="adminSecretKey"
+                    placeholder="Admin Secret Key"
+                    value={formData.adminSecretKey}
+                    onChange={handleChange}
+                    required
+                    className={`ds-form-input ${errors.adminSecretKey ? 'ds-error' : ''}`}
+                    disabled={loading}
+                  />
+                  {errors.adminSecretKey && <span className="ds-error-text">{errors.adminSecretKey}</span>}
+                  <small className="ds-form-hint">Please enter the admin registration key provided by the system administrator.</small>
+                </div>
+              )}
               
               {/* Password Field */}
               <div className="ds-form-group">
