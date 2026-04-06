@@ -51,7 +51,11 @@ try {
 
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+<<<<<<< Updated upstream
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://nirodgimhan356_db_user:rES4vm1t7pgsSuYQ@cluster0.kz8fvuz.mongodb.net/JobApplicationPlatform?retryWrites=true&w=majority';
+=======
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/jobportal';
+>>>>>>> Stashed changes
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const CLIENT_URLS = process.env.CLIENT_URLS 
     ? process.env.CLIENT_URLS.split(',') 
