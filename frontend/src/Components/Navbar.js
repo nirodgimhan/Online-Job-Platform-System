@@ -2,24 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, API } from '../Components/context/AuthContext';
 import { 
-  FaBriefcase,
-  FaUserCircle,
-  FaSignOutAlt,
-  FaTachometerAlt,
-  FaUser,
-  FaCog,
-  FaChevronDown,
-  FaSearch,
-  FaBell,
-  FaEnvelope
+  FaBriefcase, FaUserCircle, FaSignOutAlt, FaTachometerAlt,
+  FaUser, FaCog, FaChevronDown, FaSearch, FaBell, FaEnvelope
 } from 'react-icons/fa';
 
-// Helper to get base URL from environment or fallback
-const getBaseUrl = () => {
-  return process.env.REACT_APP_API_URL || 'http://localhost:5000';
-};
+const getBaseUrl = () => process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-// Helper to get full profile picture URL
 const getProfilePictureUrl = (profilePicture) => {
   if (!profilePicture) return null;
   if (profilePicture.startsWith('http')) return profilePicture;
@@ -34,12 +22,10 @@ const Navbar = () => {
   const [companyProfile, setCompanyProfile] = useState(null);
   const [profilePictureUrl, setProfilePictureUrl] = useState(null);
 
-  // Fetch company profile if user is a company
   useEffect(() => {
     if (isAuthenticated && user?.role === 'company') {
       fetchCompanyProfile();
     } else if (isAuthenticated) {
-      // For students and admins, use user.profilePicture
       setProfilePictureUrl(getProfilePictureUrl(user?.profilePicture));
     } else {
       setProfilePictureUrl(null);
@@ -52,28 +38,13 @@ const Navbar = () => {
       if (response.data.success) {
         const company = response.data.company;
         setCompanyProfile(company);
-        if (company.companyLogo) {
-          setProfilePictureUrl(getProfilePictureUrl(company.companyLogo));
-        } else if (user?.profilePicture) {
-          setProfilePictureUrl(getProfilePictureUrl(user.profilePicture));
-        } else {
-          setProfilePictureUrl(null);
-        }
+        setProfilePictureUrl(getProfilePictureUrl(company.companyLogo || user?.profilePicture));
       } else {
-        // Fallback
-        if (user?.profilePicture) {
-          setProfilePictureUrl(getProfilePictureUrl(user.profilePicture));
-        } else {
-          setProfilePictureUrl(null);
-        }
+        setProfilePictureUrl(getProfilePictureUrl(user?.profilePicture));
       }
     } catch (error) {
-      console.error('Error fetching company profile for navbar:', error);
-      if (user?.profilePicture) {
-        setProfilePictureUrl(getProfilePictureUrl(user.profilePicture));
-      } else {
-        setProfilePictureUrl(null);
-      }
+      console.error('Error fetching company profile:', error);
+      setProfilePictureUrl(getProfilePictureUrl(user?.profilePicture));
     }
   };
 
@@ -104,15 +75,6 @@ const Navbar = () => {
     }
   };
 
-  const getBrowseJobsLink = () => {
-    return '/jobs';
-  };
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  // For user initials fallback
   const getUserInitials = () => {
     if (!user?.name) return 'U';
     return user.name.charAt(0).toUpperCase();
@@ -120,81 +82,81 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="jobline-navbar">
-        <div className="jobline-navbar-container">
+      <nav className="nc-navbar">
+        <div className="nc-container">
           {/* Logo */}
-          <Link to="/" className="jobline-logo">
-            <FaBriefcase className="jobline-logo-icon" />
+          <Link to="/" className="nc-logo">
+            <FaBriefcase className="nc-logo-icon" />
             <span>JobPortal</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="jobline-nav-menu">
-            <Link to="/" className="jobline-nav-link">Home</Link>
-            <Link to="/jobs" className="jobline-nav-link">Browse Jobs</Link>
-            <Link to="/about" className="jobline-nav-link">About Us</Link>
-            <Link to="/services" className="jobline-nav-link">Services</Link>
-            <Link to="/contact" className="jobline-nav-link">Contact</Link>
+          {/* Desktop Navigation Links */}
+          <div className="nc-nav-links">
+            <Link to="/" className="nc-nav-link">Home</Link>
+            <Link to="/jobs" className="nc-nav-link">Browse Jobs</Link>
+            <Link to="/about" className="nc-nav-link">About Us</Link>
+            <Link to="/services" className="nc-nav-link">Services</Link>
+            <Link to="/contact" className="nc-nav-link">Contact</Link>
           </div>
 
-          {/* Right Section */}
-          <div className="jobline-nav-right">
+          {/* Right Side */}
+          <div className="nc-right">
             {isAuthenticated ? (
               <>
-                {/* Notification Icon */}
-                <button className="jobline-icon-btn">
+                {/* Notifications */}
+                <button className="nc-icon-btn">
                   <FaBell />
-                  <span className="jobline-badge">3</span>
+                  <span className="nc-badge">3</span>
                 </button>
                 
-                {/* Messages Icon */}
-                <button className="jobline-icon-btn">
+                {/* Messages */}
+                <button className="nc-icon-btn">
                   <FaEnvelope />
-                  <span className="jobline-badge">5</span>
+                  <span className="nc-badge">5</span>
                 </button>
 
                 {/* User Dropdown */}
-                <div className="jobline-user-dropdown">
+                <div className="nc-dropdown">
                   <button
-                    className="jobline-user-btn"
+                    className="nc-dropdown-trigger"
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   >
-                    <div className="jobline-user-avatar">
+                    <div className="nc-avatar">
                       {profilePictureUrl ? (
                         <img src={profilePictureUrl} alt={user.name} />
                       ) : (
                         <span>{getUserInitials()}</span>
                       )}
                     </div>
-                    <span className="jobline-user-name">{user?.name?.split(' ')[0] || 'User'}</span>
-                    <FaChevronDown className={`jobline-dropdown-arrow ${isDropdownOpen ? 'open' : ''}`} />
+                    <span className="nc-user-name">{user?.name?.split(' ')[0] || 'User'}</span>
+                    <FaChevronDown className={`nc-arrow ${isDropdownOpen ? 'open' : ''}`} />
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="jobline-dropdown-menu">
-                      <div className="jobline-dropdown-header">
-                        <div className="jobline-dropdown-user-name">{user?.name}</div>
-                        <div className="jobline-dropdown-user-email">{user?.email}</div>
-                        <div className={`jobline-role-badge ${user?.role}`}>
+                    <div className="nc-dropdown-menu">
+                      <div className="nc-dropdown-header">
+                        <div className="nc-dropdown-name">{user?.name}</div>
+                        <div className="nc-dropdown-email">{user?.email}</div>
+                        <div className={`nc-role-badge ${user?.role}`}>
                           {user?.role === 'student' ? 'Student' : user?.role === 'company' ? 'Company' : 'Admin'}
                         </div>
                       </div>
 
-                      <Link to={getDashboardLink()} className="jobline-dropdown-item" onClick={() => setIsDropdownOpen(false)}>
+                      <Link to={getDashboardLink()} className="nc-dropdown-item" onClick={() => setIsDropdownOpen(false)}>
                         <FaTachometerAlt /> Dashboard
                       </Link>
 
-                      <Link to={getProfileLink()} className="jobline-dropdown-item" onClick={() => setIsDropdownOpen(false)}>
+                      <Link to={getProfileLink()} className="nc-dropdown-item" onClick={() => setIsDropdownOpen(false)}>
                         <FaUser /> My Profile
                       </Link>
 
-                      <Link to={getBrowseJobsLink()} className="jobline-dropdown-item" onClick={() => setIsDropdownOpen(false)}>
+                      <Link to="/jobs" className="nc-dropdown-item" onClick={() => setIsDropdownOpen(false)}>
                         <FaBriefcase /> Find Jobs
                       </Link>
 
-                      <div className="jobline-dropdown-divider"></div>
+                      <div className="nc-divider"></div>
 
-                      <button onClick={handleLogout} className="jobline-dropdown-item jobline-logout-btn">
+                      <button onClick={handleLogout} className="nc-dropdown-item nc-logout-btn">
                         <FaSignOutAlt /> Sign Out
                       </button>
                     </div>
@@ -202,62 +164,46 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <div className="jobline-auth-buttons">
-                <Link to="/register" className="jobline-btn jobline-btn-primary">Sign Up</Link>
-                <Link to="/login" className="jobline-btn jobline-btn-outline">Sign In</Link>
+              <div className="nc-auth-buttons">
+                <Link to="/register" className="nc-btn nc-btn-primary">Sign Up</Link>
+                <Link to="/login" className="nc-btn nc-btn-outline">Sign In</Link>
               </div>
             )}
           </div>
 
           {/* Mobile Menu Button */}
-          <button className="jobline-mobile-menu-btn" onClick={toggleMobileMenu}>
-            <span></span>
-            <span></span>
-            <span></span>
+          <button className="nc-mobile-toggle" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            <span></span><span></span><span></span>
           </button>
         </div>
 
         {/* Mobile Menu */}
-        <div className={`jobline-mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
-          <Link to="/" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
-          <Link to="/jobs" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Browse Jobs</Link>
-          <Link to="/about" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>About Us</Link>
-          <Link to="/services" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Services</Link>
-          <Link to="/contact" className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>Contact</Link>  
+        <div className={`nc-mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+          <Link to="/" className="nc-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
+          <Link to="/jobs" className="nc-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>Browse Jobs</Link>
+          <Link to="/about" className="nc-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>About Us</Link>
+          <Link to="/services" className="nc-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>Services</Link>
+          <Link to="/contact" className="nc-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>Contact</Link>
           
           {isAuthenticated ? (
             <>
-              <div className="jobline-mobile-user-info">
-                <div className="jobline-mobile-user-avatar">
-                  {profilePictureUrl ? (
-                    <img src={profilePictureUrl} alt={user.name} />
-                  ) : (
-                    <span>{getUserInitials()}</span>
-                  )}
+              <div className="nc-mobile-user">
+                <div className="nc-mobile-avatar">
+                  {profilePictureUrl ? <img src={profilePictureUrl} alt={user.name} /> : <span>{getUserInitials()}</span>}
                 </div>
-                <div className="jobline-mobile-user-details">
-                  <div className="jobline-mobile-user-name">{user?.name}</div>
-                  <div className="jobline-mobile-user-email">{user?.email}</div>
+                <div className="nc-mobile-info">
+                  <div className="nc-mobile-name">{user?.name}</div>
+                  <div className="nc-mobile-email">{user?.email}</div>
                 </div>
               </div>
-              <Link to={getDashboardLink()} className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-                Dashboard
-              </Link>
-              <Link to={getProfileLink()} className="jobline-mobile-nav-link" onClick={() => setIsMobileMenuOpen(false)}>
-                My Profile
-              </Link>
-              <button onClick={handleLogout} className="jobline-mobile-nav-link jobline-mobile-logout">
-                Sign Out
-              </button>
+              <Link to={getDashboardLink()} className="nc-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>Dashboard</Link>
+              <Link to={getProfileLink()} className="nc-mobile-link" onClick={() => setIsMobileMenuOpen(false)}>My Profile</Link>
+              <button onClick={handleLogout} className="nc-mobile-link nc-mobile-logout">Sign Out</button>
             </>
           ) : (
-            <div className="jobline-mobile-auth">
-              <Link to="/register" className="jobline-mobile-btn jobline-mobile-btn-primary" onClick={() => setIsMobileMenuOpen(false)}>
-                Sign Up
-              </Link>
-              <Link to="/login" className="jobline-mobile-btn jobline-mobile-btn-outline" onClick={() => setIsMobileMenuOpen(false)}>
-                Sign In
-              </Link>
+            <div className="nc-mobile-auth">
+              <Link to="/register" className="nc-mobile-btn nc-mobile-btn-primary" onClick={() => setIsMobileMenuOpen(false)}>Sign Up</Link>
+              <Link to="/login" className="nc-mobile-btn nc-mobile-btn-outline" onClick={() => setIsMobileMenuOpen(false)}>Sign In</Link>
             </div>
           )}
         </div>

@@ -3,32 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, API } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { 
-  FaBriefcase, 
-  FaClock, 
-  FaCheckCircle, 
-  FaTimesCircle,
-  FaEye,
-  FaCalendarAlt,
-  FaMapMarkerAlt,
-  FaBuilding,
-  FaStar,
-  FaFilter,
-  FaSyncAlt,
-  FaFileAlt,
-  FaDownload,
-  FaComment,
-  FaUserGraduate,
-  FaArrowLeft,
-  FaRegClock,
-  FaRegCheckCircle,
-  FaRegTimesCircle,
-  FaRegStar,
-  FaExternalLinkAlt,
-  FaChartLine,
-  FaTrophy,
-  FaMedal,
-  FaSpinner,
-  FaExclamationTriangle
+  FaBriefcase, FaClock, FaCheckCircle, FaTimesCircle, FaEye,
+  FaCalendarAlt, FaMapMarkerAlt, FaBuilding, FaStar, FaFilter,
+  FaSyncAlt, FaFileAlt, FaComment, FaRegClock, FaRegCheckCircle,
+  FaRegTimesCircle, FaRegStar, FaExternalLinkAlt, FaExclamationTriangle,
+  FaSpinner, FaSearch, FaTimes, FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
 
 const AppliedJobs = () => {
@@ -38,25 +17,18 @@ const AppliedJobs = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    status: '',
-    dateRange: ''
-  });
+  const [filters, setFilters] = useState({ status: '', dateRange: '' });
   const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    reviewed: 0,
-    shortlisted: 0,
-    interview: 0,
-    accepted: 0,
-    rejected: 0,
-    withdrawn: 0
+    total: 0, pending: 0, reviewed: 0, shortlisted: 0,
+    interview: 0, accepted: 0, rejected: 0, withdrawn: 0
   });
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('date');
 
   const normalizeStatus = (status) => {
     if (!status) return 'Pending';
@@ -71,51 +43,18 @@ const AppliedJobs = () => {
     return status;
   };
 
-  useEffect(() => {
-    checkAuthAndFetchApplications();
-  }, []);
+  useEffect(() => { checkAuthAndFetchApplications(); }, []);
 
   useEffect(() => {
-    if (applications.length > 0) {
-      calculateStats(applications);
-    } else {
-      setStats({
-        total: 0,
-        pending: 0,
-        reviewed: 0,
-        shortlisted: 0,
-        interview: 0,
-        accepted: 0,
-        rejected: 0,
-        withdrawn: 0
-      });
-    }
+    if (applications.length) calculateStats(applications);
+    else setStats({ total:0, pending:0, reviewed:0, shortlisted:0, interview:0, accepted:0, rejected:0, withdrawn:0 });
   }, [applications]);
 
   const checkAuthAndFetchApplications = async () => {
     const token = localStorage.getItem('token');
-    
-    if (!token) {
-      setError('Please login to view your applications');
-      setTimeout(() => navigate('/login'), 2000);
-      setLoading(false);
-      return;
-    }
-
-    if (!user) {
-      setError('User data not found. Please login again.');
-      setTimeout(() => navigate('/login'), 2000);
-      setLoading(false);
-      return;
-    }
-
-    if (user.role !== 'student') {
-      setError('Access denied. Only students can view applications.');
-      setTimeout(() => navigate('/'), 2000);
-      setLoading(false);
-      return;
-    }
-
+    if (!token) { setError('Please login to view your applications'); setTimeout(() => navigate('/login'), 2000); setLoading(false); return; }
+    if (!user) { setError('User data not found'); setTimeout(() => navigate('/login'), 2000); setLoading(false); return; }
+    if (user.role !== 'student') { setError('Access denied. Only students can view applications.'); setTimeout(() => navigate('/'), 2000); setLoading(false); return; }
     await fetchApplications();
   };
 
@@ -123,13 +62,10 @@ const AppliedJobs = () => {
     try {
       setLoading(true);
       setError(null);
-      
       const response = await API.get('/applications/student');
-      
       if (response.data && response.data.success) {
         const apps = response.data.applications || [];
-        
-        const processedApps = apps.map(app => ({
+        const processed = apps.map(app => ({
           ...app,
           appliedDate: app.appliedDate || app.appliedAt || app.createdAt,
           updatedAt: app.updatedAt || app.appliedDate || app.createdAt,
@@ -139,140 +75,48 @@ const AppliedJobs = () => {
           coverLetter: app.coverLetter || '',
           status: normalizeStatus(app.status)
         }));
-        
-        setApplications(processedApps);
-      } else {
-        setError(response.data?.message || 'Failed to load applications');
-      }
+        setApplications(processed);
+      } else setError(response.data?.message || 'Failed to load applications');
     } catch (err) {
-      console.error('Error fetching applications:', err);
-      
-      if (err.response?.status === 401) {
-        setError('Session expired. Please login again.');
-        localStorage.removeItem('token');
-        setTimeout(() => navigate('/login'), 2000);
-      } else if (err.response?.status === 403) {
-        setError('You are not authorized to view these applications.');
-      } else if (err.request) {
-        setError('No response from server. Please check if backend is running.');
-      } else {
-        setError('Error: ' + err.message);
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+      console.error(err);
+      if (err.response?.status === 401) { setError('Session expired. Please login again.'); localStorage.removeItem('token'); setTimeout(() => navigate('/login'), 2000); }
+      else if (err.response?.status === 403) setError('You are not authorized.');
+      else setError('Error: ' + err.message);
+    } finally { setLoading(false); setRefreshing(false); }
   };
 
   const calculateStats = (apps) => {
-    const newStats = {
+    setStats({
       total: apps.length,
-      pending: apps.filter(app => app.status === 'Pending').length,
-      reviewed: apps.filter(app => app.status === 'Reviewed').length,
-      shortlisted: apps.filter(app => app.status === 'Shortlisted').length,
-      interview: apps.filter(app => app.status === 'Interview').length,
-      accepted: apps.filter(app => app.status === 'Accepted').length,
-      rejected: apps.filter(app => app.status === 'Rejected').length,
-      withdrawn: apps.filter(app => app.status === 'Withdrawn').length
-    };
-    setStats(newStats);
+      pending: apps.filter(a => a.status === 'Pending').length,
+      reviewed: apps.filter(a => a.status === 'Reviewed').length,
+      shortlisted: apps.filter(a => a.status === 'Shortlisted').length,
+      interview: apps.filter(a => a.status === 'Interview').length,
+      accepted: apps.filter(a => a.status === 'Accepted').length,
+      rejected: apps.filter(a => a.status === 'Rejected').length,
+      withdrawn: apps.filter(a => a.status === 'Withdrawn').length
+    });
   };
 
-  const applyFilters = () => {
-    let filtered = [...applications];
-    
-    if (filters.status) {
-      filtered = filtered.filter(app => app.status === filters.status);
-    }
-    
-    if (filters.dateRange) {
-      const now = new Date();
-      const filterDate = new Date();
-      
-      switch(filters.dateRange) {
-        case 'week':
-          filterDate.setDate(now.getDate() - 7);
-          filtered = filtered.filter(app => new Date(app.appliedDate) >= filterDate);
-          break;
-        case 'month':
-          filterDate.setMonth(now.getMonth() - 1);
-          filtered = filtered.filter(app => new Date(app.appliedDate) >= filterDate);
-          break;
-        case '3months':
-          filterDate.setMonth(now.getMonth() - 3);
-          filtered = filtered.filter(app => new Date(app.appliedDate) >= filterDate);
-          break;
-        default:
-          break;
-      }
-    }
-    
-    return filtered;
-  };
+  const handleFilterChange = (e) => setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleRefresh = () => { setRefreshing(true); fetchApplications(); };
+  const handleClearFilters = () => { setFilters({ status: '', dateRange: '' }); setSearchTerm(''); setSortBy('date'); };
+  const handleViewInterviewDetails = (app) => { setSelectedApplication(app); setShowInterviewModal(true); };
+  const handleViewFeedback = (app) => { setSelectedApplication(app); setShowFeedbackModal(true); };
+  const handleCloseModals = () => { setShowInterviewModal(false); setShowFeedbackModal(false); setSelectedApplication(null); };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchApplications();
-  };
-
-  const handleRetry = () => {
-    fetchApplications();
-  };
-
-  const handleGoToLogin = () => {
-    navigate('/login');
-  };
-
-  const handleClearFilters = () => {
-    setFilters({ status: '', dateRange: '' });
-  };
-
-  const handleViewInterviewDetails = (application) => {
-    setSelectedApplication(application);
-    setShowInterviewModal(true);
-  };
-
-  const handleViewFeedback = (application) => {
-    setSelectedApplication(application);
-    setShowFeedbackModal(true);
-  };
-
-  const handleCloseModals = () => {
-    setShowInterviewModal(false);
-    setShowFeedbackModal(false);
-    setSelectedApplication(null);
-  };
-
-  // NEW: Withdraw application
   const handleWithdrawApplication = async (applicationId) => {
-    if (!window.confirm('Are you sure you want to withdraw this application? This action cannot be undone.')) {
-      return;
-    }
-
+    if (!window.confirm('Are you sure you want to withdraw this application? This action cannot be undone.')) return;
     setWithdrawing(true);
     try {
       const response = await API.put(`/applications/${applicationId}/status`, { status: 'Withdrawn' });
       if (response.data.success) {
         toast.success('Application withdrawn successfully');
-        
-        // Remove the application from state
-        const updatedApplications = applications.filter(app => app._id !== applicationId);
-        setApplications(updatedApplications);
-        // Stats will automatically recalculate because of the useEffect dependency on applications
-      } else {
-        toast.error(response.data.message || 'Failed to withdraw application');
-      }
-    } catch (err) {
-      console.error('Error withdrawing application:', err);
-      toast.error(err.response?.data?.message || 'Failed to withdraw application');
-    } finally {
-      setWithdrawing(false);
-    }
+        const updated = applications.filter(app => app._id !== applicationId);
+        setApplications(updated);
+      } else toast.error(response.data.message || 'Failed to withdraw');
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to withdraw'); }
+    finally { setWithdrawing(false); }
   };
 
   const getCompanyLogoUrl = (company) => {
@@ -291,109 +135,66 @@ const AppliedJobs = () => {
       'Rejected': { class: 'aj-status-rejected', icon: <FaRegTimesCircle />, text: 'Rejected' },
       'Withdrawn': { class: 'aj-status-withdrawn', icon: <FaTimesCircle />, text: 'Withdrawn' }
     };
-    
     const badge = badges[status];
-    if (!badge) {
-      return (
-        <span className="aj-status-badge aj-status-pending">
-          <FaRegClock /> {status}
-        </span>
-      );
-    }
-    
-    return (
-      <span className={`aj-status-badge ${badge.class}`}>
-        {badge.icon}
-        {badge.text}
-      </span>
-    );
+    if (!badge) return <span className="aj-status-badge aj-status-pending"><FaRegClock /> {status}</span>;
+    return <span className={`aj-status-badge ${badge.class}`}>{badge.icon}{badge.text}</span>;
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
-    } catch (e) {
-      return dateString;
+    } catch { return dateString; }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...applications];
+    if (filters.status) filtered = filtered.filter(app => app.status === filters.status);
+    if (filters.dateRange) {
+      const now = new Date();
+      const filterDate = new Date();
+      if (filters.dateRange === 'week') filterDate.setDate(now.getDate() - 7);
+      else if (filters.dateRange === 'month') filterDate.setMonth(now.getMonth() - 1);
+      else if (filters.dateRange === '3months') filterDate.setMonth(now.getMonth() - 3);
+      filtered = filtered.filter(app => new Date(app.appliedDate) >= filterDate);
     }
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(app => 
+        app.jobId?.title?.toLowerCase().includes(term) ||
+        app.jobId?.companyId?.companyName?.toLowerCase().includes(term)
+      );
+    }
+    if (sortBy === 'date') filtered.sort((a,b) => new Date(b.appliedDate) - new Date(a.appliedDate));
+    else if (sortBy === 'company') filtered.sort((a,b) => (a.jobId?.companyId?.companyName || '').localeCompare(b.jobId?.companyId?.companyName || ''));
+    return filtered;
   };
 
   const filteredApplications = applyFilters();
 
   if (loading) {
-    return (
-      <div className="aj-loading-container">
-        <div className="aj-spinner"></div>
-        <h4>Loading your applications...</h4>
-        <p>Please wait while we fetch your data</p>
-      </div>
-    );
+    return <div className="aj-loading-container"><div className="aj-spinner"></div><h4>Loading your applications...</h4></div>;
   }
-
   if (error) {
-    return (
-      <div className="aj-error-container">
-        <div className="aj-error-card">
-          <FaExclamationTriangle className="aj-error-icon" />
-          <h3>Error Loading Applications</h3>
-          <p>{error}</p>
-          <div className="aj-error-actions">
-            <button className="aj-btn aj-btn-primary" onClick={handleRetry}>
-              <FaSyncAlt /> Try Again
-            </button>
-            <button className="aj-btn aj-btn-outline-secondary" onClick={handleGoToLogin}>
-              Go to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="aj-error-container"><div className="aj-error-card"><FaExclamationTriangle className="aj-error-icon"/><h3>Error</h3><p>{error}</p><button className="aj-btn aj-btn-primary" onClick={fetchApplications}>Try Again</button></div></div>;
   }
-
   if (applications.length === 0) {
     return (
       <div className="aj-empty-state">
-        <div className="aj-empty-icon-wrapper">
-          <FaBriefcase className="aj-empty-icon" />
-        </div>
+        <div className="aj-empty-icon-wrapper"><FaBriefcase className="aj-empty-icon"/></div>
         <h3>No Applications Yet</h3>
         <p>You haven't applied to any jobs. Start your job search today!</p>
-        <Link to="/student/jobs" className="aj-btn aj-btn-primary aj-btn-lg">
-          <FaBriefcase /> Browse Jobs
-        </Link>
+        <Link to="/student/jobs" className="aj-btn aj-btn-primary">Browse Jobs</Link>
       </div>
     );
   }
 
   return (
     <div className="aj-applied-jobs">
-      <div className="aj-applied-jobs-container">
-        {/* Header */}
-        <div className="aj-page-header">
-          <div className="aj-header-left">
-            <div className="aj-header-icon-wrapper">
-              <FaBriefcase className="aj-header-icon" />
-            </div>
-            <div>
-              <h1>My Applications</h1>
-              <p className="aj-header-subtitle">
-                You have applied to {applications.length} job{applications.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-          <button className="aj-refresh-btn" onClick={handleRefresh} disabled={refreshing}>
-            <FaSyncAlt className={refreshing ? 'aj-spin' : ''} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-
-        {/* Stats Cards */}
+      <div className="aj-container">
+        {/* ========== STATISTICS CARDS ========== */}
         <div className="aj-stats-grid">
           <div className="aj-stat-card aj-stat-total">
             <div className="aj-stat-icon"><FaBriefcase /></div>
@@ -425,150 +226,122 @@ const AppliedJobs = () => {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Combined Header + Filters Card */}
         <div className="aj-filters-card">
-          <div className="aj-filters-content">
-            <div className="aj-filters-row">
-              <div className="aj-filter-group">
-                <label>Status</label>
-                <select name="status" value={filters.status} onChange={handleFilterChange}>
-                  <option value="">All Statuses</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Reviewed">Reviewed</option>
-                  <option value="Shortlisted">Shortlisted</option>
-                  <option value="Interview">Interview</option>
-                  <option value="Accepted">Accepted</option>
-                  <option value="Rejected">Rejected</option>
-                  <option value="Withdrawn">Withdrawn</option>
-                </select>
+          <div className="aj-card-header">
+            <div className="aj-header-left">
+              <div className="aj-header-icon-wrapper"><FaBriefcase className="aj-header-icon"/></div>
+              <div>
+                <h1>My Applications</h1>
+                <p className="aj-header-subtitle">You have applied to {applications.length} job{applications.length !== 1 ? 's' : ''}</p>
               </div>
-              <div className="aj-filter-group">
-                <label>Date Range</label>
-                <select name="dateRange" value={filters.dateRange} onChange={handleFilterChange}>
-                  <option value="">All Time</option>
-                  <option value="week">Last 7 Days</option>
-                  <option value="month">Last 30 Days</option>
-                  <option value="3months">Last 3 Months</option>
-                </select>
-              </div>
-              <button className="aj-clear-filters" onClick={handleClearFilters}>
-                <FaFilter /> Clear Filters
-              </button>
             </div>
+          </div>
+
+          {/* Search bar */}
+          <div className="aj-search-wrapper">
+            <div className="aj-search-input-group">
+              <FaSearch className="aj-search-icon"/>
+              <input type="text" placeholder="Search by job title or company..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}/>
+              {searchTerm && <button className="aj-clear-search" onClick={() => setSearchTerm('')}><FaTimes/></button>}
+            </div>
+          </div>
+
+          {/* Filters row */}
+          <div className="aj-filters-row">
+            <div className="aj-filter-group">
+              <label>Status</label>
+              <select name="status" value={filters.status} onChange={handleFilterChange}>
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Reviewed">Reviewed</option>
+                <option value="Shortlisted">Shortlisted</option>
+                <option value="Interview">Interview</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Rejected">Rejected</option>
+                <option value="Withdrawn">Withdrawn</option>
+              </select>
+            </div>
+            <div className="aj-filter-group">
+              <label>Date Range</label>
+              <select name="dateRange" value={filters.dateRange} onChange={handleFilterChange}>
+                <option value="">All Time</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
+                <option value="3months">Last 3 Months</option>
+              </select>
+            </div>
+            <div className="aj-filter-group">
+              <label>Sort By</label>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="date">Newest First</option>
+                <option value="company">Company Name</option>
+              </select>
+            </div>
+            <button className="aj-clear-filters-btn" onClick={handleClearFilters}>
+              <FaFilter/> Clear Filters
+            </button>
+            <button className="aj-refresh-btn" onClick={handleRefresh} disabled={refreshing}>
+              <FaSyncAlt className={refreshing ? 'aj-spin' : ''}/> {refreshing ? '...' : 'Refresh'}
+            </button>
           </div>
         </div>
 
-        {/* Results Count */}
+        {/* Results count */}
         <div className="aj-results-info">
-          <p>Showing <strong>{filteredApplications.length}</strong> of <strong>{applications.length}</strong> applications</p>
+          Showing <strong>{filteredApplications.length}</strong> of <strong>{applications.length}</strong> applications
         </div>
 
-        {/* Applications Grid */}
+        {/* Applications list */}
         {filteredApplications.length === 0 ? (
           <div className="aj-empty-filters">
-            <FaFilter className="aj-empty-icon" />
-            <h4>No applications match your filters</h4>
-            <p>Try adjusting your filters to see more results.</p>
-            <button className="aj-btn aj-btn-outline-primary" onClick={handleClearFilters}>
-              Clear Filters
-            </button>
+            <FaFilter className="aj-empty-icon"/><h4>No applications match</h4>
+            <button className="aj-btn aj-btn-outline-primary" onClick={handleClearFilters}>Clear Filters</button>
           </div>
         ) : (
           <div className="aj-applications-grid">
             {filteredApplications.map((app) => {
               const companyLogoUrl = getCompanyLogoUrl(app.jobId?.companyId);
-              
               return (
                 <div key={app._id} className="aj-application-card">
-                  {/* Header */}
-                  <div className="aj-card-header">
-                    <div className="aj-company-logo">
-                      {companyLogoUrl ? (
-                        <img 
-                          src={companyLogoUrl}
-                          alt={app.jobId?.companyId?.companyName || 'Company Logo'}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            if (e.target.nextSibling) {
-                              e.target.nextSibling.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <div className="aj-logo-placeholder" style={{ display: companyLogoUrl ? 'none' : 'flex' }}>
-                        <FaBuilding />
+                  <div className="aj-card-logo">
+                    {companyLogoUrl ? <img src={companyLogoUrl} alt={app.jobId?.companyId?.companyName}/> : <div className="aj-logo-placeholder"><FaBuilding/></div>}
+                  </div>
+                  <div className="aj-card-content">
+                    <div className="aj-card-header-section">
+                      <div className="aj-job-title-section">
+                        <h3 className="aj-job-title">{app.jobId?.title || 'Unknown Position'}</h3>
+                        <p className="aj-company-name">{app.jobId?.companyId?.companyName || 'Unknown Company'}</p>
+                        <div className="aj-job-meta">
+                          <span><FaMapMarkerAlt/> {app.jobId?.location?.city || 'Remote'}</span>
+                          <span><FaBriefcase/> {app.jobId?.employmentType || 'Full-time'}</span>
+                          <span><FaCalendarAlt/> Applied {formatDate(app.appliedDate)}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="aj-job-info">
-                      <h3 className="aj-job-title">{app.jobId?.title || 'Unknown Position'}</h3>
-                      <p className="aj-company-name">{app.jobId?.companyId?.companyName || 'Unknown Company'}</p>
-                      <div className="aj-job-meta">
-                        <span><FaMapMarkerAlt /> {app.jobId?.location?.city || 'Remote'}</span>
-                        <span><FaBriefcase /> {app.jobId?.employmentType || 'Full-time'}</span>
-                      </div>
-                    </div>
-                    <div className="aj-status-wrapper">
-                      <div className="aj-status">
+                      <div className="aj-status-section">
                         {getStatusBadge(app.status)}
+                        {app.status !== 'Withdrawn' && app.status !== 'Rejected' && app.status !== 'Accepted' && (
+                          <button className="aj-withdraw-btn" onClick={() => handleWithdrawApplication(app._id)} disabled={withdrawing} title="Withdraw"><FaTimesCircle/></button>
+                        )}
                       </div>
-                      {/* Withdraw button - only show for active (non‑final) statuses */}
-                      {app.status !== 'Withdrawn' && app.status !== 'Rejected' && app.status !== 'Accepted' && (
-                        <button 
-                          className="aj-withdraw-btn"
-                          onClick={() => handleWithdrawApplication(app._id)}
-                          disabled={withdrawing}
-                          title="Withdraw application"
-                        >
-                          <FaTimesCircle />
-                        </button>
+                    </div>
+
+                    {app.coverLetter && (
+                      <div className="aj-cover-letter">
+                        <FaFileAlt/>
+                        <div><span>Cover Letter</span><p>{app.coverLetter.length > 120 ? `${app.coverLetter.substring(0,120)}...` : app.coverLetter}</p></div>
+                      </div>
+                    )}
+
+                    <div className="aj-card-actions">
+                      <Link to={`/student/job/${app.jobId?._id}`} className="aj-action-btn aj-view-btn"><FaEye/> View Job</Link>
+                      {app.status === 'Interview' && app.interviewDetails && Object.keys(app.interviewDetails).length > 0 && (
+                        <button className="aj-action-btn aj-interview-btn" onClick={() => handleViewInterviewDetails(app)}><FaCalendarAlt/> Interview</button>
+                      )}
+                      {app.feedback && app.feedback.comments && (
+                        <button className="aj-action-btn aj-feedback-btn" onClick={() => handleViewFeedback(app)}><FaComment/> Feedback</button>
                       )}
                     </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="aj-card-details">
-                    <div className="aj-detail-item">
-                      <FaCalendarAlt />
-                      <div>
-                        <span>Applied Date</span>
-                        <strong>{formatDate(app.appliedDate)}</strong>
-                      </div>
-                    </div>
-                    <div className="aj-detail-item">
-                      <FaClock />
-                      <div>
-                        <span>Last Updated</span>
-                        <strong>{formatDate(app.updatedAt || app.appliedDate)}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Cover Letter Preview */}
-                  {app.coverLetter && (
-                    <div className="aj-cover-letter">
-                      <FaFileAlt />
-                      <div>
-                        <span>Cover Letter</span>
-                        <p>{app.coverLetter.length > 120 ? `${app.coverLetter.substring(0, 120)}...` : app.coverLetter}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="aj-card-actions">
-                    <Link to={`/student/job/${app.jobId?._id}`} className="aj-action-btn aj-view-btn">
-                      <FaEye /> View Job
-                    </Link>
-                    {app.status === 'Interview' && app.interviewDetails && Object.keys(app.interviewDetails).length > 0 && (
-                      <button className="aj-action-btn aj-interview-btn" onClick={() => handleViewInterviewDetails(app)}>
-                        <FaCalendarAlt /> Interview
-                      </button>
-                    )}
-                    {app.feedback && app.feedback.comments && (
-                      <button className="aj-action-btn aj-feedback-btn" onClick={() => handleViewFeedback(app)}>
-                        <FaComment /> Feedback
-                      </button>
-                    )}
                   </div>
                 </div>
               );
@@ -580,59 +353,22 @@ const AppliedJobs = () => {
       {/* Interview Modal */}
       {showInterviewModal && selectedApplication && (
         <div className="aj-modal-overlay" onClick={handleCloseModals}>
-          <div className="aj-modal aj-modal-interview" onClick={e => e.stopPropagation()}>
+          <div className="aj-modal" onClick={e => e.stopPropagation()}>
             <div className="aj-modal-header aj-modal-header-success">
-              <FaCalendarAlt className="aj-modal-icon" />
-              <h3>Interview Details</h3>
-              <button className="aj-modal-close" onClick={handleCloseModals}>
-                <FaTimesCircle />
-              </button>
+              <FaCalendarAlt className="aj-modal-icon"/><h3>Interview Details</h3>
+              <button className="aj-modal-close" onClick={handleCloseModals}><FaTimes/></button>
             </div>
             <div className="aj-modal-body">
-              <div className="aj-info-row">
-                <label>Position</label>
-                <p>{selectedApplication.jobId?.title || 'Unknown Position'}</p>
-              </div>
-              <div className="aj-info-row">
-                <label>Company</label>
-                <p>{selectedApplication.jobId?.companyId?.companyName || 'Unknown Company'}</p>
-              </div>
-              <div className="aj-info-row">
-                <label>Date & Time</label>
-                <p>{formatDate(selectedApplication.interviewDetails?.date || selectedApplication.interviewDate)}</p>
-              </div>
-              <div className="aj-info-row">
-                <label>Mode</label>
-                <p>
-                  <span className={`aj-mode-badge ${selectedApplication.interviewDetails?.mode === 'Online' ? 'aj-online' : 'aj-inperson'}`}>
-                    {selectedApplication.interviewDetails?.mode || 'Not specified'}
-                  </span>
-                </p>
-              </div>
+              <div className="aj-info-row"><label>Position</label><p>{selectedApplication.jobId?.title}</p></div>
+              <div className="aj-info-row"><label>Company</label><p>{selectedApplication.jobId?.companyId?.companyName}</p></div>
+              <div className="aj-info-row"><label>Date & Time</label><p>{formatDate(selectedApplication.interviewDetails?.date)}</p></div>
+              <div className="aj-info-row"><label>Mode</label><p><span className={`aj-mode-badge ${selectedApplication.interviewDetails?.mode === 'Online' ? 'aj-online' : 'aj-inperson'}`}>{selectedApplication.interviewDetails?.mode}</span></p></div>
               {selectedApplication.interviewDetails?.mode === 'Online' && selectedApplication.interviewDetails?.link && (
-                <div className="aj-info-row">
-                  <label>Meeting Link</label>
-                  <a href={selectedApplication.interviewDetails.link} target="_blank" rel="noopener noreferrer" className="aj-meeting-link">
-                    <FaExternalLinkAlt /> Join Meeting
-                  </a>
-                </div>
+                <div className="aj-info-row"><label>Meeting Link</label><a href={selectedApplication.interviewDetails.link} target="_blank" rel="noopener"><FaExternalLinkAlt/> Join</a></div>
               )}
-              {selectedApplication.interviewDetails?.mode === 'In-person' && selectedApplication.interviewDetails?.address && (
-                <div className="aj-info-row">
-                  <label>Address</label>
-                  <p>{selectedApplication.interviewDetails.address}</p>
-                </div>
-              )}
-              {selectedApplication.interviewDetails?.notes && (
-                <div className="aj-info-row">
-                  <label>Additional Notes</label>
-                  <p className="aj-notes">{selectedApplication.interviewDetails.notes}</p>
-                </div>
-              )}
+              {selectedApplication.interviewDetails?.notes && <div className="aj-info-row"><label>Notes</label><p>{selectedApplication.interviewDetails.notes}</p></div>}
             </div>
-            <div className="aj-modal-footer">
-              <button className="aj-btn aj-btn-secondary" onClick={handleCloseModals}>Close</button>
-            </div>
+            <div className="aj-modal-footer"><button className="aj-btn aj-btn-secondary" onClick={handleCloseModals}>Close</button></div>
           </div>
         </div>
       )}
@@ -640,50 +376,14 @@ const AppliedJobs = () => {
       {/* Feedback Modal */}
       {showFeedbackModal && selectedApplication && (
         <div className="aj-modal-overlay" onClick={handleCloseModals}>
-          <div className="aj-modal aj-modal-feedback" onClick={e => e.stopPropagation()}>
-            <div className="aj-modal-header aj-modal-header-info">
-              <FaComment className="aj-modal-icon" />
-              <h3>Employer Feedback</h3>
-              <button className="aj-modal-close" onClick={handleCloseModals}>
-                <FaTimesCircle />
-              </button>
-            </div>
+          <div className="aj-modal" onClick={e => e.stopPropagation()}>
+            <div className="aj-modal-header aj-modal-header-info"><FaComment className="aj-modal-icon"/><h3>Employer Feedback</h3><button className="aj-modal-close" onClick={handleCloseModals}><FaTimes/></button></div>
             <div className="aj-modal-body">
-              <div className="aj-info-row">
-                <label>Position</label>
-                <p>{selectedApplication.jobId?.title || 'Unknown Position'}</p>
-              </div>
-              <div className="aj-info-row">
-                <label>Company</label>
-                <p>{selectedApplication.jobId?.companyId?.companyName || 'Unknown Company'}</p>
-              </div>
-              <div className="aj-feedback-content">
-                <label>Feedback</label>
-                <div className="aj-feedback-text">
-                  {selectedApplication.feedback?.comments || 'No feedback provided'}
-                </div>
-              </div>
-              {selectedApplication.feedback?.rating && (
-                <div className="aj-feedback-rating">
-                  <label>Rating</label>
-                  <div className="aj-rating-stars">
-                    {[1, 2, 3, 4, 5].map(star => (
-                      <span key={star} className={star <= selectedApplication.feedback.rating ? 'aj-star-filled' : 'aj-star-empty'}>
-                        {star <= selectedApplication.feedback.rating ? '★' : '☆'}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {selectedApplication.feedback?.providedDate && (
-                <div className="aj-feedback-date">
-                  <small>Provided on: {formatDate(selectedApplication.feedback.providedDate)}</small>
-                </div>
-              )}
+              <div className="aj-info-row"><label>Position</label><p>{selectedApplication.jobId?.title}</p></div>
+              <div className="aj-feedback-content"><label>Feedback</label><div className="aj-feedback-text">{selectedApplication.feedback?.comments || 'No feedback provided'}</div></div>
+              {selectedApplication.feedback?.rating && <div className="aj-feedback-rating"><label>Rating</label><div className="aj-rating-stars">{[1,2,3,4,5].map(star => <span key={star} className={star <= selectedApplication.feedback.rating ? 'aj-star-filled' : 'aj-star-empty'}>{star <= selectedApplication.feedback.rating ? '★' : '☆'}</span>)}</div></div>}
             </div>
-            <div className="aj-modal-footer">
-              <button className="aj-btn aj-btn-secondary" onClick={handleCloseModals}>Close</button>
-            </div>
+            <div className="aj-modal-footer"><button className="aj-btn aj-btn-secondary" onClick={handleCloseModals}>Close</button></div>
           </div>
         </div>
       )}

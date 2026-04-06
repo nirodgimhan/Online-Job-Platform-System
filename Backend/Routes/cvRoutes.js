@@ -252,4 +252,43 @@ router.delete('/:id', auth, async (req, res) => {
     }
 });
 
+// ==================== DOWNLOAD CV ====================
+router.get('/download/:id', auth, async (req, res) => {
+    try {
+        const student = await Student.findOne({ userId: req.user.id });
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student profile not found' });
+        }
+
+        const cv = await CV.findOne({ _id: req.params.id, studentId: student._id });
+        if (!cv) {
+            return res.status(404).json({ success: false, message: 'CV not found' });
+        }
+
+        // Increment download count (optional)
+        cv.analytics.downloads = (cv.analytics.downloads || 0) + 1;
+        await cv.save();
+
+        const filePath = cv.filePath;
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ success: false, message: 'File not found on server' });
+        }
+
+        // Set filename for download
+        const downloadName = cv.filename || `${cv.title}.pdf`;
+        res.download(filePath, downloadName, (err) => {
+            if (err) {
+                console.error('Download error:', err);
+                // If headers already sent, can't send error response
+                if (!res.headersSent) {
+                    res.status(500).json({ success: false, message: 'Error sending file' });
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error downloading CV:', error.message);
+        res.status(500).json({ success: false, message: 'Server Error: ' + error.message });
+    }
+});
+
 module.exports = router;

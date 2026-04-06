@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../Components/context/AuthContext';
+import { useAuth, API } from '../Components/context/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { 
@@ -10,9 +10,10 @@ import {
   FaSyncAlt, FaStar, FaUserTie, FaShieldAlt, FaBell, FaEnvelope,
   FaVideo, FaUserFriends, FaRegHeart, FaRegStar, FaRegClock, FaSpinner,
   FaComments, FaUserPlus, FaUserCheck, FaGraduationCap, FaCode,
-  FaPost, FaNewspaper, FaChartBar, FaDownload, FaFilter
+  FaPost, FaNewspaper, FaChartBar, FaDownload, FaFilter, FaChevronLeft,
+  FaChevronRight, FaCircle, FaInstagram, FaFacebook, FaLinkedinIn
 } from 'react-icons/fa';
-import { API } from '../Components/context/AuthContext';
+
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -34,7 +35,6 @@ const Dashboard = () => {
     companyFollowers: 0,
     notifications: 0,
     unreadMessages: 0,
-    // Student specific
     savedJobs: 0,
     reviewedApplications: 0
   });
@@ -50,6 +50,13 @@ const Dashboard = () => {
     hireRate: 0
   });
   
+  // New states for calendar and follow
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [companiesToFollow, setCompaniesToFollow] = useState([]);
+  const [followersList, setFollowersList] = useState([]);
+  const [followingLoading, setFollowingLoading] = useState(false);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -58,6 +65,12 @@ const Dashboard = () => {
     if (user) {
       loadProfilePicture();
       fetchAllDashboardData();
+      fetchCalendarEvents();
+      if (user.role === 'student') {
+        fetchCompaniesToFollow();
+      } else if (user.role === 'company') {
+        fetchFollowersList();
+      }
     }
   }, [user]);
 
@@ -68,7 +81,6 @@ const Dashboard = () => {
         setProfilePictureUrl(url);
         return;
       }
-      // Fallback: try to get from localStorage
       const userData = localStorage.getItem('user');
       if (userData) {
         try {
@@ -108,7 +120,6 @@ const Dashboard = () => {
   // ==================== STUDENT DASHBOARD ====================
   const fetchStudentDashboardData = async () => {
     try {
-      // 1. Fetch applications
       let applications = [];
       try {
         const appsRes = await API.get('/applications/student');
@@ -117,7 +128,6 @@ const Dashboard = () => {
         console.log('Applications fetch failed:', e);
       }
 
-      // 2. Fetch saved jobs
       let savedJobsList = [];
       try {
         const savedRes = await API.get('/students/saved-jobs');
@@ -126,7 +136,6 @@ const Dashboard = () => {
         console.log('Saved jobs fetch failed:', e);
       }
 
-      // 3. Fetch upcoming interviews
       let interviews = [];
       try {
         const interviewsRes = await API.get('/interviews/student');
@@ -135,7 +144,6 @@ const Dashboard = () => {
         console.log('Interviews fetch failed:', e);
       }
 
-      // Compute stats from applications
       const pending = applications.filter(app => app.status === 'pending' || app.status === 'Pending').length;
       const reviewed = applications.filter(app => app.status === 'reviewed' || app.status === 'Reviewed').length;
       const shortlisted = applications.filter(app => app.status === 'shortlisted' || app.status === 'Shortlisted').length;
@@ -146,14 +154,10 @@ const Dashboard = () => {
       const upcomingInterviewsList = interviews.filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled');
       const upcomingCount = upcomingInterviewsList.length;
 
-      // Set recent applications (last 5)
       const recentApps = applications.slice(0, 5);
       setRecentApplications(recentApps);
-
-      // Set upcoming interviews (first 3)
       setUpcomingInterviews(upcomingInterviewsList.slice(0, 3));
 
-      // 4. Fetch recommended jobs (recent jobs)
       let recommendedJobs = [];
       try {
         const jobsRes = await API.get('/jobs?limit=3&sort=recent');
@@ -163,7 +167,6 @@ const Dashboard = () => {
       }
       setActiveJobs(recommendedJobs);
 
-      // Update stats
       setStats({
         ...stats,
         totalApplications: applications.length,
@@ -176,11 +179,10 @@ const Dashboard = () => {
         rejectedApplications: rejected,
         upcomingInterviews: upcomingCount,
         completedInterviews: interviews.filter(i => i.status === 'completed').length,
-        notifications: 5, // placeholder
+        notifications: 5,
         unreadMessages: 3
       });
 
-      // Also set companyStats for student (optional)
       setCompanyStats({
         profileViews: 0,
         jobViews: 0,
@@ -197,7 +199,6 @@ const Dashboard = () => {
   // ==================== COMPANY DASHBOARD ====================
   const fetchCompanyDashboardData = async () => {
     try {
-      // Fetch company profile
       let company = null;
       try {
         const profileRes = await API.get('/companies/profile');
@@ -210,7 +211,6 @@ const Dashboard = () => {
         console.log('Company profile fetch failed:', e);
       }
 
-      // Fetch jobs
       let jobs = [];
       try {
         const jobsRes = await API.get('/companies/jobs');
@@ -222,7 +222,6 @@ const Dashboard = () => {
 
       const activeJobsCount = jobs.filter(job => job.status === 'active' || job.status === 'open').length;
 
-      // Fetch applications
       let applications = [];
       try {
         const applicationsRes = await API.get('/applications/company');
@@ -238,7 +237,6 @@ const Dashboard = () => {
       const accepted = applications.filter(app => app.status === 'accepted' || app.status === 'Accepted').length;
       const rejected = applications.filter(app => app.status === 'rejected' || app.status === 'Rejected').length;
 
-      // Fetch interviews
       let interviews = [];
       try {
         const interviewsRes = await API.get('/interviews/company');
@@ -251,21 +249,17 @@ const Dashboard = () => {
       const upcoming = interviews.filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled').length;
       const completed = interviews.filter(i => i.status === 'completed').length;
 
-      // Set recent applications (last 5)
       const recentApps = applications.slice(0, 5);
       setRecentApplications(recentApps);
 
-      // Set upcoming interviews
       const upcomingInterviewsList = interviews
         .filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled')
         .slice(0, 3);
       setUpcomingInterviews(upcomingInterviewsList);
 
-      // Set active jobs
       const activeJobsList = jobs.filter(job => job.status === 'active' || job.status === 'open').slice(0, 3);
       setActiveJobs(activeJobsList);
 
-      // Calculate stats
       const totalViews = applications.reduce((sum, app) => sum + (app.views || 0), 0);
       const applicationRate = applications.length > 0 ? Math.round((shortlisted / applications.length) * 100) : 0;
       const hireRate = applications.length > 0 ? Math.round((accepted / applications.length) * 100) : 0;
@@ -306,11 +300,94 @@ const Dashboard = () => {
       const response = await API.get(endpoint);
       setRecentNotifications(response.data.notifications?.slice(0, 5) || []);
     } catch (error) {
-      // Fallback notifications
       setRecentNotifications([
         { _id: '1', message: 'New application received for Software Engineer position', time: '2 hours ago', read: false },
         { _id: '2', message: 'Your job post has been viewed 50 times', time: '1 day ago', read: false }
       ]);
+    }
+  };
+
+  // ==================== CALENDAR FUNCTIONS ====================
+  const fetchCalendarEvents = async () => {
+    try {
+      // Fetch upcoming interviews as calendar events
+      const endpoint = user?.role === 'student' ? '/interviews/student' : '/interviews/company';
+      const response = await API.get(endpoint);
+      const interviews = response.data.interviews || [];
+      const events = interviews.map(interview => ({
+        id: interview._id,
+        title: interview.jobId?.title || 'Interview',
+        date: new Date(interview.scheduledDate),
+        type: 'interview'
+      }));
+      setCalendarEvents(events);
+    } catch (error) {
+      console.log('Calendar events fetch failed:', error);
+      setCalendarEvents([]);
+    }
+  };
+
+  const getDaysInMonth = (year, month) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (year, month) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  const hasEventOnDate = (date) => {
+    return calendarEvents.some(event => 
+      event.date.getDate() === date.getDate() &&
+      event.date.getMonth() === date.getMonth() &&
+      event.date.getFullYear() === date.getFullYear()
+    );
+  };
+
+  // ==================== FOLLOW COMPANIES (STUDENT) ====================
+  const fetchCompaniesToFollow = async () => {
+    try {
+      const response = await API.get('/companies?limit=6');
+      setCompaniesToFollow(response.data.companies || []);
+    } catch (error) {
+      console.log('Fetch companies failed:', error);
+      setCompaniesToFollow([]);
+    }
+  };
+
+  const handleFollowCompany = async (companyId) => {
+    setFollowingLoading(true);
+    try {
+      const response = await API.post(`/students/follow-company/${companyId}`);
+      if (response.data.success) {
+        toast.success('Company followed successfully!');
+        // Update the list by removing the followed company or updating its follow status
+        setCompaniesToFollow(prev => prev.filter(c => c._id !== companyId));
+      } else {
+        toast.error('Failed to follow company');
+      }
+    } catch (error) {
+      toast.error('Error following company');
+    } finally {
+      setFollowingLoading(false);
+    }
+  };
+
+  // ==================== FOLLOWERS LIST (COMPANY) ====================
+  const fetchFollowersList = async () => {
+    try {
+      const response = await API.get('/companies/followers');
+      setFollowersList(response.data.followers || []);
+    } catch (error) {
+      console.log('Fetch followers failed:', error);
+      setFollowersList([]);
     }
   };
 
@@ -321,14 +398,14 @@ const Dashboard = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      'pending': 'ds-badge ds-badge-warning', 'Pending': 'ds-badge ds-badge-warning',
-      'reviewed': 'ds-badge ds-badge-info', 'Reviewed': 'ds-badge ds-badge-info',
-      'shortlisted': 'ds-badge ds-badge-primary', 'Shortlisted': 'ds-badge ds-badge-primary',
-      'interview': 'ds-badge ds-badge-success', 'Interview': 'ds-badge ds-badge-success',
-      'accepted': 'ds-badge ds-badge-success', 'Accepted': 'ds-badge ds-badge-success',
-      'rejected': 'ds-badge ds-badge-danger', 'Rejected': 'ds-badge ds-badge-danger'
+      'pending': 'jobdash-badge jobdash-badge-warning', 'Pending': 'jobdash-badge jobdash-badge-warning',
+      'reviewed': 'jobdash-badge jobdash-badge-info', 'Reviewed': 'jobdash-badge jobdash-badge-info',
+      'shortlisted': 'jobdash-badge jobdash-badge-primary', 'Shortlisted': 'jobdash-badge jobdash-badge-primary',
+      'interview': 'jobdash-badge jobdash-badge-success', 'Interview': 'jobdash-badge jobdash-badge-success',
+      'accepted': 'jobdash-badge jobdash-badge-success', 'Accepted': 'jobdash-badge jobdash-badge-success',
+      'rejected': 'jobdash-badge jobdash-badge-danger', 'Rejected': 'jobdash-badge jobdash-badge-danger'
     };
-    return statusMap[status] || 'ds-badge ds-badge-secondary';
+    return statusMap[status] || 'jobdash-badge jobdash-badge-secondary';
   };
 
   const formatDate = (dateString) => {
@@ -353,22 +430,10 @@ const Dashboard = () => {
     });
   };
 
-  const handleStatusUpdate = async (applicationId, newStatus) => {
-    try {
-      const response = await API.put(`/applications/${applicationId}/status`, { status: newStatus });
-      if (response.data.success) {
-        toast.success(`Application status updated to ${newStatus}`);
-        fetchAllDashboardData();
-      }
-    } catch (err) {
-      toast.error('Failed to update status');
-    }
-  };
-
   if (loading) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
+      <div className="jobdash-loading-container">
+        <div className="jobdash-spinner"></div>
         <h4>Loading your dashboard...</h4>
         <p>Please wait while we fetch your data</p>
       </div>
@@ -377,11 +442,11 @@ const Dashboard = () => {
 
   if (!user) {
     return (
-      <div className="ds-error-container">
-        <FaExclamationTriangle className="ds-error-icon" />
+      <div className="jobdash-error-container">
+        <FaExclamationTriangle className="jobdash-error-icon" />
         <h4>Please Login</h4>
         <p>You need to login to view your dashboard</p>
-        <button className="ds-btn ds-btn-primary" onClick={() => navigate('/login')}>Go to Login</button>
+        <button className="jobdash-btn jobdash-btn-primary" onClick={() => navigate('/login')}>Go to Login</button>
       </div>
     );
   }
@@ -389,40 +454,47 @@ const Dashboard = () => {
   // ==================== STUDENT DASHBOARD RENDER ====================
   if (user?.role === 'student') {
     return (
-      <div className="ds-student-dashboard">
-        {/* Welcome Header with User Logo */}
-        <div className="ds-welcome-header">
-          <div className="ds-welcome-content">
-            
-            <div className="ds-welcome-text">
+      <div className="jobdash-student-dashboard">
+        {/* Welcome Header with Background Image */}
+        <div className="jobdash-welcome-header" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")' }}>
+          <div className="jobdash-welcome-overlay"></div>
+          <div className="jobdash-welcome-content">
+            <div className="jobdash-profile-logo">
+              {profilePictureUrl ? (
+                <img src={profilePictureUrl} alt={user.name} />
+              ) : (
+                getInitials(user.name)
+              )}
+            </div>
+            <div className="jobdash-welcome-text">
               <h2>Welcome back, {user.name}! 👋</h2>
               <p>Your career journey continues here. Let's find your dream job!</p>
-              <div className="ds-user-meta">
+              <div className="jobdash-user-meta">
                 <span><FaEye /> {stats.totalViews || 0} profile views</span>
                 <span><FaUsers /> {stats.companyFollowers || 0} connections</span>
                 <span><FaHeart /> {stats.savedJobs || 0} saved jobs</span>
               </div>
             </div>
           </div>
-          <div className="ds-welcome-actions">
-            <button className="ds-icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
+          <div className="jobdash-welcome-actions">
+            <button className="jobdash-icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
               <FaBell />
-              {stats.notifications > 0 && <span className="ds-badge-notification">{stats.notifications}</span>}
+              {stats.notifications > 0 && <span className="jobdash-badge-notification">{stats.notifications}</span>}
             </button>
           </div>
         </div>
 
         {/* Notifications Dropdown */}
         {showNotifications && (
-          <div className="ds-dropdown ds-notifications-dropdown">
-            <div className="ds-dropdown-header">
+          <div className="jobdash-dropdown jobdash-notifications-dropdown">
+            <div className="jobdash-dropdown-header">
               <h6>Notifications</h6>
-              <Link to="/notifications" className="ds-link">View All</Link>
+              <Link to="/notifications" className="jobdash-link">View All</Link>
             </div>
-            <div className="ds-dropdown-body">
+            <div className="jobdash-dropdown-body">
               {recentNotifications.map(notif => (
-                <div key={notif._id} className={`ds-notification-item ${!notif.read ? 'ds-unread' : ''}`}>
-                  <div className="ds-notification-content">
+                <div key={notif._id} className={`jobdash-notification-item ${!notif.read ? 'jobdash-unread' : ''}`}>
+                  <div className="jobdash-notification-content">
                     <p>{notif.message}</p>
                     <small>{notif.time}</small>
                   </div>
@@ -432,142 +504,241 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Statistics Cards */}
-        <div className="ds-stats-grid">
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.totalApplications}</h3>
-              <p>Total Applications</p>
+        {/* Two Column Layout: Left (Main Content) + Right (Calendar + Companies to Follow) */}
+        <div className="jobdash-two-column">
+          {/* Left Column */}
+          <div className="jobdash-main-col">
+            {/* Statistics Cards */}
+            <div className="jobdash-stats-grid">
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.totalApplications}</h3>
+                  <p>Total Applications</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-primary">
+                  <FaBriefcase />
+                </div>
+              </div>
+              
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.savedJobs}</h3>
+                  <p>Saved Jobs</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-success">
+                  <FaHeart />
+                </div>
+              </div>
+              
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.pendingApplications}</h3>
+                  <p>In Review</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-info">
+                  <FaClock />
+                </div>
+              </div>
+              
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.upcomingInterviews}</h3>
+                  <p>Upcoming Interviews</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-warning">
+                  <FaCalendarAlt />
+                </div>
+              </div>
             </div>
-            <div className="ds-stat-icon ds-stat-icon-primary">
-              <FaBriefcase />
-            </div>
-          </div>
-          
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.savedJobs}</h3>
-              <p>Saved Jobs</p>
-            </div>
-            <div className="ds-stat-icon ds-stat-icon-success">
-              <FaHeart />
-            </div>
-          </div>
-          
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.pendingApplications}</h3>
-              <p>In Review</p>
-            </div>
-            <div className="ds-stat-icon ds-stat-icon-info">
-              <FaClock />
-            </div>
-          </div>
-          
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.upcomingInterviews}</h3>
-              <p>Upcoming Interviews</p>
-            </div>
-            <div className="ds-stat-icon ds-stat-icon-warning">
-              <FaCalendarAlt />
-            </div>
-          </div>
-        </div>
 
-        {/* Application Status & Recommended Jobs */}
-        <div className="ds-row">
-          <div className="ds-col-6">
-            <div className="ds-card">
-              <div className="ds-card-header">
-                <h5>Application Status</h5>
+            {/* Application Status & Recommended Jobs */}
+            <div className="jobdash-row">
+              <div className="jobdash-col-6">
+                <div className="jobdash-card">
+                  <div className="jobdash-card-header">
+                    <h5>Application Status</h5>
+                  </div>
+                  <div className="jobdash-card-body">
+                    <div className="jobdash-status-item">
+                      <span><FaCheckCircle className="jobdash-text-success" /> Accepted</span>
+                      <span className="jobdash-status-value">{stats.acceptedApplications}</span>
+                    </div>
+                    <div className="jobdash-status-item">
+                      <span><FaClock className="jobdash-text-warning" /> Pending</span>
+                      <span className="jobdash-status-value">{stats.pendingApplications}</span>
+                    </div>
+                    <div className="jobdash-status-item">
+                      <span><FaEye className="jobdash-text-info" /> Reviewed</span>
+                      <span className="jobdash-status-value">{stats.reviewedApplications}</span>
+                    </div>
+                    <div className="jobdash-status-item">
+                      <span><FaTimesCircle className="jobdash-text-danger" /> Rejected</span>
+                      <span className="jobdash-status-value">{stats.rejectedApplications}</span>
+                    </div>
+                    <div className="jobdash-status-item">
+                      <span><FaCalendarAlt className="jobdash-text-primary" /> Interview</span>
+                      <span className="jobdash-status-value">{stats.interviewedApplications}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="ds-card-body">
-                <div className="ds-status-item">
-                  <span><FaCheckCircle className="ds-text-success" /> Accepted</span>
-                  <span className="ds-status-value">{stats.acceptedApplications}</span>
-                </div>
-                <div className="ds-status-item">
-                  <span><FaClock className="ds-text-warning" /> Pending</span>
-                  <span className="ds-status-value">{stats.pendingApplications}</span>
-                </div>
-                <div className="ds-status-item">
-                  <span><FaEye className="ds-text-info" /> Reviewed</span>
-                  <span className="ds-status-value">{stats.reviewedApplications}</span>
-                </div>
-                <div className="ds-status-item">
-                  <span><FaTimesCircle className="ds-text-danger" /> Rejected</span>
-                  <span className="ds-status-value">{stats.rejectedApplications}</span>
-                </div>
-                <div className="ds-status-item">
-                  <span><FaCalendarAlt className="ds-text-primary" /> Interview</span>
-                  <span className="ds-status-value">{stats.interviewedApplications}</span>
+              
+              <div className="jobdash-col-6">
+                <div className="jobdash-card">
+                  <div className="jobdash-card-header">
+                    <h5>Recommended Jobs</h5>
+                  </div>
+                  <div className="jobdash-card-body">
+                    {activeJobs.length > 0 ? (
+                      activeJobs.map(job => (
+                        <div key={job._id} className="jobdash-recommended-item">
+                          <div className="jobdash-recommended-content">
+                            <h6>{job.title}</h6>
+                            <p>{job.companyId?.companyName || 'Company'}</p>
+                            <div className="jobdash-job-meta">
+                              <span><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span>
+                              <span><FaDollarSign /> {job.salary?.min ? `$${job.salary.min.toLocaleString()}` : 'Negotiable'}</span>
+                            </div>
+                          </div>
+                          <Link to={`/student/job/${job._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">
+                            View
+                          </Link>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="jobdash-empty-state">
+                        <p>No recommended jobs found</p>
+                        <Link to="/student/jobs" className="jobdash-btn jobdash-btn-primary jobdash-btn-sm">
+                          Browse All Jobs
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Quick Actions Buttons */}
+            <div className="jobdash-quick-actions">
+              <Link to="/student/jobs" className="jobdash-quick-action-card">
+                <FaBriefcase />
+                <h6>Browse Jobs</h6>
+              </Link>
+              <Link to="/student/cv-manager" className="jobdash-quick-action-card">
+                <FaFileAlt />
+                <h6>Manage CVs</h6>
+              </Link>
+              <Link to="/student/saved-jobs" className="jobdash-quick-action-card">
+                <FaHeart />
+                <h6>Saved Jobs</h6>
+              </Link>
+              <Link to="/student/profile" className="jobdash-quick-action-card">
+                <FaUserGraduate />
+                <h6>My Profile</h6>
+              </Link>
+              <Link to="/student/skill-tests" className="jobdash-quick-action-card">
+                <FaCode />
+                <h6>Skill Tests</h6>
+              </Link>
+              <Link to="/student/interviews" className="jobdash-quick-action-card">
+                <FaCalendarAlt />
+                <h6>Interviews</h6>
+              </Link>
+            </div>
           </div>
-          
-          <div className="ds-col-6">
-            <div className="ds-card">
-              <div className="ds-card-header">
-                <h5>Recommended Jobs</h5>
+
+          {/* Right Column - Calendar & Companies to Follow */}
+          <div className="jobdash-side-col">
+            {/* Calendar Widget */}
+            <div className="jobdash-card jobdash-calendar-card">
+              <div className="jobdash-card-header">
+                <h5><FaCalendarAlt /> Calendar</h5>
+                <div className="jobdash-calendar-nav">
+                  <button onClick={handlePrevMonth} className="jobdash-icon-btn-sm"><FaChevronLeft /></button>
+                  <span>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+                  <button onClick={handleNextMonth} className="jobdash-icon-btn-sm"><FaChevronRight /></button>
+                </div>
               </div>
-              <div className="ds-card-body">
-                {activeJobs.length > 0 ? (
-                  activeJobs.map(job => (
-                    <div key={job._id} className="ds-recommended-item">
-                      <div className="ds-recommended-content">
-                        <h6>{job.title}</h6>
-                        <p>{job.companyId?.companyName || 'Company'}</p>
-                        <div className="ds-job-meta">
-                          <span><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span>
-                          <span><FaDollarSign /> {job.salary?.min ? `$${job.salary.min.toLocaleString()}` : 'Negotiable'}</span>
+              <div className="jobdash-card-body">
+                <div className="jobdash-calendar">
+                  <div className="jobdash-calendar-weekdays">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                      <div key={day} className="jobdash-calendar-weekday">{day}</div>
+                    ))}
+                  </div>
+                  <div className="jobdash-calendar-days">
+                    {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => (
+                      <div key={`empty-${i}`} className="jobdash-calendar-day jobdash-calendar-day-empty"></div>
+                    ))}
+                    {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
+                      const day = i + 1;
+                      const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                      const hasEvent = hasEventOnDate(dateObj);
+                      const isToday = dateObj.toDateString() === new Date().toDateString();
+                      return (
+                        <div key={day} className={`jobdash-calendar-day ${isToday ? 'jobdash-calendar-day-today' : ''} ${hasEvent ? 'jobdash-calendar-day-event' : ''}`}>
+                          {day}
+                          {hasEvent && <FaCircle className="jobdash-event-dot" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="jobdash-upcoming-events">
+                  <h6>Upcoming Events</h6>
+                  {calendarEvents.filter(e => e.date >= new Date()).slice(0, 3).map(event => (
+                    <div key={event.id} className="jobdash-event-item">
+                      <FaCalendarAlt />
+                      <span>{event.title}</span>
+                      <small>{event.date.toLocaleDateString()}</small>
+                    </div>
+                  ))}
+                  {calendarEvents.filter(e => e.date >= new Date()).length === 0 && (
+                    <p className="jobdash-empty-text">No upcoming events</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Companies to Follow */}
+            <div className="jobdash-card">
+              <div className="jobdash-card-header">
+                <h5><FaBuilding /> Companies to Follow</h5>
+              </div>
+              <div className="jobdash-card-body">
+                {companiesToFollow.length > 0 ? (
+                  companiesToFollow.map(company => (
+                    <div key={company._id} className="jobdash-follow-item">
+                      <div className="jobdash-follow-info">
+                        <div className="jobdash-follow-logo">
+                          {company.companyLogo ? (
+                            <img src={`http://localhost:5000${company.companyLogo}`} alt={company.companyName} />
+                          ) : (
+                            <div className="jobdash-follow-initials">{getInitials(company.companyName)}</div>
+                          )}
+                        </div>
+                        <div className="jobdash-follow-details">
+                          <h6>{company.companyName}</h6>
+                          <p>{company.industry || 'Company'}</p>
                         </div>
                       </div>
-                      <Link to={`/student/job/${job._id}`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
-                        View
-                      </Link>
+                      <button 
+                        className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary"
+                        onClick={() => handleFollowCompany(company._id)}
+                        disabled={followingLoading}
+                      >
+                        <FaUserPlus /> Follow
+                      </button>
                     </div>
                   ))
                 ) : (
-                  <div className="ds-empty-state">
-                    <p>No recommended jobs found</p>
-                    <Link to="/student/jobs" className="ds-btn ds-btn-primary ds-btn-sm">
-                      Browse All Jobs
-                    </Link>
+                  <div className="jobdash-empty-state">
+                    <p>No companies to follow</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Quick Actions Buttons */}
-        <div className="ds-quick-actions">
-          <Link to="/student/jobs" className="ds-quick-action-card">
-            <FaBriefcase />
-            <h6>Browse Jobs</h6>
-          </Link>
-          <Link to="/student/cv-manager" className="ds-quick-action-card">
-            <FaFileAlt />
-            <h6>Manage CVs</h6>
-          </Link>
-          <Link to="/student/saved-jobs" className="ds-quick-action-card">
-            <FaHeart />
-            <h6>Saved Jobs</h6>
-          </Link>
-          <Link to="/student/profile" className="ds-quick-action-card">
-            <FaUserGraduate />
-            <h6>My Profile</h6>
-          </Link>
-          <Link to="/student/skill-tests" className="ds-quick-action-card">
-            <FaCode />
-            <h6>Skill Tests</h6>
-          </Link>
-          <Link to="/student/interviews" className="ds-quick-action-card">
-            <FaCalendarAlt />
-            <h6>Interviews</h6>
-          </Link>
         </div>
       </div>
     );
@@ -576,40 +747,47 @@ const Dashboard = () => {
   // ==================== COMPANY DASHBOARD RENDER ====================
   if (user?.role === 'company') {
     return (
-      <div className="ds-company-dashboard">
-        {/* Welcome Header */}
-        <div className="ds-welcome-header">
-          <div className="ds-welcome-content">
-            
-            <div className="ds-welcome-text">
+      <div className="jobdash-company-dashboard">
+        {/* Welcome Header with Background Image */}
+        <div className="jobdash-welcome-header" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")' }}>
+          <div className="jobdash-welcome-overlay"></div>
+          <div className="jobdash-welcome-content">
+            <div className="jobdash-profile-logo">
+              {profilePictureUrl ? (
+                <img src={profilePictureUrl} alt={user.companyName || user.name} />
+              ) : (
+                getInitials(user.companyName || user.name)
+              )}
+            </div>
+            <div className="jobdash-welcome-text">
               <h2>Welcome back, {user.companyName || user.name}! 🏢</h2>
               <p>Find the best talent for your company. Post jobs and review applications.</p>
-              <div className="ds-user-meta">
+              <div className="jobdash-user-meta">
                 <span><FaEye /> {companyStats.profileViews} profile views</span>
                 <span><FaChartBar /> {companyStats.jobViews} job views</span>
                 <span><FaUsers /> {stats.companyFollowers} followers</span>
               </div>
             </div>
           </div>
-          <div className="ds-welcome-actions">
-            <button className="ds-icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
+          <div className="jobdash-welcome-actions">
+            <button className="jobdash-icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
               <FaBell />
-              {stats.notifications > 0 && <span className="ds-badge-notification">{stats.notifications}</span>}
+              {stats.notifications > 0 && <span className="jobdash-badge-notification">{stats.notifications}</span>}
             </button>
           </div>
         </div>
 
         {/* Notifications Dropdown */}
         {showNotifications && (
-          <div className="ds-dropdown ds-notifications-dropdown">
-            <div className="ds-dropdown-header">
+          <div className="jobdash-dropdown jobdash-notifications-dropdown">
+            <div className="jobdash-dropdown-header">
               <h6>Notifications</h6>
-              <Link to="/notifications" className="ds-link">View All</Link>
+              <Link to="/notifications" className="jobdash-link">View All</Link>
             </div>
-            <div className="ds-dropdown-body">
+            <div className="jobdash-dropdown-body">
               {recentNotifications.map(notif => (
-                <div key={notif._id} className={`ds-notification-item ${!notif.read ? 'ds-unread' : ''}`}>
-                  <div className="ds-notification-content">
+                <div key={notif._id} className={`jobdash-notification-item ${!notif.read ? 'jobdash-unread' : ''}`}>
+                  <div className="jobdash-notification-content">
                     <p>{notif.message}</p>
                     <small>{notif.time}</small>
                   </div>
@@ -619,228 +797,323 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Statistics Cards */}
-        <div className="ds-stats-grid">
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.activeJobs}</h3>
-              <p>Active Jobs</p>
+        {/* Two Column Layout: Left (Main Content) + Right (Calendar + Followers) */}
+        <div className="jobdash-two-column">
+          {/* Left Column */}
+          <div className="jobdash-main-col">
+            {/* Statistics Cards */}
+            <div className="jobdash-stats-grid">
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.activeJobs}</h3>
+                  <p>Active Jobs</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-primary">
+                  <FaBriefcase />
+                </div>
+              </div>
+              
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.totalApplications}</h3>
+                  <p>Total Applications</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-success">
+                  <FaFileAlt />
+                </div>
+              </div>
+              
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.shortlistedApplications}</h3>
+                  <p>Shortlisted</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-info">
+                  <FaStar />
+                </div>
+              </div>
+              
+              <div className="jobdash-stat-card">
+                <div className="jobdash-stat-info">
+                  <h3>{stats.upcomingInterviews}</h3>
+                  <p>Upcoming Interviews</p>
+                </div>
+                <div className="jobdash-stat-icon jobdash-stat-icon-warning">
+                  <FaCalendarAlt />
+                </div>
+              </div>
             </div>
-            <div className="ds-stat-icon ds-stat-icon-primary">
-              <FaBriefcase />
-            </div>
-          </div>
-          
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.totalApplications}</h3>
-              <p>Total Applications</p>
-            </div>
-            <div className="ds-stat-icon ds-stat-icon-success">
-              <FaFileAlt />
-            </div>
-          </div>
-          
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.shortlistedApplications}</h3>
-              <p>Shortlisted</p>
-            </div>
-            <div className="ds-stat-icon ds-stat-icon-info">
-              <FaStar />
-            </div>
-          </div>
-          
-          <div className="ds-stat-card">
-            <div className="ds-stat-info">
-              <h3>{stats.upcomingInterviews}</h3>
-              <p>Upcoming Interviews</p>
-            </div>
-            <div className="ds-stat-icon ds-stat-icon-warning">
-              <FaCalendarAlt />
-            </div>
-          </div>
-        </div>
 
-        {/* Company Stats Row */}
-        <div className="ds-row">
-          <div className="ds-col-6">
-            <div className="ds-card">
-              <div className="ds-card-header">
-                <h5>Application Pipeline</h5>
-              </div>
-              <div className="ds-card-body">
-                <div className="ds-pipeline-grid">
-                  <div className="ds-pipeline-item">
-                    <h3>{stats.pendingApplications}</h3>
-                    <p>Pending Review</p>
+            {/* Company Stats Row */}
+            <div className="jobdash-row">
+              <div className="jobdash-col-6">
+                <div className="jobdash-card">
+                  <div className="jobdash-card-header">
+                    <h5>Application Pipeline</h5>
                   </div>
-                  <div className="ds-pipeline-item">
-                    <h3>{stats.shortlistedApplications}</h3>
-                    <p>Shortlisted</p>
-                  </div>
-                  <div className="ds-pipeline-item">
-                    <h3>{stats.interviewedApplications}</h3>
-                    <p>Interviewed</p>
-                  </div>
-                  <div className="ds-pipeline-item">
-                    <h3>{stats.acceptedApplications}</h3>
-                    <p>Accepted</p>
-                  </div>
-                </div>
-                <div className="ds-distribution">
-                  <div>
-                    <div className="ds-distribution-header">
-                      <span>Application Rate</span>
-                      <span>{companyStats.applicationRate}%</span>
+                  <div className="jobdash-card-body">
+                    <div className="jobdash-pipeline-grid">
+                      <div className="jobdash-pipeline-item">
+                        <h3>{stats.pendingApplications}</h3>
+                        <p>Pending Review</p>
+                      </div>
+                      <div className="jobdash-pipeline-item">
+                        <h3>{stats.shortlistedApplications}</h3>
+                        <p>Shortlisted</p>
+                      </div>
+                      <div className="jobdash-pipeline-item">
+                        <h3>{stats.interviewedApplications}</h3>
+                        <p>Interviewed</p>
+                      </div>
+                      <div className="jobdash-pipeline-item">
+                        <h3>{stats.acceptedApplications}</h3>
+                        <p>Accepted</p>
+                      </div>
                     </div>
-                    <div className="ds-progress">
-                      <div className="ds-progress-bar ds-bg-success" style={{ width: `${companyStats.applicationRate}%` }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="ds-distribution-header">
-                      <span>Hire Rate</span>
-                      <span>{companyStats.hireRate}%</span>
-                    </div>
-                    <div className="ds-progress">
-                      <div className="ds-progress-bar ds-bg-primary" style={{ width: `${companyStats.hireRate}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="ds-col-6">
-            <div className="ds-card">
-              <div className="ds-card-header">
-                <h5>Recent Applications</h5>
-                <Link to="/company/applicants" className="ds-btn ds-btn-link">View All</Link>
-              </div>
-              <div className="ds-card-body">
-                {recentApplications.length > 0 ? (
-                  recentApplications.map(app => (
-                    <div key={app._id} className="ds-recommended-item">
-                      <div className="ds-recommended-content">
-                        <h6>{app.studentId?.name || 'Applicant'}</h6>
-                        <p>{app.jobId?.title || 'Position'}</p>
-                        <div className="ds-job-meta">
-                          <span><FaClock /> {formatDate(app.appliedDate)}</span>
-                          <span className={getStatusBadge(app.status)}>{app.status || 'Pending'}</span>
+                    <div className="jobdash-distribution">
+                      <div>
+                        <div className="jobdash-distribution-header">
+                          <span>Application Rate</span>
+                          <span>{companyStats.applicationRate}%</span>
+                        </div>
+                        <div className="jobdash-progress">
+                          <div className="jobdash-progress-bar jobdash-bg-success" style={{ width: `${companyStats.applicationRate}%` }}></div>
                         </div>
                       </div>
-                      <Link to={`/company/applicants/${app._id}`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
-                        Review
+                      <div>
+                        <div className="jobdash-distribution-header">
+                          <span>Hire Rate</span>
+                          <span>{companyStats.hireRate}%</span>
+                        </div>
+                        <div className="jobdash-progress">
+                          <div className="jobdash-progress-bar jobdash-bg-primary" style={{ width: `${companyStats.hireRate}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="jobdash-col-6">
+                <div className="jobdash-card">
+                  <div className="jobdash-card-header">
+                    <h5>Recent Applications</h5>
+                    <Link to="/company/applicants" className="jobdash-btn jobdash-btn-link">View All</Link>
+                  </div>
+                  <div className="jobdash-card-body">
+                    {recentApplications.length > 0 ? (
+                      recentApplications.map(app => (
+                        <div key={app._id} className="jobdash-recommended-item">
+                          <div className="jobdash-recommended-content">
+                            <h6>{app.studentId?.name || 'Applicant'}</h6>
+                            <p>{app.jobId?.title || 'Position'}</p>
+                            <div className="jobdash-job-meta">
+                              <span><FaClock /> {formatDate(app.appliedDate)}</span>
+                              <span className={getStatusBadge(app.status)}>{app.status || 'Pending'}</span>
+                            </div>
+                          </div>
+                          <Link to={`/company/applicants/${app._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">
+                            Review
+                          </Link>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="jobdash-empty-state">
+                        <p>No applications yet</p>
+                        <Link to="/company/post-job" className="jobdash-btn jobdash-btn-primary jobdash-btn-sm">
+                          Post a Job
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Upcoming Interviews Section */}
+            {upcomingInterviews.length > 0 && (
+              <div className="jobdash-card jobdash-interviews-card">
+                <div className="jobdash-card-header">
+                  <h5>
+                    <FaCalendarAlt className="jobdash-icon" />
+                    Upcoming Interviews
+                  </h5>
+                  <Link to="/company/interviews" className="jobdash-btn jobdash-btn-link">View All</Link>
+                </div>
+                <div className="jobdash-card-body">
+                  <div className="jobdash-interviews-list">
+                    {upcomingInterviews.map(interview => (
+                      <div key={interview._id} className="jobdash-interview-item">
+                        <div className="jobdash-interview-info">
+                          <h6>{interview.jobId?.title || 'Position'}</h6>
+                          <p className="jobdash-company-name">with {interview.studentId?.name || 'Candidate'}</p>
+                          <div className="jobdash-interview-meta">
+                            <span><FaCalendarAlt /> {formatInterviewDate(interview.scheduledDate)}</span>
+                            <span className="jobdash-interview-mode">
+                              {interview.mode === 'Online' ? <FaVideo /> : <FaBuilding />}
+                              {interview.mode || 'Online'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="jobdash-interview-actions">
+                          <Link to={`/company/interviews/${interview._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">
+                            View Details
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active Jobs Section */}
+            {activeJobs.length > 0 && (
+              <div className="jobdash-card">
+                <div className="jobdash-card-header">
+                  <h5>Active Jobs</h5>
+                  <Link to="/company/jobs" className="jobdash-btn jobdash-btn-link">Manage Jobs</Link>
+                </div>
+                <div className="jobdash-card-body">
+                  {activeJobs.map(job => (
+                    <div key={job._id} className="jobdash-recommended-item">
+                      <div className="jobdash-recommended-content">
+                        <h6>{job.title}</h6>
+                        <p>{job.location?.city || 'Remote'} • {job.employmentType || 'Full-time'}</p>
+                        <div className="jobdash-job-meta">
+                          <span><FaUsers /> {job.applicationsCount || 0} applicants</span>
+                          <span><FaEye /> {job.views || 0} views</span>
+                          <span className="jobdash-badge jobdash-badge-success">Active</span>
+                        </div>
+                      </div>
+                      <div className="jobdash-interview-actions">
+                        <Link to={`/company/jobs/${job._id}/applications`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">
+                          View Applicants
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quick Actions Buttons */}
+            <div className="jobdash-quick-actions">
+              <Link to="/company/post-job" className="jobdash-quick-action-card">
+                <FaBriefcase />
+                <h6>Post New Job</h6>
+              </Link>
+              <Link to="/company/jobs" className="jobdash-quick-action-card">
+                <FaNewspaper />
+                <h6>Manage Jobs</h6>
+              </Link>
+              <Link to="/company/applicants" className="jobdash-quick-action-card">
+                <FaUsers />
+                <h6>View Applicants</h6>
+              </Link>
+              <Link to="/company/profile" className="jobdash-quick-action-card">
+                <FaBuilding />
+                <h6>Company Profile</h6>
+              </Link>
+              <Link to="/company/interviews" className="jobdash-quick-action-card">
+                <FaCalendarAlt />
+                <h6>Interviews</h6>
+              </Link>
+              <Link to="/company/reports" className="jobdash-quick-action-card">
+                <FaChartLine />
+                <h6>Analytics</h6>
+              </Link>
+            </div>
+          </div>
+
+          {/* Right Column - Calendar & Followers */}
+          <div className="jobdash-side-col">
+            {/* Calendar Widget */}
+            <div className="jobdash-card jobdash-calendar-card">
+              <div className="jobdash-card-header">
+                <h5><FaCalendarAlt /> Calendar</h5>
+                <div className="jobdash-calendar-nav">
+                  <button onClick={handlePrevMonth} className="jobdash-icon-btn-sm"><FaChevronLeft /></button>
+                  <span>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+                  <button onClick={handleNextMonth} className="jobdash-icon-btn-sm"><FaChevronRight /></button>
+                </div>
+              </div>
+              <div className="jobdash-card-body">
+                <div className="jobdash-calendar">
+                  <div className="jobdash-calendar-weekdays">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                      <div key={day} className="jobdash-calendar-weekday">{day}</div>
+                    ))}
+                  </div>
+                  <div className="jobdash-calendar-days">
+                    {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => (
+                      <div key={`empty-${i}`} className="jobdash-calendar-day jobdash-calendar-day-empty"></div>
+                    ))}
+                    {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
+                      const day = i + 1;
+                      const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                      const hasEvent = hasEventOnDate(dateObj);
+                      const isToday = dateObj.toDateString() === new Date().toDateString();
+                      return (
+                        <div key={day} className={`jobdash-calendar-day ${isToday ? 'jobdash-calendar-day-today' : ''} ${hasEvent ? 'jobdash-calendar-day-event' : ''}`}>
+                          {day}
+                          {hasEvent && <FaCircle className="jobdash-event-dot" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="jobdash-upcoming-events">
+                  <h6>Upcoming Events</h6>
+                  {calendarEvents.filter(e => e.date >= new Date()).slice(0, 3).map(event => (
+                    <div key={event.id} className="jobdash-event-item">
+                      <FaCalendarAlt />
+                      <span>{event.title}</span>
+                      <small>{event.date.toLocaleDateString()}</small>
+                    </div>
+                  ))}
+                  {calendarEvents.filter(e => e.date >= new Date()).length === 0 && (
+                    <p className="jobdash-empty-text">No upcoming events</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Followers List for Company */}
+            <div className="jobdash-card">
+              <div className="jobdash-card-header">
+                <h5><FaUserFriends /> Followers</h5>
+              </div>
+              <div className="jobdash-card-body">
+                {followersList.length > 0 ? (
+                  followersList.map(follower => (
+                    <div key={follower._id} className="jobdash-follow-item">
+                      <div className="jobdash-follow-info">
+                        <div className="jobdash-follow-logo">
+                          {follower.profilePicture ? (
+                            <img src={`http://localhost:5000${follower.profilePicture}`} alt={follower.name} />
+                          ) : (
+                            <div className="jobdash-follow-initials">{getInitials(follower.name)}</div>
+                          )}
+                        </div>
+                        <div className="jobdash-follow-details">
+                          <h6>{follower.name}</h6>
+                          <p>{follower.email}</p>
+                        </div>
+                      </div>
+                      <Link to={`/company/followers/${follower._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">
+                        View Profile
                       </Link>
                     </div>
                   ))
                 ) : (
-                  <div className="ds-empty-state">
-                    <p>No applications yet</p>
-                    <Link to="/company/post-job" className="ds-btn ds-btn-primary ds-btn-sm">
-                      Post a Job
-                    </Link>
+                  <div className="jobdash-empty-state">
+                    <p>No followers yet</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Upcoming Interviews Section */}
-        {upcomingInterviews.length > 0 && (
-          <div className="ds-card ds-interviews-card">
-            <div className="ds-card-header">
-              <h5>
-                <FaCalendarAlt className="ds-icon" />
-                Upcoming Interviews
-              </h5>
-              <Link to="/company/interviews" className="ds-btn ds-btn-link">View All</Link>
-            </div>
-            <div className="ds-card-body">
-              <div className="ds-interviews-list">
-                {upcomingInterviews.map(interview => (
-                  <div key={interview._id} className="ds-interview-item">
-                    <div className="ds-interview-info">
-                      <h6>{interview.jobId?.title || 'Position'}</h6>
-                      <p className="ds-company-name">with {interview.studentId?.name || 'Candidate'}</p>
-                      <div className="ds-interview-meta">
-                        <span><FaCalendarAlt /> {formatInterviewDate(interview.scheduledDate)}</span>
-                        <span className="ds-interview-mode">
-                          {interview.mode === 'Online' ? <FaVideo /> : <FaBuilding />}
-                          {interview.mode || 'Online'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="ds-interview-actions">
-                      <Link to={`/company/interviews/${interview._id}`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
-                        View Details
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Active Jobs Section */}
-        {activeJobs.length > 0 && (
-          <div className="ds-card">
-            <div className="ds-card-header">
-              <h5>Active Jobs</h5>
-              <Link to="/company/jobs" className="ds-btn ds-btn-link">Manage Jobs</Link>
-            </div>
-            <div className="ds-card-body">
-              {activeJobs.map(job => (
-                <div key={job._id} className="ds-recommended-item">
-                  <div className="ds-recommended-content">
-                    <h6>{job.title}</h6>
-                    <p>{job.location?.city || 'Remote'} • {job.employmentType || 'Full-time'}</p>
-                    <div className="ds-job-meta">
-                      <span><FaUsers /> {job.applicationsCount || 0} applicants</span>
-                      <span><FaEye /> {job.views || 0} views</span>
-                      <span className="ds-badge ds-badge-success">Active</span>
-                    </div>
-                  </div>
-                  <div className="ds-interview-actions">
-                    <Link to={`/company/jobs/${job._id}/applications`} className="ds-btn ds-btn-sm ds-btn-outline-primary">
-                      View Applicants
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Quick Actions Buttons */}
-        <div className="ds-quick-actions">
-          <Link to="/company/post-job" className="ds-quick-action-card">
-            <FaBriefcase />
-            <h6>Post New Job</h6>
-          </Link>
-          <Link to="/company/jobs" className="ds-quick-action-card">
-            <FaNewspaper />
-            <h6>Manage Jobs</h6>
-          </Link>
-          <Link to="/company/applicants" className="ds-quick-action-card">
-            <FaUsers />
-            <h6>View Applicants</h6>
-          </Link>
-          <Link to="/company/profile" className="ds-quick-action-card">
-            <FaBuilding />
-            <h6>Company Profile</h6>
-          </Link>
-          <Link to="/company/interviews" className="ds-quick-action-card">
-            <FaCalendarAlt />
-            <h6>Interviews</h6>
-          </Link>
-          <Link to="/company/reports" className="ds-quick-action-card">
-            <FaChartLine />
-            <h6>Analytics</h6>
-          </Link>
         </div>
       </div>
     );

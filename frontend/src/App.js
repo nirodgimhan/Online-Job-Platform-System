@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -8,6 +8,7 @@ import { AuthProvider } from './Components/context/AuthContext';
 
 // Layout Components
 import Navbar from './Components/Navbar';
+import Sidebar from './Components/Sidebar';
 import Home from './Components/Home';
 import AboutUs from './Components/AboutUs';
 import Services from './Components/Services';
@@ -17,7 +18,6 @@ import Login from './Components/Login';
 import Register from './Components/Register';
 import Dashboard from './Components/Dashboard';
 import ProtectedRoute from './Components/ProtectedRoute';
-import Sidebar from './Components/Sidebar';
 
 // Public Job Search Components
 import JobSearch from './Components/student/JobSearch';
@@ -45,12 +45,22 @@ import AdminDashboard from './Components/admin/AdminDashboard';
 import ManageUsers from './Components/admin/ManageUsers';
 import ManageCompanies from './Components/admin/ManageCompanies';
 import AdminProfile from './Components/admin/AdminProfile';
-import VerificationRequests from './Components/admin/VerificationRequests'; // ✅ New
-import AdminReports from './Components/admin/AdminReports'; // ✅ New
+import VerificationRequests from './Components/admin/VerificationRequests';
+import AdminReports from './Components/admin/AdminReports';
 
-// Wrapper component to apply Sidebar to protected routes
-const DashboardPage = ({ children }) => {
-  return <Sidebar>{children}</Sidebar>;
+// ========== Layout for Authenticated Users ==========
+// This layout includes Sidebar + main content area with centered container
+const AuthenticatedLayout = () => {
+  return (
+    <div className="app-authenticated-layout">
+      <Sidebar />
+      <div className="app-main-wrapper">
+        <div className="app-main-container">
+          <Outlet />  {/* Nested routes will render here */}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 function App() {
@@ -58,156 +68,69 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="App">
-          <Navbar />
-          <div className="app-container">
-            <Routes>
-              {/* Public Routes - No Sidebar Required */}
-              <Route path="/" element={<Home />} />
-              <Route path="/about" element={<AboutUs />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/featured" element={<Featured />} />
-              <Route path="/contact" element={<ContactUs />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              {/* Public Job Search Routes - Accessible to Everyone */}
-              <Route path="/jobs" element={<JobSearch />} />
-              <Route path="/job/:id" element={<JobDetails />} />
+          <Navbar />  {/* Fixed at top, always visible */}
 
-              {/* Student Routes with Sidebar (Requires Authentication) */}
-              <Route path="/student" element={<ProtectedRoute role="student" />}>
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={
-                  <DashboardPage>
-                    <Dashboard />
-                  </DashboardPage>
-                } />
-                <Route path="profile" element={
-                  <DashboardPage>
-                    <StudentProfile />
-                  </DashboardPage>
-                } />
-                <Route path="jobs" element={
-                  <DashboardPage>
-                    <JobSearch />
-                  </DashboardPage>
-                } />
-                <Route path="job/:id" element={
-                  <DashboardPage>
-                    <JobDetails />
-                  </DashboardPage>
-                } />
-                <Route path="applied-jobs" element={
-                  <DashboardPage>
-                    <AppliedJobs />
-                  </DashboardPage>
-                } />
-                <Route path="saved-jobs" element={
-                  <DashboardPage>
-                    <SavedJobs />
-                  </DashboardPage>
-                } />
-                <Route path="cv-manager" element={
-                  <DashboardPage>
-                    <CvManager />
-                  </DashboardPage>
-                } />
-                <Route path="interviews" element={
-                  <DashboardPage>
-                    <StudentInterviews />
-                  </DashboardPage>
-                } />
+          <Routes>
+            {/* Public Routes – No Sidebar */}
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/featured" element={<Featured />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* Public Job Search Routes */}
+            <Route path="/jobs" element={<JobSearch />} />
+            <Route path="/job/:id" element={<JobDetails />} />
+
+            {/* ========== Protected Routes with Sidebar ========== */}
+            <Route element={<ProtectedRoute />}> {/* Generic auth check */}
+              <Route element={<AuthenticatedLayout />}>
+                {/* Student Routes */}
+                <Route path="/student">
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="profile" element={<StudentProfile />} />
+                  <Route path="jobs" element={<JobSearch />} />
+                  <Route path="job/:id" element={<JobDetails />} />
+                  <Route path="applied-jobs" element={<AppliedJobs />} />
+                  <Route path="saved-jobs" element={<SavedJobs />} />
+                  <Route path="cv-manager" element={<CvManager />} />
+                  <Route path="interviews" element={<StudentInterviews />} />
+                </Route>
+
+                {/* Company Routes */}
+                <Route path="/company">
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="profile" element={<CompanyProfile />} />
+                  <Route path="post-job" element={<PostJob />} />
+                  <Route path="manage-jobs" element={<ManageJobs />} />
+                  <Route path="applicants" element={<ApplicantsList />} />
+                  <Route path="applicant/:id" element={<ApplicantDetails />} />
+                  <Route path="edit-job/:id" element={<EditJob />} />
+                  <Route path="interviews" element={<CompanyInterviews />} />
+                  <Route path="confirmed-interviews" element={<CompanyConfirmedInterviews />} />
+                </Route>
+
+                {/* Admin Routes */}
+                <Route path="/admin">
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="profile" element={<AdminProfile />} />
+                  <Route path="users" element={<ManageUsers />} />
+                  <Route path="companies" element={<ManageCompanies />} />
+                  <Route path="verifications" element={<VerificationRequests />} />
+                  <Route path="reports" element={<AdminReports />} />
+                </Route>
               </Route>
+            </Route>
 
-              {/* Company Routes with Sidebar (Requires Authentication) */}
-              <Route path="/company" element={<ProtectedRoute role="company" />}>
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={
-                  <DashboardPage>
-                    <Dashboard />
-                  </DashboardPage>
-                } />
-                <Route path="profile" element={
-                  <DashboardPage>
-                    <CompanyProfile />
-                  </DashboardPage>
-                } />
-                <Route path="post-job" element={
-                  <DashboardPage>
-                    <PostJob />
-                  </DashboardPage>
-                } />
-                <Route path="manage-jobs" element={
-                  <DashboardPage>
-                    <ManageJobs />
-                  </DashboardPage>
-                } />
-                <Route path="applicants" element={
-                  <DashboardPage>
-                    <ApplicantsList />
-                  </DashboardPage>
-                } />
-                <Route path="applicant/:id" element={
-                  <DashboardPage>
-                    <ApplicantDetails />
-                  </DashboardPage>
-                } />
-                <Route path="edit-job/:id" element={
-                  <DashboardPage>
-                    <EditJob />
-                  </DashboardPage>
-                } />
-                <Route path="interviews" element={
-                  <DashboardPage>
-                    <CompanyInterviews />
-                  </DashboardPage>
-                } />
-                <Route path="confirmed-interviews" element={
-                  <DashboardPage>
-                    <CompanyConfirmedInterviews />
-                  </DashboardPage>
-                } />
-              </Route>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
 
-              {/* Admin Routes with Sidebar (Requires Authentication) */}
-              <Route path="/admin" element={<ProtectedRoute role="admin" />}>
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={
-                  <DashboardPage>
-                    <AdminDashboard />
-                  </DashboardPage>
-                } />
-                <Route path="profile" element={
-                  <DashboardPage>
-                    <AdminProfile />
-                  </DashboardPage>
-                } />
-                <Route path="users" element={
-                  <DashboardPage>
-                    <ManageUsers />
-                  </DashboardPage>
-                } />
-                <Route path="companies" element={
-                  <DashboardPage>
-                    <ManageCompanies />
-                  </DashboardPage>
-                } />
-                <Route path="verifications" element={
-                  <DashboardPage>
-                    <VerificationRequests />
-                  </DashboardPage>
-                } />
-                <Route path="reports" element={
-                  <DashboardPage>
-                    <AdminReports />
-                  </DashboardPage>
-                } />
-              </Route>
-
-              {/* Fallback Route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
           <ToastContainer 
             position="top-right"
             autoClose={3000}
