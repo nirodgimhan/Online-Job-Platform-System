@@ -14,18 +14,16 @@ const API = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000 // Increased timeout to 30 seconds
+  timeout: 30000,
 });
 
 // Add token to every request
 API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    
     if (token) {
       config.headers['x-auth-token'] = token;
     }
-    
     return config;
   },
   (error) => {
@@ -34,86 +32,44 @@ API.interceptors.request.use(
   }
 );
 
-// Handle response errors with retry logic for database connection issues
-let isRefreshing = false;
-let failedQueue = [];
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
-// Response interceptor with retry logic for DB connection issues
+// Simplified response interceptor – no retry logic
 API.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // Handle network errors
+    // Network errors (no response from server)
     if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
       toast.error('Network connection error. Please check your internet connection.');
       return Promise.reject(error);
     }
     
-    // Handle 503 (Database connecting)
-    if (error.response?.status === 503 && error.response?.data?.retry === true) {
-      if (!originalRequest._retry) {
-        originalRequest._retry = true;
-        toast.info('Database is connecting, retrying...');
-        
-        // Wait 2 seconds and retry
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return API(originalRequest);
+    // 401 Unauthorized – token expired or invalid
+    if (error.response?.status === 401) {
+      // Check if this is a CV upload request to avoid immediate redirect
+      const isCVUpload = originalRequest.url?.includes('/cv/upload');
+      if (!isCVUpload) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        toast.error('Session expired. Please login again.');
       } else {
-        toast.error('Database is still connecting. Please try again in a moment.');
-        return Promise.reject(error);
+        toast.error('Session expired. Please login again to upload CV.');
       }
-    }
-    
-    // Handle 503 with no retry flag
-    if (error.response?.status === 503) {
-      toast.error(error.response?.data?.message || 'Database connection unavailable. Please try again later.');
       return Promise.reject(error);
     }
     
-    // Handle 500 server errors
+    // 500 Internal Server Error
     if (error.response?.status === 500) {
       toast.error('Server error. Please try again later.');
       return Promise.reject(error);
     }
     
-    // Handle 401 Unauthorized - Modified to not redirect immediately for CV uploads
-    if (error.response?.status === 401) {
-      // Check if this is a CV upload request
-      const isCVUpload = originalRequest.url?.includes('/cv/upload');
-      
-      if (!isCVUpload) {
-        // For non-CV requests, redirect to login
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-        toast.error('Session expired. Please login again.');
-      } else {
-        // For CV upload, just show error and let user handle
-        toast.error('Session expired. Please login again to upload CV.');
-        // Don't redirect immediately, let the component handle it
-      }
-      return Promise.reject(error);
-    }
-    
-    // Handle 404 Not Found
+    // 404 Not Found – let components handle it (no toast)
     if (error.response?.status === 404) {
-      // Don't show toast for 404 errors - let components handle them
       return Promise.reject(error);
     }
     
+    // For other status codes, pass through
     return Promise.reject(error);
   }
 );
@@ -129,20 +85,14 @@ export const AuthProvider = ({ children }) => {
     const handleOnline = () => {
       setIsOnline(true);
       toast.info('Connection restored!');
-      // Reload user data when coming back online
-      if (token) {
-        loadUser();
-      }
+      if (token) loadUser();
     };
-    
     const handleOffline = () => {
       setIsOnline(false);
       toast.warning('You are offline. Some features may not work.');
     };
-    
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -165,8 +115,8 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading user:', error);
-      // Don't remove token on network errors or 503
-      if (error.response?.status !== 503 && error.response?.status !== 401 && error.message !== 'Network Error') {
+      // Only remove token on 401 (unauthorized) – not on network errors
+      if (error.response?.status === 401) {
         localStorage.removeItem('token');
         setToken(null);
       }
@@ -180,17 +130,13 @@ export const AuthProvider = ({ children }) => {
       toast.error('You are offline. Please check your connection.');
       return { success: false, error: 'Offline' };
     }
-    
     try {
       const response = await API.post('/auth/register', userData);
-      
       if (response.data.success) {
         const { token, user } = response.data;
-        
         localStorage.setItem('token', token);
         setToken(token);
         setUser(user);
-        
         toast.success('Registration successful!');
         return { success: true, data: response.data };
       }
@@ -207,17 +153,13 @@ export const AuthProvider = ({ children }) => {
       toast.error('You are offline. Please check your connection.');
       return { success: false, error: 'Offline' };
     }
-    
     try {
       const response = await API.post('/auth/login', credentials);
-      
       if (response.data.success) {
         const { token, user } = response.data;
-        
         localStorage.setItem('token', token);
         setToken(token);
         setUser(user);
-        
         toast.success('Login successful!');
         return { success: true, data: response.data };
       }
@@ -236,15 +178,33 @@ export const AuthProvider = ({ children }) => {
     toast.info('Logged out successfully');
   };
 
-  // ***** NEW FUNCTION: Update user in context and localStorage *****
   const updateUser = (updatedUser) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
-  // Function to check if user is authenticated
-  const isAuthenticated = () => {
-    return !!token && !!user;
+  const isAuthenticated = () => !!token && !!user;
+
+  const submitContact = async (contactData) => {
+    if (!isOnline) {
+      toast.error('You are offline. Please check your connection.');
+      return { success: false, error: 'Offline' };
+    }
+    try {
+      const response = await API.post('/contact', contactData);
+      if (response.data.success) {
+        toast.success(response.data.message || 'Message sent successfully!');
+        return { success: true, data: response.data };
+      } else {
+        toast.error(response.data.message || 'Failed to send message');
+        return { success: false, error: response.data.message };
+      }
+    } catch (error) {
+      console.error('Contact submission error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to send message. Please try again later.';
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+    }
   };
 
   const value = {
@@ -254,10 +214,11 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    updateUser,          // <-- exposed for components to update user
+    updateUser,
     isAuthenticated: isAuthenticated(),
     token,
-    API // Export API for use in components
+    API,
+    submitContact,
   };
 
   return (
@@ -267,5 +228,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Export the configured API for use in other components
 export { API };

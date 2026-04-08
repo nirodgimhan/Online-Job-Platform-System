@@ -16,10 +16,7 @@ import {
   FaTimesCircle,
   FaFacebookF,
   FaGoogle,
-  FaLinkedinIn,
-  FaIndustry,
-  FaUsers,
-  FaGlobe
+  FaLinkedinIn
 } from 'react-icons/fa';
 
 const Register = () => {
@@ -235,60 +232,59 @@ const Register = () => {
   };
 
   return (
-    <div className="ds-register-container">
-      <div className="ds-register-wrapper">
+    <div className="rg-register-container">
+      <div className="rg-register-wrapper">
         {/* Left Side - Sign Up Form */}
-        <div className="ds-register-form-side">
-          <div className="ds-register-content">
-            <h2 className="ds-register-title">Create Account</h2>
-            <p className="ds-register-subtitle">To keep connected with us please sign up with your personal info</p>
+        <div className="rg-register-form-side">
+          <div className="rg-register-content">
+            <h2 className="rg-register-title">Create Account</h2>
+            <p className="rg-register-subtitle">To keep connected with us please sign up with your personal info</p>
             
-            {/* Social Buttons */}
-            <button className="ds-social-btn ds-social-facebook">
-              <FaFacebookF /> Sign up with Facebook
-            </button>
-            <button className="ds-social-btn ds-social-google">
-              <FaGoogle /> Sign up with Google
-            </button>
-            <button className="ds-social-btn ds-social-linkedin">
-              <FaLinkedinIn /> Sign up with LinkedIn
-            </button>
+            {/* Social Icons - Inline Centered */}
+            <div className="rg-social-icons">
+              <button className="rg-social-icon rg-social-facebook">
+                <FaFacebookF />
+              </button>
+              <button className="rg-social-icon rg-social-google">
+                <FaGoogle />
+              </button>
+              <button className="rg-social-icon rg-social-linkedin">
+                <FaLinkedinIn />
+              </button>
+            </div>
             
-            <div className="ds-register-divider">
+            <div className="rg-register-divider">
               <span>or use your email for registration</span>
             </div>
             
-            <form onSubmit={handleSubmit} className="ds-register-form">
-              {/* Role Selection - Inline Centered */}
-              <div className="ds-role-selection">
+            <form onSubmit={handleSubmit} className="rg-register-form">
+              {/* Role Selection - Compact Cards (Icon + Name only) */}
+              <div className="rg-role-selection">
                 <div 
-                  className={`ds-role-card ${formData.role === 'student' ? 'active' : ''}`}
+                  className={`rg-role-card ${formData.role === 'student' ? 'active' : ''}`}
                   onClick={() => setFormData({...formData, role: 'student'})}
                 >
-                  <FaUserGraduate className="ds-role-icon" />
+                  <FaUserGraduate className="rg-role-icon" />
                   <h4>Student</h4>
-                  <p>Looking for job opportunities</p>
                 </div>
                 <div 
-                  className={`ds-role-card ${formData.role === 'company' ? 'active' : ''}`}
+                  className={`rg-role-card ${formData.role === 'company' ? 'active' : ''}`}
                   onClick={() => setFormData({...formData, role: 'company'})}
                 >
-                  <FaBuilding className="ds-role-icon" />
+                  <FaBuilding className="rg-role-icon" />
                   <h4>Company</h4>
-                  <p>Hiring talent</p>
                 </div>
                 <div 
-                  className={`ds-role-card ${formData.role === 'admin' ? 'active' : ''}`}
+                  className={`rg-role-card ${formData.role === 'admin' ? 'active' : ''}`}
                   onClick={() => setFormData({...formData, role: 'admin'})}
                 >
-                  <FaShieldAlt className="ds-role-icon" />
+                  <FaShieldAlt className="rg-role-icon" />
                   <h4>Admin</h4>
-                  <p>Platform administrator</p>
                 </div>
               </div>
               
               {/* Common Fields */}
-              <div className="ds-form-group">
+              <div className="rg-form-group">
                 <input
                   type="text"
                   name="name"
@@ -296,15 +292,15 @@ const Register = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className={`ds-form-input ${errors.name ? 'ds-error' : ''}`}
+                  className={`rg-form-input ${errors.name ? 'rg-error' : ''}`}
                   disabled={loading}
                 />
-                {errors.name && <span className="ds-error-text">{errors.name}</span>}
+                {errors.name && <span className="rg-error-text">{errors.name}</span>}
               </div>
               
               {formData.role === 'company' && (
                 <>
-                  <div className="ds-form-group">
+                  <div className="rg-form-group">
                     <input
                       type="text"
                       name="companyName"
@@ -312,12 +308,12 @@ const Register = () => {
                       value={formData.companyName}
                       onChange={handleChange}
                       required
-                      className={`ds-form-input ${errors.companyName ? 'ds-error' : ''}`}
+                      className={`rg-form-input ${errors.companyName ? 'rg-error' : ''}`}
                       disabled={loading}
                     />
-                    {errors.companyName && <span className="ds-error-text">{errors.companyName}</span>}
+                    {errors.companyName && <span className="rg-error-text">{errors.companyName}</span>}
                   </div>
-                  <div className="ds-form-group">
+                  <div className="rg-form-group">
                     <input
                       type="text"
                       name="industry"
@@ -325,18 +321,18 @@ const Register = () => {
                       value={formData.industry}
                       onChange={handleChange}
                       required
-                      className={`ds-form-input ${errors.industry ? 'ds-error' : ''}`}
+                      className={`rg-form-input ${errors.industry ? 'rg-error' : ''}`}
                       disabled={loading}
                     />
-                    {errors.industry && <span className="ds-error-text">{errors.industry}</span>}
+                    {errors.industry && <span className="rg-error-text">{errors.industry}</span>}
                   </div>
-                  <div className="ds-form-row">
-                    <div className="ds-form-group">
+                  <div className="rg-form-row">
+                    <div className="rg-form-group">
                       <select
                         name="companySize"
                         value={formData.companySize}
                         onChange={handleChange}
-                        className="ds-form-input"
+                        className="rg-form-input"
                         disabled={loading}
                       >
                         <option value="">Company Size</option>
@@ -347,26 +343,26 @@ const Register = () => {
                         <option value="500+">500+ employees</option>
                       </select>
                     </div>
-                    <div className="ds-form-group">
+                    <div className="rg-form-group">
                       <input
                         type="url"
                         name="website"
                         placeholder="Website (optional)"
                         value={formData.website}
                         onChange={handleChange}
-                        className="ds-form-input"
+                        className="rg-form-input"
                         disabled={loading}
                       />
                     </div>
                   </div>
-                  <div className="ds-form-group">
+                  <div className="rg-form-group">
                     <textarea
                       name="description"
                       placeholder="Company Description (optional)"
                       value={formData.description}
                       onChange={handleChange}
                       rows="3"
-                      className="ds-form-input"
+                      className="rg-form-input"
                       disabled={loading}
                     />
                   </div>
@@ -374,7 +370,7 @@ const Register = () => {
               )}
               
               {/* Email Field */}
-              <div className="ds-form-group">
+              <div className="rg-form-group">
                 <input
                   type="email"
                   name="email"
@@ -382,29 +378,29 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className={`ds-form-input ${errors.email ? 'ds-error' : ''}`}
+                  className={`rg-form-input ${errors.email ? 'rg-error' : ''}`}
                   disabled={loading}
                 />
-                {errors.email && <span className="ds-error-text">{errors.email}</span>}
+                {errors.email && <span className="rg-error-text">{errors.email}</span>}
               </div>
               
               {/* Phone Number (Optional) */}
-              <div className="ds-form-group">
+              <div className="rg-form-group">
                 <input
                   type="tel"
                   name="phoneNumber"
                   placeholder="Phone Number (Optional)"
                   value={formData.phoneNumber}
                   onChange={handleChange}
-                  className={`ds-form-input ${errors.phoneNumber ? 'ds-error' : ''}`}
+                  className={`rg-form-input ${errors.phoneNumber ? 'rg-error' : ''}`}
                   disabled={loading}
                 />
-                {errors.phoneNumber && <span className="ds-error-text">{errors.phoneNumber}</span>}
+                {errors.phoneNumber && <span className="rg-error-text">{errors.phoneNumber}</span>}
               </div>
               
               {/* Admin Secret Key Field (only for admin role) */}
               {formData.role === 'admin' && (
-                <div className="ds-form-group">
+                <div className="rg-form-group">
                   <input
                     type="password"
                     name="adminSecretKey"
@@ -412,17 +408,17 @@ const Register = () => {
                     value={formData.adminSecretKey}
                     onChange={handleChange}
                     required
-                    className={`ds-form-input ${errors.adminSecretKey ? 'ds-error' : ''}`}
+                    className={`rg-form-input ${errors.adminSecretKey ? 'rg-error' : ''}`}
                     disabled={loading}
                   />
-                  {errors.adminSecretKey && <span className="ds-error-text">{errors.adminSecretKey}</span>}
-                  <small className="ds-form-hint">Please enter the admin registration key provided by the system administrator.</small>
+                  {errors.adminSecretKey && <span className="rg-error-text">{errors.adminSecretKey}</span>}
+                  <small className="rg-form-hint">Please enter the admin registration key provided by the system administrator.</small>
                 </div>
               )}
               
               {/* Password Field */}
-              <div className="ds-form-group">
-                <div className="ds-password-wrapper">
+              <div className="rg-form-group">
+                <div className="rg-password-wrapper">
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
@@ -430,51 +426,51 @@ const Register = () => {
                     value={formData.password}
                     onChange={handleChange}
                     required
-                    className={`ds-form-input ${errors.password ? 'ds-error' : ''}`}
+                    className={`rg-form-input ${errors.password ? 'rg-error' : ''}`}
                     disabled={loading}
                   />
                   <button
                     type="button"
-                    className="ds-password-toggle"
+                    className="rg-password-toggle"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.password && <span className="ds-error-text">{errors.password}</span>}
+                {errors.password && <span className="rg-error-text">{errors.password}</span>}
                 
                 {/* Password Strength Meter */}
                 {formData.password && (
-                  <div className="ds-password-strength">
-                    <div className="ds-strength-bar">
+                  <div className="rg-password-strength">
+                    <div className="rg-strength-bar">
                       <div 
-                        className="ds-strength-progress"
+                        className="rg-strength-progress"
                         style={{ 
                           width: `${(passwordStrength.score / 5) * 100}%`,
                           background: getPasswordStrengthColor()
                         }}
                       ></div>
                     </div>
-                    <div className="ds-strength-text">
+                    <div className="rg-strength-text">
                       <span>Password Strength: </span>
                       <span style={{ color: getPasswordStrengthColor() }}>
                         {getPasswordStrengthText()}
                       </span>
                     </div>
-                    <div className="ds-strength-requirements">
-                      <span className={passwordStrength.hasLength ? 'ds-valid' : 'ds-invalid'}>
+                    <div className="rg-strength-requirements">
+                      <span className={passwordStrength.hasLength ? 'rg-valid' : 'rg-invalid'}>
                         {passwordStrength.hasLength ? <FaCheckCircle /> : <FaTimesCircle />} 8+ characters
                       </span>
-                      <span className={passwordStrength.hasNumber ? 'ds-valid' : 'ds-invalid'}>
+                      <span className={passwordStrength.hasNumber ? 'rg-valid' : 'rg-invalid'}>
                         {passwordStrength.hasNumber ? <FaCheckCircle /> : <FaTimesCircle />} Number
                       </span>
-                      <span className={passwordStrength.hasUpperCase ? 'ds-valid' : 'ds-invalid'}>
+                      <span className={passwordStrength.hasUpperCase ? 'rg-valid' : 'rg-invalid'}>
                         {passwordStrength.hasUpperCase ? <FaCheckCircle /> : <FaTimesCircle />} Uppercase
                       </span>
-                      <span className={passwordStrength.hasLowerCase ? 'ds-valid' : 'ds-invalid'}>
+                      <span className={passwordStrength.hasLowerCase ? 'rg-valid' : 'rg-invalid'}>
                         {passwordStrength.hasLowerCase ? <FaCheckCircle /> : <FaTimesCircle />} Lowercase
                       </span>
-                      <span className={passwordStrength.hasSpecialChar ? 'ds-valid' : 'ds-invalid'}>
+                      <span className={passwordStrength.hasSpecialChar ? 'rg-valid' : 'rg-invalid'}>
                         {passwordStrength.hasSpecialChar ? <FaCheckCircle /> : <FaTimesCircle />} Special char
                       </span>
                     </div>
@@ -483,8 +479,8 @@ const Register = () => {
               </div>
               
               {/* Confirm Password Field */}
-              <div className="ds-form-group">
-                <div className="ds-password-wrapper">
+              <div className="rg-form-group">
+                <div className="rg-password-wrapper">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
@@ -492,32 +488,32 @@ const Register = () => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     required
-                    className={`ds-form-input ${errors.confirmPassword ? 'ds-error' : ''}`}
+                    className={`rg-form-input ${errors.confirmPassword ? 'rg-error' : ''}`}
                     disabled={loading}
                   />
                   <button
                     type="button"
-                    className="ds-password-toggle"
+                    className="rg-password-toggle"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.confirmPassword && <span className="ds-error-text">{errors.confirmPassword}</span>}
+                {errors.confirmPassword && <span className="rg-error-text">{errors.confirmPassword}</span>}
                 {formData.password && formData.confirmPassword && formData.password === formData.confirmPassword && (
-                  <span className="ds-valid-text">
+                  <span className="rg-valid-text">
                     <FaCheckCircle /> Passwords match
                   </span>
                 )}
               </div>
               
               {/* Terms and Conditions */}
-              <div className="ds-terms">
+              <div className="rg-terms">
                 <input
                   type="checkbox"
                   id="terms"
                   required
-                  className="ds-terms-checkbox"
+                  className="rg-terms-checkbox"
                 />
                 <label htmlFor="terms">
                   I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>
@@ -526,7 +522,7 @@ const Register = () => {
               
               <button 
                 type="submit" 
-                className="ds-register-btn"
+                className="rg-register-btn"
                 disabled={loading}
               >
                 {loading ? 'Signing Up...' : 'SIGN UP'}
@@ -536,11 +532,11 @@ const Register = () => {
         </div>
         
         {/* Right Side - Sign In Info */}
-        <div className="ds-signin-side">
-          <div className="ds-signin-content">
-            <h2 className="ds-signin-title">Welcome</h2>
-            <p className="ds-signin-subtitle">Welcome Back!</p>
-            <Link to="/login" className="ds-signin-btn">
+        <div className="rg-signin-side">
+          <div className="rg-signin-content">
+            <h2 className="rg-signin-title">Welcome</h2>
+            <p className="rg-signin-subtitle">Welcome Back!</p>
+            <Link to="/login" className="rg-signin-btn">
               SIGN IN
             </Link>
           </div>

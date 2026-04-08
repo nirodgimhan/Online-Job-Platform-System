@@ -17,7 +17,11 @@ import {
   FaGlobe,
   FaSpinner,
   FaChevronLeft,
-  FaChevronRight,FaLinkedin ,FaTwitter, FaFacebook, FaGithub,
+  FaChevronRight, 
+  FaLinkedin, 
+  FaTwitter, 
+  FaFacebook, 
+  FaGithub,
   FaEye,
   FaCalendarAlt,
   FaStar,
@@ -53,8 +57,6 @@ const JobSearch = () => {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [categories, setCategories] = useState([]);
-  
-  // New state for UI enhancements
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -114,9 +116,7 @@ const JobSearch = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get('http://localhost:5000/api/students/saved-jobs', {
-        headers: {
-          'x-auth-token': token
-        }
+        headers: { 'x-auth-token': token }
       });
       if (response.data.success) {
         const savedJobIds = new Set(response.data.savedJobs.map(job => job._id || job));
@@ -129,10 +129,7 @@ const JobSearch = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFilters(prev => ({ ...prev, [name]: value }));
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
@@ -298,9 +295,9 @@ const JobSearch = () => {
 
   if (loading && jobs.length === 0) {
     return (
-      <div className="ds-job-search">
-        <div className="ds-loading-container">
-          <div className="ds-spinner"></div>
+      <div className="js-job-search">
+        <div className="js-loading-container">
+          <div className="js-spinner"></div>
           <h4>Finding the best jobs for you...</h4>
           <p>Please wait while we search for opportunities</p>
         </div>
@@ -309,18 +306,18 @@ const JobSearch = () => {
   }
 
   return (
-    <div className="ds-job-search">
-      <div className="ds-job-search-container">
+    <div className="js-job-search">
+      <div className="js-job-search-container">
         {/* Hero Section */}
-        <div className="ds-hero-section">
-          <div className="ds-hero-content">
-            <FaBriefcase className="ds-hero-icon" />
+        <div className="js-hero-section">
+          <div className="js-hero-content">
+            <FaBriefcase className="js-hero-icon" />
             <h1>Seeking New Job Opportunities?</h1>
             <p>Find your dream job with thousands of opportunities waiting for you</p>
             
-            <form onSubmit={handleSearch} className="ds-search-box-large">
-              <div className="ds-search-input-wrapper">
-                <FaSearch className="ds-search-icon-large" />
+            <form onSubmit={handleSearch} className="js-search-box-large">
+              <div className="js-search-input-wrapper">
+                <FaSearch className="js-search-icon-large" />
                 <input
                   type="text"
                   placeholder="Search By Job Title, Company, Or Skill"
@@ -328,28 +325,28 @@ const JobSearch = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <button type="submit" className="ds-search-btn">
+              <button type="submit" className="js-search-btn">
                 Search Jobs
               </button>
             </form>
           </div>
         </div>
 
-        {/* Your Existing Search and Filters Section */}
-        <div className="ds-search-section">
+        {/* Main Content */}
+        <div className="js-search-section">
           {/* Header */}
-          <div className="ds-page-header">
-            <div className="ds-header-left">
-              <div className="ds-header-icon-wrapper">
-                <FaBriefcase className="ds-header-icon" />
+          <div className="js-page-header">
+            <div className="js-header-left">
+              <div className="js-header-icon-wrapper">
+                <FaBriefcase className="js-header-icon" />
               </div>
               <div>
                 <h1>Find Your Dream Job</h1>
-                <p className="ds-header-subtitle">Discover opportunities that match your skills and career goals</p>
+                <p className="js-header-subtitle">Discover opportunities that match your skills and career goals</p>
               </div>
             </div>
             <button 
-              className="ds-filter-toggle-btn"
+              className="js-filter-toggle-btn"
               onClick={() => setShowFilters(!showFilters)}
             >
               <FaFilter /> {showFilters ? 'Hide Filters' : 'Show Filters'}
@@ -357,11 +354,11 @@ const JobSearch = () => {
           </div>
 
           {/* Search Card */}
-          <div className="ds-search-card">
-            <div className="ds-search-form">
-              <div className="ds-search-row">
-                <div className="ds-search-input-group">
-                  <FaSearch className="ds-input-icon" />
+          <div className="js-search-card">
+            <div className="js-search-form">
+              <div className="js-search-row">
+                <div className="js-search-input-group">
+                  <FaSearch className="js-input-icon" />
                   <input
                     type="text"
                     name="title"
@@ -370,8 +367,8 @@ const JobSearch = () => {
                     onChange={handleFilterChange}
                   />
                 </div>
-                <div className="ds-search-input-group">
-                  <FaMapMarkerAlt className="ds-input-icon" />
+                <div className="js-search-input-group">
+                  <FaMapMarkerAlt className="js-input-icon" />
                   <input
                     type="text"
                     name="location"
@@ -384,7 +381,7 @@ const JobSearch = () => {
                   name="employmentType"
                   value={filters.employmentType}
                   onChange={handleFilterChange}
-                  className="ds-form-select"
+                  className="js-form-select"
                 >
                   {employmentTypes.map(type => (
                     <option key={type.value} value={type.value}>{type.label}</option>
@@ -394,7 +391,7 @@ const JobSearch = () => {
                   name="workMode"
                   value={filters.workMode}
                   onChange={handleFilterChange}
-                  className="ds-form-select"
+                  className="js-form-select"
                 >
                   {workModes.map(mode => (
                     <option key={mode.value} value={mode.value}>{mode.label}</option>
@@ -403,36 +400,36 @@ const JobSearch = () => {
               </div>
 
               {/* Advanced Filters */}
-              <div className={`ds-advanced-filters ${showFilters ? 'ds-show' : ''}`}>
-                <div className="ds-filter-group">
+              <div className={`js-advanced-filters ${showFilters ? 'js-show' : ''}`}>
+                <div className="js-filter-group">
                   <label>Salary Range (per year)</label>
-                  <div className="ds-salary-inputs">
+                  <div className="js-salary-inputs">
                     <input
                       type="number"
                       name="minSalary"
                       placeholder="Min"
                       value={filters.minSalary}
                       onChange={handleFilterChange}
-                      className="ds-form-control"
+                      className="js-form-control"
                     />
-                    <span className="ds-salary-separator">-</span>
+                    <span className="js-salary-separator">-</span>
                     <input
                       type="number"
                       name="maxSalary"
                       placeholder="Max"
                       value={filters.maxSalary}
                       onChange={handleFilterChange}
-                      className="ds-form-control"
+                      className="js-form-control"
                     />
                   </div>
                 </div>
-                <div className="ds-filter-group">
+                <div className="js-filter-group">
                   <label>Category</label>
                   <select
                     name="category"
                     value={filters.category}
                     onChange={handleFilterChange}
-                    className="ds-form-select"
+                    className="js-form-select"
                   >
                     <option value="">All Categories</option>
                     {categories.map(cat => (
@@ -440,7 +437,7 @@ const JobSearch = () => {
                     ))}
                   </select>
                 </div>
-                <button className="ds-clear-filters" onClick={clearFilters}>
+                <button className="js-clear-filters" onClick={clearFilters}>
                   <FaTimes /> Clear All Filters
                 </button>
               </div>
@@ -448,7 +445,7 @@ const JobSearch = () => {
           </div>
 
           {/* Results Count */}
-          <div className="ds-results-count">
+          <div className="js-results-count">
             <p>
               <strong>{jobs.length}</strong> jobs found 
               {pagination.total > jobs.length && ` out of ${pagination.total} total`}
@@ -456,15 +453,15 @@ const JobSearch = () => {
           </div>
 
           {/* Job Listings Grid */}
-          <div className="ds-jobs-grid">
+          <div className="js-jobs-grid">
             {jobs.length === 0 ? (
-              <div className="ds-empty-state">
-                <div className="ds-empty-icon-wrapper">
-                  <FaBriefcase className="ds-empty-icon" />
+              <div className="js-empty-state">
+                <div className="js-empty-icon-wrapper">
+                  <FaBriefcase className="js-empty-icon" />
                 </div>
                 <h3>No jobs found</h3>
                 <p>Try adjusting your search filters or check back later for new opportunities.</p>
-                <button className="ds-btn ds-btn-primary" onClick={clearFilters}>
+                <button className="js-btn js-btn-primary" onClick={clearFilters}>
                   Clear All Filters
                 </button>
               </div>
@@ -474,39 +471,39 @@ const JobSearch = () => {
                 const isSaved = savedJobs.has(job._id);
                 
                 return (
-                  <div key={job._id} className="ds-job-card" style={{ animationDelay: `${index * 0.05}s` }}>
-                    <div className="ds-job-card-header">
-                      <div className="ds-company-info">
-                        <div className="ds-company-logo-wrapper">
+                  <div key={job._id} className="js-job-card" style={{ animationDelay: `${index * 0.05}s` }}>
+                    <div className="js-job-card-header">
+                      <div className="js-company-info">
+                        <div className="js-company-logo-wrapper">
                           {companyLogo ? (
                             <img 
                               src={companyLogo} 
                               alt={job.companyId?.companyName}
-                              className="ds-company-logo"
+                              className="js-company-logo"
                               onError={(e) => {
                                 e.target.style.display = 'none';
-                                e.target.parentElement.querySelector('.ds-company-logo-placeholder').style.display = 'flex';
+                                e.target.parentElement.querySelector('.js-company-logo-placeholder').style.display = 'flex';
                               }}
                             />
                           ) : null}
-                          <div className="ds-company-logo-placeholder" style={{ display: companyLogo ? 'none' : 'flex' }}>
+                          <div className="js-company-logo-placeholder" style={{ display: companyLogo ? 'none' : 'flex' }}>
                             <FaBuilding />
                           </div>
                         </div>
-                        <div className="ds-job-title-info">
+                        <div className="js-job-title-info">
                           <h3>{job.title}</h3>
-                          <p className="ds-company-name">{job.companyId?.companyName || 'Company'}</p>
+                          <p className="js-company-name">{job.companyId?.companyName || 'Company'}</p>
                         </div>
                       </div>
                       {user?.role === 'student' && (
                         <button 
-                          className={`ds-save-job-btn ${isSaved ? 'ds-saved' : ''}`}
+                          className={`js-save-job-btn ${isSaved ? 'js-saved' : ''}`}
                           onClick={() => handleSaveJob(job._id)}
                           disabled={savingJobId === job._id}
                           title={isSaved ? 'Remove from saved' : 'Save job'}
                         >
                           {savingJobId === job._id ? (
-                            <FaSpinner className="ds-spin" />
+                            <FaSpinner className="js-spin" />
                           ) : isSaved ? (
                             <FaHeart />
                           ) : (
@@ -516,54 +513,54 @@ const JobSearch = () => {
                       )}
                     </div>
 
-                    <p className="ds-job-description">
+                    <p className="js-job-description">
                       {job.description?.length > 150 
                         ? `${job.description.substring(0, 150)}...` 
                         : job.description || 'No description available'}
                     </p>
 
-                    <div className="ds-job-meta">
+                    <div className="js-job-meta">
                       {job.location?.city && (
-                        <span className="ds-meta-badge">
+                        <span className="js-meta-badge">
                           <FaMapMarkerAlt /> {job.location.city}{job.location.country ? `, ${job.location.country}` : ''}
                         </span>
                       )}
-                      <span className="ds-meta-badge">
+                      <span className="js-meta-badge">
                         <FaBriefcase /> {job.employmentType || 'Full-time'}
                       </span>
-                      <span className="ds-meta-badge">
+                      <span className="js-meta-badge">
                         <FaGlobe /> {job.workMode || 'On-site'}
                       </span>
                       {job.salary && (job.salary.min || job.salary.max) && (
-                        <span className="ds-meta-badge ds-salary-badge">
+                        <span className="js-meta-badge js-salary-badge">
                           <FaDollarSign /> {formatSalary(job.salary)}
                         </span>
                       )}
-                      <span className="ds-meta-badge">
+                      <span className="js-meta-badge">
                         <FaClock /> {formatDate(job.postedAt || job.createdAt)}
                       </span>
                     </div>
 
                     {job.requiredSkills && job.requiredSkills.length > 0 && (
-                      <div className="ds-skills-preview">
+                      <div className="js-skills-preview">
                         {job.requiredSkills.slice(0, 3).map((skill, idx) => (
-                          <span key={idx} className="ds-skill-tag">{skill}</span>
+                          <span key={idx} className="js-skill-tag">{skill}</span>
                         ))}
                         {job.requiredSkills.length > 3 && (
-                          <span className="ds-skill-tag ds-more-skills">+{job.requiredSkills.length - 3}</span>
+                          <span className="js-skill-tag js-more-skills">+{job.requiredSkills.length - 3}</span>
                         )}
                       </div>
                     )}
 
-                    <div className="ds-job-card-footer">
+                    <div className="js-job-card-footer">
                       <button 
-                        className="ds-btn ds-btn-primary"
+                        className="js-btn js-btn-primary"
                         onClick={() => handleViewDetails(job._id)}
                       >
                         <FaEye /> View Details
                       </button>
                       {job.applicationDeadline && new Date(job.applicationDeadline) > new Date() && (
-                        <span className="ds-deadline">
+                        <span className="js-deadline">
                           <FaCalendarAlt /> Apply by {new Date(job.applicationDeadline).toLocaleDateString()}
                         </span>
                       )}
@@ -576,15 +573,15 @@ const JobSearch = () => {
 
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="ds-pagination">
+            <div className="js-pagination">
               <button
-                className={`ds-page-btn ${pagination.page === 1 ? 'ds-disabled' : ''}`}
+                className={`js-page-btn ${pagination.page === 1 ? 'js-disabled' : ''}`}
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
               >
                 <FaChevronLeft /> Previous
               </button>
-              <div className="ds-page-numbers">
+              <div className="js-page-numbers">
                 {[...Array(pagination.pages).keys()].map(num => {
                   const pageNum = num + 1;
                   if (
@@ -595,7 +592,7 @@ const JobSearch = () => {
                     return (
                       <button
                         key={pageNum}
-                        className={`ds-page-number ${pagination.page === pageNum ? 'ds-active' : ''}`}
+                        className={`js-page-number ${pagination.page === pageNum ? 'js-active' : ''}`}
                         onClick={() => handlePageChange(pageNum)}
                       >
                         {pageNum}
@@ -606,14 +603,14 @@ const JobSearch = () => {
                     pageNum === pagination.page + 3
                   ) {
                     return (
-                      <span key={pageNum} className="ds-page-dots">...</span>
+                      <span key={pageNum} className="js-page-dots">...</span>
                     );
                   }
                   return null;
                 })}
               </div>
               <button
-                className={`ds-page-btn ${pagination.page === pagination.pages ? 'ds-disabled' : ''}`}
+                className={`js-page-btn ${pagination.page === pagination.pages ? 'js-disabled' : ''}`}
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.pages}
               >
@@ -623,68 +620,69 @@ const JobSearch = () => {
           )}
         </div>
       </div>
-       {/* Footer */}
-            <footer className="hp-footer">
-              <div className="hp-container">
-                <div className="hp-footer-grid">
-                  <div className="hp-footer-col">
-                    <div className="hp-footer-logo">
-                      <FaBriefcase className="hp-logo-icon" />
-                      <span>JobPortal</span>
-                    </div>
-                    <p>Connecting talented professionals with forward-thinking companies since 2020.</p>
-                    <div className="hp-social-links">
-                      <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
-                        <FaLinkedin />
-                      </a>
-                      <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
-                        <FaTwitter />
-                      </a>
-                      <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
-                        <FaFacebook />
-                      </a>
-                      <a href="https://github.com" target="_blank" rel="noopener noreferrer">
-                        <FaGithub />
-                      </a>
-                    </div>
-                  </div>
-      
-                  <div className="hp-footer-col">
-                    <h4>For Job Seekers</h4>
-                    <ul>
-                      <li><Link to="/student/jobs">Browse Jobs</Link></li>
-                      <li><Link to="/student/cv-manager">CV Manager</Link></li>
-                      <li><Link to="/student/job-alerts">Job Alerts</Link></li>
-                      <li><Link to="/student/saved-jobs">Saved Jobs</Link></li>
-                    </ul>
-                  </div>
-      
-                  <div className="hp-footer-col">
-                    <h4>For Employers</h4>
-                    <ul>
-                      <li><Link to="/company/post-job">Post a Job</Link></li>
-                      <li><Link to="/company/manage-jobs">Manage Jobs</Link></li>
-                      <li><Link to="/company/applicants">Browse Candidates</Link></li>
-                      <li><Link to="/company/pricing">Pricing</Link></li>
-                    </ul>
-                  </div>
-      
-                  <div className="hp-footer-col">
-                    <h4>Company</h4>
-                    <ul>
-                      <li><Link to="/about">About Us</Link></li>
-                      <li><Link to="/contact">Contact Us</Link></li>
-                      <li><Link to="/privacy">Privacy Policy</Link></li>
-                      <li><Link to="/terms">Terms of Service</Link></li>
-                    </ul>
-                  </div>
-                </div>
-      
-                <div className="hp-footer-bottom">
-                  <p>&copy; 2024 JobPortal. All rights reserved.</p>
-                </div>
+
+      {/* Footer */}
+      <footer className="js-footer">
+        <div className="js-container">
+          <div className="js-footer-grid">
+            <div className="js-footer-col">
+              <div className="js-footer-logo">
+                <FaBriefcase className="js-logo-icon" />
+                <span>JobPortal</span>
               </div>
-            </footer>
+              <p>Connecting talented professionals with forward-thinking companies since 2020.</p>
+              <div className="js-social-links">
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
+                  <FaLinkedin />
+                </a>
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
+                  <FaTwitter />
+                </a>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
+                  <FaFacebook />
+                </a>
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                  <FaGithub />
+                </a>
+              </div>
+            </div>
+
+            <div className="js-footer-col">
+              <h4>For Job Seekers</h4>
+              <ul>
+                <li><Link to="/student/jobs">Browse Jobs</Link></li>
+                <li><Link to="/student/cv-manager">CV Manager</Link></li>
+                <li><Link to="/student/job-alerts">Job Alerts</Link></li>
+                <li><Link to="/student/saved-jobs">Saved Jobs</Link></li>
+              </ul>
+            </div>
+
+            <div className="js-footer-col">
+              <h4>For Employers</h4>
+              <ul>
+                <li><Link to="/company/post-job">Post a Job</Link></li>
+                <li><Link to="/company/manage-jobs">Manage Jobs</Link></li>
+                <li><Link to="/company/applicants">Browse Candidates</Link></li>
+                <li><Link to="/company/pricing">Pricing</Link></li>
+              </ul>
+            </div>
+
+            <div className="js-footer-col">
+              <h4>Company</h4>
+              <ul>
+                <li><Link to="/about">About Us</Link></li>
+                <li><Link to="/contact">Contact Us</Link></li>
+                <li><Link to="/privacy">Privacy Policy</Link></li>
+                <li><Link to="/terms">Terms of Service</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="js-footer-bottom">
+            <p>&copy; 2024 JobPortal. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

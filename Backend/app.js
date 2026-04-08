@@ -156,19 +156,13 @@ app.use((req, res, next) => {
     next();
 });
 
-// ==================== DATABASE CONNECTION WITH KEEP-ALIVE ====================
-
-let isConnected = false;
-let connectionAttempts = 0;
-const MAX_RETRIES = 5;
-const RETRY_DELAY = 3000;
+// ==================== DATABASE CONNECTION (SIMPLE & STABLE) ====================
 
 const dbOptions = {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
-    connectTimeoutMS: 10000,
     family: 4,
     keepAlive: true,
     keepAliveInitialDelay: 300000,
@@ -176,74 +170,34 @@ const dbOptions = {
     retryReads: true,
     maxPoolSize: 10,
     minPoolSize: 2,
-    maxIdleTimeMS: 10000,
-    waitQueueTimeoutMS: 20000
+    autoIndex: true,
+    autoCreate: true
 };
 
-const connectDB = async () => {
-    try {
-        const conn = await mongoose.connect(MONGO_URI, dbOptions);
-        isConnected = true;
-        connectionAttempts = 0;
+mongoose.connect(MONGO_URI, dbOptions)
+    .then(() => {
         console.log('\n=================================');
         console.log('✅ MongoDB Connected Successfully');
-        console.log(`📊 Database: ${conn.connection.name || 'JobApplicationPlatform'}`);
-        console.log(`📍 Host: ${conn.connection.host || 'localhost'}`);
+        console.log(`📊 Database: ${mongoose.connection.name}`);
+        console.log(`📍 Host: ${mongoose.connection.host}`);
         console.log('=================================\n');
-    } catch (err) {
-        isConnected = false;
-        connectionAttempts++;
+    })
+    .catch(err => {
         console.error('\n❌ MongoDB Connection Error:', err.message);
-        
-        if (connectionAttempts < MAX_RETRIES) {
-            console.log(`🔄 Retrying connection in ${RETRY_DELAY/1000} seconds... (Attempt ${connectionAttempts}/${MAX_RETRIES})`);
-            setTimeout(connectDB, RETRY_DELAY);
-        } else {
-            console.error('\n⚠️ MongoDB connection failed after multiple attempts.');
-            console.error('   The server will continue but database operations may fail.');
-            console.error('   Please ensure MongoDB is running and restart the server.\n');
-        }
-    }
-};
+        console.error('   Please ensure MongoDB is running.\n');
+        // Do not exit process – let the app run but log the error
+    });
 
-// Initialize connection
-setTimeout(connectDB, 1000);
-
-// Keep connection alive with periodic ping
-setInterval(async () => {
-    if (mongoose.connection.readyState === 1) {
-        try {
-            await mongoose.connection.db.admin().ping();
-            if (!isConnected) {
-                isConnected = true;
-                console.log('✅ MongoDB Reconnected');
-            }
-        } catch (err) {
-            if (isConnected) {
-                isConnected = false;
-                console.log('⚠️ MongoDB connection lost, attempting to reconnect...');
-                connectDB();
-            }
-        }
-    } else if (mongoose.connection.readyState === 0 && !isConnected) {
-        connectDB();
-    }
-}, 30000);
-
-// Connection event handlers
+// Event listeners (for logging only)
 mongoose.connection.on('connected', () => {
-    isConnected = true;
     console.log('✅ MongoDB Connection Established');
 });
 
 mongoose.connection.on('disconnected', () => {
-    isConnected = false;
-    console.log('⚠️ MongoDB Connection Lost');
-    setTimeout(connectDB, 5000);
+    console.log('⚠️ MongoDB Connection Lost – auto-reconnect will attempt');
 });
 
 mongoose.connection.on('reconnected', () => {
-    isConnected = true;
     console.log('✅ MongoDB Reconnected');
 });
 
@@ -251,28 +205,30 @@ mongoose.connection.on('error', (err) => {
     console.error('⚠️ MongoDB Error:', err.message);
 });
 
-// Middleware to ensure DB connection for critical routes
-const ensureDbConnection = async (req, res, next) => {
-    if (mongoose.connection.readyState !== 1) {
-        if (connectionAttempts < MAX_RETRIES) {
-            return res.status(503).json({
-                success: false,
-                message: 'Database is connecting, please try again in a moment.',
-                retry: true
-            });
-        } else {
-            return res.status(503).json({
-                success: false,
-                message: 'Database connection unavailable. Please check your MongoDB server.',
-                retry: false
-            });
-        }
+// Graceful shutdown
+process.on('SIGINT', async () => {
+    console.log('\n🔄 Gracefully shutting down...');
+    try {
+        await mongoose.connection.close();
+        console.log('✅ MongoDB connection closed');
+        process.exit(0);
+    } catch (err) {
+        console.error('❌ Error during shutdown:', err);
+        process.exit(1);
     }
-    next();
-};
+});
 
-// Apply DB check to all API routes
-app.use('/api', ensureDbConnection);
+process.on('SIGTERM', async () => {
+    console.log('\n🔄 Received SIGTERM, shutting down...');
+    try {
+        await mongoose.connection.close();
+        console.log('✅ MongoDB connection closed');
+        process.exit(0);
+    } catch (err) {
+        console.error('❌ Error during shutdown:', err);
+        process.exit(1);
+    }
+});
 
 // ==================== IMPORT MODELS ====================
 
@@ -283,8 +239,10 @@ try {
     require('./models/Post');
     require('./models/Job');
     require('./Models/Application');
-    require('./Models/Interview');  // Changed from 'Models/Interview' to 'models/Interview'
+    require('./Models/Interview');
     require('./models/CV');
+    require('./models/Contact');
+    require('./Models/Notification');
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -294,6 +252,7 @@ try {
 
 let authRoutes, userRoutes, studentRoutes, companyRoutes, postRoutes, jobRoutes, applicationRoutes;
 let cvRoutes, notificationRoutes, messageRoutes, adminRoutes, searchRoutes, interviewRoutes, activityRoutes;
+let contactRoutes;
 
 // Auth Routes
 try {
@@ -357,7 +316,7 @@ try {
 
 // Job Routes
 try {
-    jobRoutes = require('./routes/jobRoutes');
+    jobRoutes = require('./Routes/jobRoutes');
     console.log('✅ jobRoutes loaded');
 } catch (err) {
     console.error('❌ Error loading jobRoutes:', err.message);
@@ -391,9 +350,9 @@ try {
     });
 }
 
-// Interview Routes - IMPORTANT: This is the main interview route
+// Interview Routes
 try {
-    interviewRoutes = require('./routes/interviews'); // Changed from './Routes/interviewRoutes' to './routes/interviews'
+    interviewRoutes = require('./routes/interviews');
     console.log('✅ interviewRoutes loaded from ./routes/interviews');
 } catch (err) {
     console.error('❌ Error loading interviewRoutes:', err.message);
@@ -423,7 +382,7 @@ try {
 
 // Notification Routes
 try {
-    notificationRoutes = require('./routes/notificationRoutes');
+    notificationRoutes = require('./Routes/notificationRoutes');
     console.log('✅ notificationRoutes loaded');
 } catch (err) {
     console.log('⚠️ notificationRoutes not found - optional');
@@ -463,6 +422,21 @@ try {
     searchRoutes = express.Router();
 }
 
+// ==================== CONTACT ROUTES ====================
+try {
+    contactRoutes = require('./Routes/contactRoutes');
+    console.log('✅ contactRoutes loaded');
+} catch (err) {
+    console.error('❌ Error loading contactRoutes:', err.message);
+    contactRoutes = express.Router();
+    contactRoutes.post('/', (req, res) => {
+        res.status(501).json({ success: false, message: 'Contact routes not implemented' });
+    });
+    contactRoutes.get('/admin', (req, res) => {
+        res.status(501).json({ success: false, message: 'Contact admin routes not implemented' });
+    });
+}
+
 // ==================== API ROUTES ====================
 
 app.use('/api/auth', authRoutes);
@@ -473,12 +447,13 @@ app.use('/api/posts', postRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/cv', cvRoutes);
-app.use('/api/interviews', interviewRoutes);  // This is the main interview route
+app.use('/api/interviews', interviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/contact', contactRoutes);
 
 console.log('\n✅ API routes registered:');
 console.log('   - /api/auth');
@@ -489,12 +464,13 @@ console.log('   - /api/posts');
 console.log('   - /api/jobs');
 console.log('   - /api/applications');
 console.log('   - /api/cv');
-console.log('   - /api/interviews');  // Added to log
+console.log('   - /api/interviews');
 console.log('   - /api/notifications');
 console.log('   - /api/messages');
 console.log('   - /api/activities');
 console.log('   - /api/admin');
 console.log('   - /api/search');
+console.log('   - /api/contact');
 
 // ==================== API HEALTH CHECK ====================
 
@@ -510,15 +486,15 @@ app.get('/api/health', (req, res) => {
         environment: NODE_ENV,
         mongodb: {
             state: dbStateText,
-            isConnected: dbState === 1,
-            attempts: connectionAttempts
+            isConnected: dbState === 1
         },
         directories: {
             uploads: fs.existsSync(uploadsDir),
             cvs: fs.existsSync(cvsDir)
         },
         routes: {
-            interviews: '/api/interviews'
+            interviews: '/api/interviews',
+            contact: '/api/contact'
         }
     });
 });
@@ -541,6 +517,7 @@ app.get('/api', (req, res) => {
             notifications: '/api/notifications',
             messages: '/api/messages',
             activities: '/api/activities',
+            contact: '/api/contact',
             health: '/api/health'
         }
     });
@@ -638,40 +615,6 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ==================== GRACEFUL SHUTDOWN ====================
-
-process.on('SIGINT', async () => {
-    console.log('\n🔄 Gracefully shutting down...');
-    try {
-        await mongoose.connection.close();
-        console.log('✅ MongoDB connection closed');
-        process.exit(0);
-    } catch (err) {
-        console.error('❌ Error during shutdown:', err);
-        process.exit(1);
-    }
-});
-
-process.on('SIGTERM', async () => {
-    console.log('\n🔄 Received SIGTERM, shutting down...');
-    try {
-        await mongoose.connection.close();
-        console.log('✅ MongoDB connection closed');
-        process.exit(0);
-    } catch (err) {
-        console.error('❌ Error during shutdown:', err);
-        process.exit(1);
-    }
-});
-
-process.on('unhandledRejection', (err) => {
-    console.error('❌ Unhandled Promise Rejection:', err);
-});
-
-process.on('uncaughtException', (err) => {
-    console.error('❌ Uncaught Exception:', err);
-});
-
 // ==================== START SERVER ====================
 
 const startServer = (port) => {
@@ -682,6 +625,7 @@ const startServer = (port) => {
         console.log(`🔍 API: http://localhost:${port}/api`);
         console.log(`🔍 Health: http://localhost:${port}/api/health`);
         console.log(`📅 Interviews: http://localhost:${port}/api/interviews`);
+        console.log(`📞 Contact: http://localhost:${port}/api/contact`);
         console.log(`⚙️  Environment: ${NODE_ENV}`);
         console.log(`📁 CV Uploads: ${cvsDir}`);
         console.log('=================================\n');

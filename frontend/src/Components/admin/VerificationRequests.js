@@ -195,8 +195,8 @@ const VerificationRequests = () => {
 
   if (loading) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
+      <div className="vr-loading-container">
+        <div className="vr-spinner"></div>
         <h4>Loading verification requests...</h4>
         <p>Please wait while we fetch pending company verifications</p>
       </div>
@@ -205,15 +205,15 @@ const VerificationRequests = () => {
 
   if (error) {
     return (
-      <div className="ds-error-container">
-        <FaExclamationTriangle className="ds-error-icon" />
-        <h4 className="ds-error-title">Error Loading Requests</h4>
-        <p className="ds-error-message">{error}</p>
-        <div className="ds-error-actions">
-          <button className="ds-btn ds-btn-primary" onClick={fetchPendingCompanies}>
+      <div className="vr-error-container">
+        <FaExclamationTriangle className="vr-error-icon" />
+        <h4 className="vr-error-title">Error Loading Requests</h4>
+        <p className="vr-error-message">{error}</p>
+        <div className="vr-error-actions">
+          <button className="vr-btn vr-btn-primary" onClick={fetchPendingCompanies}>
             <FaSyncAlt /> Try Again
           </button>
-          <button className="ds-btn ds-btn-outline" onClick={() => navigate('/admin/dashboard')}>
+          <button className="vr-btn vr-btn-outline" onClick={() => navigate('/admin/dashboard')}>
             Go to Dashboard
           </button>
         </div>
@@ -222,40 +222,40 @@ const VerificationRequests = () => {
   }
 
   return (
-    <div className="ds-verification-requests">
+    <div className="vr-verification-requests">
       {/* Header */}
-      <div className="ds-page-header">
-        <div className="ds-header-left">
-          <div className="ds-header-icon-wrapper">
+      <div className="vr-page-header">
+        <div className="vr-header-left">
+          <div className="vr-header-icon-wrapper">
             <FaCheckCircle />
           </div>
           <div>
             <h1>Verification Requests</h1>
-            <p className="ds-header-subtitle">
+            <p className="vr-header-subtitle">
               {pendingCompanies.length} company{pendingCompanies.length !== 1 ? 'ies' : ''} awaiting verification
             </p>
           </div>
         </div>
-        <button className="ds-icon-btn" onClick={fetchPendingCompanies} disabled={refreshing} title="Refresh">
-          <FaSyncAlt className={refreshing ? 'ds-spin' : ''} />
+        <button className="vr-icon-btn" onClick={fetchPendingCompanies} disabled={refreshing} title="Refresh">
+          <FaSyncAlt className={refreshing ? 'vr-spin' : ''} />
         </button>
       </div>
 
       {/* Requests Grid */}
       {pendingCompanies.length === 0 ? (
-        <div className="ds-card">
-          <div className="ds-card-body ds-empty-state">
-            <FaCheckCircle className="ds-empty-icon" />
+        <div className="vr-card">
+          <div className="vr-card-body vr-empty-state">
+            <FaCheckCircle className="vr-empty-icon" />
             <h3>No Pending Requests</h3>
             <p>All companies are verified. New registrations will appear here.</p>
           </div>
         </div>
       ) : (
-        <div className="ds-requests-grid">
+        <div className="vr-requests-grid">
           {pendingCompanies.map(company => (
-            <div key={company._id} className="ds-request-card">
-              <div className="ds-card-header">
-                <div className="ds-company-logo">
+            <div key={company._id} className="vr-request-card">
+              <div className="vr-card-header">
+                <div className="vr-company-logo">
                   {company.companyLogo ? (
                     <img 
                       src={company.companyLogo.startsWith('http') ? company.companyLogo : `http://localhost:5000${company.companyLogo}`} 
@@ -266,35 +266,35 @@ const VerificationRequests = () => {
                       }}
                     />
                   ) : null}
-                  <div className="ds-logo-placeholder" style={{ display: company.companyLogo ? 'none' : 'flex' }}>
+                  <div className="vr-logo-placeholder" style={{ display: company.companyLogo ? 'none' : 'flex' }}>
                     <FaBuilding />
                   </div>
                 </div>
-                <div className="ds-company-info">
+                <div className="vr-company-info">
                   <h3>{company.companyName}</h3>
-                  <p className="ds-email"><FaEnvelope /> {company.contactEmail || company.userId?.email}</p>
+                  <p className="vr-email"><FaEnvelope /> {company.contactEmail || company.userId?.email}</p>
                   {company.industry && <p><FaIndustry /> {company.industry}</p>}
                 </div>
-                <div className="ds-status-badge ds-pending">
+                <div className="vr-status-badge vr-pending">
                   <FaTimesCircle /> Pending
                 </div>
               </div>
 
               {company.description && (
-                <div className="ds-description">
+                <div className="vr-description">
                   <p>{company.description.length > 150 ? `${company.description.substring(0, 150)}...` : company.description}</p>
                 </div>
               )}
 
-              <div className="ds-card-footer">
+              <div className="vr-card-footer">
                 <button 
-                  className="ds-btn ds-btn-outline-primary" 
+                  className="vr-btn vr-btn-outline-primary" 
                   onClick={() => handleViewDetails(company)}
                 >
                   <FaEye /> View Details
                 </button>
                 <button 
-                  className="ds-btn ds-btn-success" 
+                  className="vr-btn vr-btn-success" 
                   onClick={() => handleVerifyCompany(company)}
                   disabled={actionLoading}
                 >
@@ -308,28 +308,28 @@ const VerificationRequests = () => {
 
       {/* Company Details Modal */}
       {showDetailsModal && selectedCompany && (
-        <div className="ds-modal-overlay" onClick={handleCloseModal}>
-          <div className="ds-modal ds-modal-large" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header">
+        <div className="vr-modal-overlay" onClick={handleCloseModal}>
+          <div className="vr-modal vr-modal-large" onClick={e => e.stopPropagation()}>
+            <div className="vr-modal-header">
               <h3><FaBuilding /> Company Details</h3>
-              <button className="ds-modal-close" onClick={handleCloseModal}>
+              <button className="vr-modal-close" onClick={handleCloseModal}>
                 <FaTimes />
               </button>
             </div>
-            <div className="ds-modal-body">
-              <div className="ds-company-detail">
-                <div className="ds-detail-header">
-                  <div className="ds-detail-avatar">
+            <div className="vr-modal-body">
+              <div className="vr-company-detail">
+                <div className="vr-detail-header">
+                  <div className="vr-detail-avatar">
                     {selectedCompany.companyName?.charAt(0).toUpperCase()}
                   </div>
-                  <div className="ds-detail-info">
+                  <div className="vr-detail-info">
                     <h3>{selectedCompany.companyName}</h3>
                     <p>{selectedCompany.industry || 'Industry not specified'}</p>
                   </div>
                 </div>
 
-                <div className="ds-detail-grid">
-                  <div className="ds-detail-section">
+                <div className="vr-detail-grid">
+                  <div className="vr-detail-section">
                     <h4>Contact Information</h4>
                     <p><FaEnvelope /> {selectedCompany.contactEmail || selectedCompany.userId?.email || 'N/A'}</p>
                     <p><FaPhone /> {selectedCompany.contactPhone || 'N/A'}</p>
@@ -338,7 +338,7 @@ const VerificationRequests = () => {
                     )}
                   </div>
 
-                  <div className="ds-detail-section">
+                  <div className="vr-detail-section">
                     <h4>Company Details</h4>
                     <p><FaIndustry /> Industry: {selectedCompany.industry || 'N/A'}</p>
                     <p><FaUsers /> Size: {selectedCompany.companySize || 'N/A'}</p>
@@ -346,17 +346,17 @@ const VerificationRequests = () => {
                   </div>
 
                   {selectedCompany.description && (
-                    <div className="ds-detail-section ds-full-width">
+                    <div className="vr-detail-section vr-full-width">
                       <h4>About</h4>
                       <p>{selectedCompany.description}</p>
                     </div>
                   )}
 
                   {selectedCompany.locations && selectedCompany.locations.length > 0 && (
-                    <div className="ds-detail-section ds-full-width">
+                    <div className="vr-detail-section vr-full-width">
                       <h4>Locations</h4>
                       {selectedCompany.locations.map((loc, idx) => (
-                        <div key={idx} className="ds-location-item">
+                        <div key={idx} className="vr-location-item">
                           <FaMapMarkerAlt />
                           <span>
                             {loc.city}{loc.state ? `, ${loc.state}` : ''}, {loc.country}
@@ -367,23 +367,23 @@ const VerificationRequests = () => {
                     </div>
                   )}
 
-                  <div className="ds-detail-section">
+                  <div className="vr-detail-section">
                     <h4>Account Information</h4>
                     <p><FaCalendarAlt /> Registered: {formatDate(selectedCompany.createdAt)}</p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="ds-modal-footer">
+            <div className="vr-modal-footer">
               <button
-                className="ds-btn ds-btn-success"
+                className="vr-btn vr-btn-success"
                 onClick={() => handleVerifyCompany(selectedCompany)}
                 disabled={actionLoading}
               >
                 <FaCheck /> Verify Company
               </button>
               <button
-                className="ds-btn ds-btn-secondary"
+                className="vr-btn vr-btn-secondary"
                 onClick={handleCloseModal}
               >
                 Close

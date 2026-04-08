@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Student = require('../models/Student');
 const Company = require('../models/Company');
 const jwt = require('jsonwebtoken');
+const { createNotification } = require('./notificationController'); // Import notification helper
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -95,6 +96,23 @@ exports.register = async (req, res) => {
                 });
                 await student.save();
                 console.log('✅ Student profile created');
+
+                // OPTIONAL: Notify admins about new student registration
+                try {
+                    const admins = await User.find({ role: 'admin' });
+                    for (const admin of admins) {
+                        await createNotification(
+                            admin._id,
+                            'new_student',
+                            'New Student Registered',
+                            `${name} has joined as a student.`,
+                            '/admin/users'
+                        );
+                    }
+                } catch (notifError) {
+                    console.error('Error sending student registration notification:', notifError);
+                    // Do not fail registration
+                }
             } catch (studentError) {
                 console.error('❌ Error creating student profile:', studentError);
                 // Delete the user if profile creation fails
@@ -117,6 +135,23 @@ exports.register = async (req, res) => {
                 });
                 await company.save();
                 console.log('✅ Company profile created');
+
+                // NOTIFY ALL ADMINS about new company registration (pending verification)
+                try {
+                    const admins = await User.find({ role: 'admin' });
+                    for (const admin of admins) {
+                        await createNotification(
+                            admin._id,
+                            'new_company',
+                            'New Company Registration',
+                            `${name} has registered and needs verification.`,
+                            '/admin/companies'
+                        );
+                    }
+                } catch (notifError) {
+                    console.error('Error sending company registration notification:', notifError);
+                    // Do not fail registration
+                }
             } catch (companyError) {
                 console.error('❌ Error creating company profile:', companyError);
                 // Delete the user if profile creation fails

@@ -97,6 +97,7 @@ const Sidebar = ({ children }) => {
     { title: 'Manage Users', path: '/admin/users', icon: <FaUsers /> },
     { title: 'Manage Companies', path: '/admin/companies', icon: <FaBuilding /> },
     { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: 'pending' },
+    { title: 'Contact Messages', path: '/admin/contact-messages', icon: <FaEnvelope />, badge: 'new' },  // <-- ADDED
     { title: 'Reports', path: '/admin/reports', icon: <FaChartLine /> },
   ];
 

@@ -328,17 +328,17 @@ const ManageCompanies = () => {
 
   const getVerificationBadge = (verified) => {
     return verified ? (
-      <span className="ds-badge ds-badge-success"><FaCheckCircle /> Verified</span>
+      <span className="mc-badge mc-badge-success"><FaCheckCircle /> Verified</span>
     ) : (
-      <span className="ds-badge ds-badge-warning"><FaTimesCircle /> Pending</span>
+      <span className="mc-badge mc-badge-warning"><FaTimesCircle /> Pending</span>
     );
   };
 
   const getStatusBadge = (isActive) => {
     return isActive !== false ? (
-      <span className="ds-badge ds-badge-success"><FaCheckCircle /> Active</span>
+      <span className="mc-badge mc-badge-success"><FaCheckCircle /> Active</span>
     ) : (
-      <span className="ds-badge ds-badge-secondary"><FaBan /> Inactive</span>
+      <span className="mc-badge mc-badge-secondary"><FaBan /> Inactive</span>
     );
   };
 
@@ -351,8 +351,8 @@ const ManageCompanies = () => {
 
   if (loading) {
     return (
-      <div className="ds-loading-container">
-        <div className="ds-spinner"></div>
+      <div className="mc-loading-container">
+        <div className="mc-spinner"></div>
         <h4>Loading companies...</h4>
         <p>Please wait while we fetch the data</p>
       </div>
@@ -361,15 +361,15 @@ const ManageCompanies = () => {
 
   if (error) {
     return (
-      <div className="ds-error-container">
-        <FaExclamationTriangle className="ds-error-icon" />
-        <h4 className="ds-error-title">Error Loading Companies</h4>
-        <p className="ds-error-message">{error}</p>
-        <div className="ds-error-actions">
-          <button className="ds-btn ds-btn-primary" onClick={fetchCompanies}>
+      <div className="mc-error-container">
+        <FaExclamationTriangle className="mc-error-icon" />
+        <h4 className="mc-error-title">Error Loading Companies</h4>
+        <p className="mc-error-message">{error}</p>
+        <div className="mc-error-actions">
+          <button className="mc-btn mc-btn-primary" onClick={fetchCompanies}>
             <FaSyncAlt /> Try Again
           </button>
-          <button className="ds-btn ds-btn-outline" onClick={() => navigate('/login')}>
+          <button className="mc-btn mc-btn-outline" onClick={() => navigate('/login')}>
             Go to Login
           </button>
         </div>
@@ -378,64 +378,64 @@ const ManageCompanies = () => {
   }
 
   return (
-    <div className="ds-manage-companies">
+    <div className="mc-manage-companies">
       {/* Header */}
-      <div className="ds-page-header">
-        <div className="ds-header-left">
-          <div className="ds-header-icon-wrapper">
+      <div className="mc-page-header">
+        <div className="mc-header-left">
+          <div className="mc-header-icon-wrapper">
             <FaBuilding />
           </div>
           <div>
             <h1>Manage Companies</h1>
-            <p className="ds-header-subtitle">
+            <p className="mc-header-subtitle">
               {stats.total} companies total ({stats.verified} verified, {stats.pending} pending)
             </p>
           </div>
         </div>
-        <button className="ds-icon-btn" onClick={handleRefresh} title="Refresh">
+        <button className="mc-icon-btn" onClick={handleRefresh} title="Refresh">
           <FaSyncAlt />
         </button>
       </div>
 
       {/* Statistics Cards */}
-      <div className="ds-stats-grid">
-        <div className="ds-stat-card">
-          <div className="ds-stat-info">
+      <div className="mc-stats-grid">
+        <div className="mc-stat-card">
+          <div className="mc-stat-info">
             <h3>{stats.total}</h3>
             <p>Total Companies</p>
           </div>
-          <div className="ds-stat-icon ds-stat-icon-primary"><FaBuilding /></div>
+          <div className="mc-stat-icon mc-stat-icon-primary"><FaBuilding /></div>
         </div>
-        <div className="ds-stat-card">
-          <div className="ds-stat-info">
+        <div className="mc-stat-card">
+          <div className="mc-stat-info">
             <h3>{stats.verified}</h3>
             <p>Verified</p>
           </div>
-          <div className="ds-stat-icon ds-stat-icon-success"><FaCheckCircle /></div>
+          <div className="mc-stat-icon mc-stat-icon-success"><FaCheckCircle /></div>
         </div>
-        <div className="ds-stat-card">
-          <div className="ds-stat-info">
+        <div className="mc-stat-card">
+          <div className="mc-stat-info">
             <h3>{stats.pending}</h3>
             <p>Pending</p>
           </div>
-          <div className="ds-stat-icon ds-stat-icon-warning"><FaTimesCircle /></div>
+          <div className="mc-stat-icon mc-stat-icon-warning"><FaTimesCircle /></div>
         </div>
-        <div className="ds-stat-card">
-          <div className="ds-stat-info">
+        <div className="mc-stat-card">
+          <div className="mc-stat-info">
             <h3>{stats.active}</h3>
             <p>Active</p>
           </div>
-          <div className="ds-stat-icon ds-stat-icon-info"><FaUsers /></div>
+          <div className="mc-stat-icon mc-stat-icon-info"><FaUsers /></div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="ds-card ds-filters-card">
-        <div className="ds-card-body">
-          <div className="ds-filters-row">
-            <div className="ds-search-wrapper">
-              <div className="ds-search-input-group">
-                <FaSearch className="ds-search-icon" />
+      <div className="mc-card mc-filters-card">
+        <div className="mc-card-body">
+          <div className="mc-filters-row">
+            <div className="mc-search-wrapper">
+              <div className="mc-search-input-group">
+                <FaSearch className="mc-search-icon" />
                 <input
                   type="text"
                   placeholder="Search by company name, industry, email..."
@@ -444,7 +444,7 @@ const ManageCompanies = () => {
                 />
               </div>
             </div>
-            <div className="ds-filter-group">
+            <div className="mc-filter-group">
               <label>Verification</label>
               <select name="verified" value={filters.verified} onChange={handleFilterChange}>
                 <option value="">All</option>
@@ -452,7 +452,7 @@ const ManageCompanies = () => {
                 <option value="pending">Pending</option>
               </select>
             </div>
-            <div className="ds-filter-group">
+            <div className="mc-filter-group">
               <label>Status</label>
               <select name="status" value={filters.status} onChange={handleFilterChange}>
                 <option value="">All</option>
@@ -460,11 +460,11 @@ const ManageCompanies = () => {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-            <button className="ds-btn ds-btn-outline-secondary" onClick={clearFilters}>
+            <button className="mc-btn mc-btn-outline-secondary" onClick={clearFilters}>
               <FaTimes /> Clear Filters
             </button>
           </div>
-          <div className="ds-results-count">
+          <div className="mc-results-count">
             Showing <strong>{filteredCompanies.length}</strong> of <strong>{companies.length}</strong> companies
           </div>
         </div>
@@ -472,9 +472,9 @@ const ManageCompanies = () => {
 
       {/* Companies Table */}
       {filteredCompanies.length === 0 ? (
-        <div className="ds-card">
-          <div className="ds-card-body ds-empty-state">
-            <FaBuilding className="ds-empty-icon" />
+        <div className="mc-card">
+          <div className="mc-card-body mc-empty-state">
+            <FaBuilding className="mc-empty-icon" />
             <h3>No Companies Found</h3>
             <p>
               {searchTerm || filters.verified || filters.status
@@ -482,16 +482,16 @@ const ManageCompanies = () => {
                 : 'No companies have registered yet.'}
             </p>
             {(searchTerm || filters.verified || filters.status) && (
-              <button className="ds-btn ds-btn-outline-primary" onClick={clearFilters}>
+              <button className="mc-btn mc-btn-outline-primary" onClick={clearFilters}>
                 Clear Filters
               </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="ds-card">
-          <div className="ds-table-responsive">
-            <table className="ds-table">
+        <div className="mc-card">
+          <div className="mc-table-responsive">
+            <table className="mc-table">
               <thead>
                 <tr>
                   <th>Company</th>
@@ -507,33 +507,33 @@ const ManageCompanies = () => {
                 {filteredCompanies.map((company) => (
                   <tr key={company._id}>
                     <td>
-                      <div className="ds-company-info">
-                        <div className="ds-company-avatar">
+                      <div className="mc-company-info">
+                        <div className="mc-company-avatar">
                           {company.companyName?.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <strong>{company.companyName}</strong>
                           <br />
-                          <small className="ds-text-muted">ID: {company._id.slice(-6)}</small>
+                          <small className="mc-text-muted">ID: {company._id.slice(-6)}</small>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <div className="ds-industry-info">
-                        <FaIndustry className="ds-icon-sm" />
+                      <div className="mc-industry-info">
+                        <FaIndustry className="mc-icon-sm" />
                         {company.industry || 'Not specified'}
                       </div>
                     </td>
                     <td>
-                      <div className="ds-contact-info">
+                      <div className="mc-contact-info">
                         {company.contactEmail && (
-                          <div><FaEnvelope className="ds-icon-sm" /> {company.contactEmail}</div>
+                          <div><FaEnvelope className="mc-icon-sm" /> {company.contactEmail}</div>
                         )}
                         {company.contactPhone && (
-                          <div><FaPhone className="ds-icon-sm" /> {company.contactPhone}</div>
+                          <div><FaPhone className="mc-icon-sm" /> {company.contactPhone}</div>
                         )}
                         {company.website && (
-                          <div><FaGlobe className="ds-icon-sm" /> 
+                          <div><FaGlobe className="mc-icon-sm" /> 
                             <a href={company.website} target="_blank" rel="noopener noreferrer">
                               {company.website.replace(/^https?:\/\//, '')}
                             </a>
@@ -545,9 +545,9 @@ const ManageCompanies = () => {
                     <td>{getVerificationBadge(company.verified)}</td>
                     <td>{getStatusBadge(company.isActive)}</td>
                     <td>
-                      <div className="ds-action-buttons">
+                      <div className="mc-action-buttons">
                         <button
-                          className="ds-icon-btn-sm"
+                          className="mc-icon-btn-sm"
                           onClick={() => handleViewCompany(company)}
                           title="View Details"
                         >
@@ -555,7 +555,7 @@ const ManageCompanies = () => {
                         </button>
                         {!company.verified && (
                           <button
-                            className="ds-icon-btn-sm ds-success"
+                            className="mc-icon-btn-sm mc-success"
                             onClick={() => handleVerifyCompany(company.userId?._id)}
                             title="Verify Company"
                             disabled={actionLoading}
@@ -564,7 +564,7 @@ const ManageCompanies = () => {
                           </button>
                         )}
                         <button
-                          className="ds-icon-btn-sm ds-danger"
+                          className="mc-icon-btn-sm mc-danger"
                           onClick={() => handleDeleteCompany(company.userId?._id)}
                           title="Delete Company"
                           disabled={actionLoading}
@@ -583,32 +583,32 @@ const ManageCompanies = () => {
 
       {/* Company Details Modal */}
       {showDetailsModal && selectedCompany && (
-        <div className="ds-modal-overlay" onClick={handleCloseModal}>
-          <div className="ds-modal ds-modal-large" onClick={e => e.stopPropagation()}>
-            <div className="ds-modal-header">
+        <div className="mc-modal-overlay" onClick={handleCloseModal}>
+          <div className="mc-modal mc-modal-large" onClick={e => e.stopPropagation()}>
+            <div className="mc-modal-header">
               <h3><FaBuilding /> Company Details</h3>
-              <button className="ds-modal-close" onClick={handleCloseModal}>
+              <button className="mc-modal-close" onClick={handleCloseModal}>
                 <FaTimes />
               </button>
             </div>
-            <div className="ds-modal-body">
-              <div className="ds-company-detail">
-                <div className="ds-detail-header">
-                  <div className="ds-detail-avatar">
+            <div className="mc-modal-body">
+              <div className="mc-company-detail">
+                <div className="mc-detail-header">
+                  <div className="mc-detail-avatar">
                     {selectedCompany.companyName?.charAt(0).toUpperCase()}
                   </div>
-                  <div className="ds-detail-info">
+                  <div className="mc-detail-info">
                     <h3>{selectedCompany.companyName}</h3>
                     <p>{selectedCompany.industry || 'Industry not specified'}</p>
-                    <div className="ds-detail-badges">
+                    <div className="mc-detail-badges">
                       {getVerificationBadge(selectedCompany.verified)}
                       {getStatusBadge(selectedCompany.isActive)}
                     </div>
                   </div>
                 </div>
 
-                <div className="ds-detail-grid">
-                  <div className="ds-detail-section">
+                <div className="mc-detail-grid">
+                  <div className="mc-detail-section">
                     <h4>Contact Information</h4>
                     <p><FaEnvelope /> {selectedCompany.contactEmail || selectedCompany.userId?.email || 'N/A'}</p>
                     <p><FaPhone /> {selectedCompany.contactPhone || 'N/A'}</p>
@@ -617,7 +617,7 @@ const ManageCompanies = () => {
                     )}
                   </div>
 
-                  <div className="ds-detail-section">
+                  <div className="mc-detail-section">
                     <h4>Company Details</h4>
                     <p><FaIndustry /> Industry: {selectedCompany.industry || 'N/A'}</p>
                     <p><FaUsers /> Size: {selectedCompany.companySize || 'N/A'}</p>
@@ -625,17 +625,17 @@ const ManageCompanies = () => {
                   </div>
 
                   {selectedCompany.description && (
-                    <div className="ds-detail-section ds-full-width">
+                    <div className="mc-detail-section mc-full-width">
                       <h4>About</h4>
                       <p>{selectedCompany.description}</p>
                     </div>
                   )}
 
                   {selectedCompany.locations && selectedCompany.locations.length > 0 && (
-                    <div className="ds-detail-section ds-full-width">
+                    <div className="mc-detail-section mc-full-width">
                       <h4>Locations</h4>
                       {selectedCompany.locations.map((loc, idx) => (
-                        <div key={idx} className="ds-location-item">
+                        <div key={idx} className="mc-location-item">
                           <FaMapMarkerAlt />
                           <span>
                             {loc.city}{loc.state ? `, ${loc.state}` : ''}, {loc.country}
@@ -646,7 +646,7 @@ const ManageCompanies = () => {
                     </div>
                   )}
 
-                  <div className="ds-detail-section">
+                  <div className="mc-detail-section">
                     <h4>Account Information</h4>
                     <p><FaEnvelope /> User Email: {selectedCompany.userId?.email}</p>
                     <p><FaCalendarAlt /> Joined: {formatDate(selectedCompany.createdAt)}</p>
@@ -655,10 +655,10 @@ const ManageCompanies = () => {
                 </div>
               </div>
             </div>
-            <div className="ds-modal-footer">
+            <div className="mc-modal-footer">
               {!selectedCompany.verified && (
                 <button
-                  className="ds-btn ds-btn-success"
+                  className="mc-btn mc-btn-success"
                   onClick={() => handleVerifyCompany(selectedCompany.userId?._id)}
                   disabled={actionLoading}
                 >
@@ -666,7 +666,7 @@ const ManageCompanies = () => {
                 </button>
               )}
               <button
-                className="ds-btn ds-btn-secondary"
+                className="mc-btn mc-btn-secondary"
                 onClick={handleCloseModal}
               >
                 Close

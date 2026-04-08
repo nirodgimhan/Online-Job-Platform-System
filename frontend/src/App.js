@@ -12,7 +12,6 @@ import Sidebar from './Components/Sidebar';
 import Home from './Components/Home';
 import AboutUs from './Components/AboutUs';
 import Services from './Components/Services';
-import Featured from './Components/Featured';
 import ContactUs from './Components/ContactUs';
 import Login from './Components/Login';
 import Register from './Components/Register';
@@ -47,6 +46,7 @@ import ManageCompanies from './Components/admin/ManageCompanies';
 import AdminProfile from './Components/admin/AdminProfile';
 import VerificationRequests from './Components/admin/VerificationRequests';
 import AdminReports from './Components/admin/AdminReports';
+import AdminContactMessages from './Components/admin/AdminContactMessages';
 
 // ========== Layout for Authenticated Users ==========
 // This layout includes Sidebar + main content area with centered container
@@ -75,7 +75,6 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/services" element={<Services />} />
-            <Route path="/featured" element={<Featured />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -123,6 +122,8 @@ function App() {
                   <Route path="companies" element={<ManageCompanies />} />
                   <Route path="verifications" element={<VerificationRequests />} />
                   <Route path="reports" element={<AdminReports />} />
+                  <Route path="contact-messages" element={<AdminContactMessages />} />
+                  
                 </Route>
               </Route>
             </Route>

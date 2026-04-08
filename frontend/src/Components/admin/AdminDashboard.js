@@ -26,8 +26,8 @@ const AdminDashboard = () => {
     totalAdmins: 0,
     totalJobs: 0,
     activeJobs: 0,
-    totalApplications: 0,   // Placeholder – will be updated when admin endpoint is added
-    totalInterviews: 0,      // Placeholder – will be updated when admin endpoint is added
+    totalApplications: 0,
+    totalInterviews: 0,
     pendingVerifications: 0,
     verifiedCompanies: 0,
     totalPosts: 0
@@ -62,14 +62,12 @@ const AdminDashboard = () => {
     setRefreshing(true);
     setError(null);
     try {
-      // Parallel requests
       const [usersRes, jobsRes, postsRes] = await Promise.allSettled([
         API.get('/users'),
         API.get('/jobs/admin/all'),
         API.get('/posts/admin/all')
       ]);
 
-      // 1. Process users
       if (usersRes.status === 'fulfilled') {
         const usersData = usersRes.value.data;
         const allUsers = usersData.users || usersData.data?.users || [];
@@ -99,7 +97,6 @@ const AdminDashboard = () => {
         toast.error('Failed to load user data');
       }
 
-      // 2. Process jobs
       if (jobsRes.status === 'fulfilled') {
         const jobsData = jobsRes.value.data;
         const jobs = jobsData.jobs || jobsData.data?.jobs || [];
@@ -116,7 +113,6 @@ const AdminDashboard = () => {
         toast.error('Failed to load job data');
       }
 
-      // 3. Process posts
       if (postsRes.status === 'fulfilled') {
         const postsData = postsRes.value.data;
         const posts = postsData.posts || postsData.data?.posts || [];
@@ -130,9 +126,6 @@ const AdminDashboard = () => {
         console.error('Failed to fetch posts:', postsRes.reason);
         toast.error('Failed to load post data');
       }
-
-      // Applications and interviews – to be added later when admin endpoints exist
-      // For now, they remain 0
     } catch (err) {
       console.error('Error fetching admin data:', err);
       setError('Failed to load dashboard data. Please try again later.');
@@ -536,31 +529,34 @@ const AdminDashboard = () => {
       </div>
 
       {/* Quick Actions Buttons */}
-      <div className="admin-quick-actions">
-        <Link to="/admin/users" className="admin-quick-action-card">
-          <FaUsers />
-          <h6>Manage Users</h6>
-        </Link>
-        <Link to="/admin/companies" className="admin-quick-action-card">
-          <FaBuilding />
-          <h6>Manage Companies</h6>
-        </Link>
-        <Link to="/admin/jobs" className="admin-quick-action-card">
-          <FaBriefcase />
-          <h6>Manage Jobs</h6>
-        </Link>
-        <Link to="/admin/verifications" className="admin-quick-action-card">
-          <FaCheckCircle />
-          <h6>Verifications</h6>
-        </Link>
-        <Link to="/admin/interviews" className="admin-quick-action-card">
-          <FaCalendarAlt />
-          <h6>Interviews</h6>
-        </Link>
-        <Link to="/admin/reports" className="admin-quick-action-card">
-          <FaChartLine />
-          <h6>Reports</h6>
-        </Link>
+      <div className="admin-quick-actions-wrapper">
+        <h5 className="admin-quick-actions-title">Quick Actions</h5>
+        <div className="admin-quick-actions">
+          <Link to="/admin/users" className="admin-quick-action-card">
+            <FaUsers />
+            <span>Manage Users</span>
+          </Link>
+          <Link to="/admin/companies" className="admin-quick-action-card">
+            <FaBuilding />
+            <span>Manage Companies</span>
+          </Link>
+          <Link to="/admin/jobs" className="admin-quick-action-card">
+            <FaBriefcase />
+            <span>Manage Jobs</span>
+          </Link>
+          <Link to="/admin/verifications" className="admin-quick-action-card">
+            <FaCheckCircle />
+            <span>Verifications</span>
+          </Link>
+          <Link to="/admin/interviews" className="admin-quick-action-card">
+            <FaCalendarAlt />
+            <span>Interviews</span>
+          </Link>
+          <Link to="/admin/reports" className="admin-quick-action-card">
+            <FaChartLine />
+            <span>Reports</span>
+          </Link>
+        </div>
       </div>
     </div>
   );

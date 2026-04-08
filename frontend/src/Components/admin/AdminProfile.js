@@ -15,9 +15,7 @@ import {
   FaShieldAlt,
   FaUser,
   FaBuilding,
-  FaGlobe,
   FaCheckCircle,
-  FaExclamationTriangle,
   FaEye,
   FaEyeSlash,
   FaUsers,
@@ -26,7 +24,7 @@ import {
 } from 'react-icons/fa';
 
 const AdminProfile = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,7 +35,6 @@ const AdminProfile = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // Welcome header stats
   const [welcomeStats, setWelcomeStats] = useState({
     totalUsers: 0,
     totalCompanies: 0,
@@ -279,7 +276,8 @@ const AdminProfile = () => {
     setSaving(true);
 
     try {
-      const response = await API.put(`/users/${user.id}`, {
+      const userId = user._id || user.id;
+      const response = await API.put(`/users/${userId}`, {
         name: formData.name,
         phoneNumber: formData.phoneNumber,
         address: formData.address
@@ -288,9 +286,13 @@ const AdminProfile = () => {
       if (response.data.success) {
         const updatedUser = { ...user, ...response.data.user };
         localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (setUser) setUser(updatedUser);
         setProfile(updatedUser);
         setEditing(false);
         toast.success('Profile updated successfully!');
+        await fetchProfile();
+      } else {
+        toast.error(response.data.message || 'Failed to update profile');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -361,10 +363,10 @@ const AdminProfile = () => {
 
   const getPasswordStrengthColor = () => {
     const score = passwordStrength.score;
-    if (score <= 2) return 'ap-danger';
-    if (score <= 3) return 'ap-warning';
-    if (score <= 4) return 'ap-info';
-    return 'ap-success';
+    if (score <= 2) return 'admin-profile-danger';
+    if (score <= 3) return 'admin-profile-warning';
+    if (score <= 4) return 'admin-profile-info';
+    return 'admin-profile-success';
   };
 
   const getPasswordStrengthText = () => {
@@ -375,160 +377,154 @@ const AdminProfile = () => {
     return 'Strong';
   };
 
-  const getInitials = (name) => {
-    if (!name) return 'A';
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   if (loading) {
     return (
-      <div className="ap-loading-container">
-        <div className="ap-spinner"></div>
+      <div className="admin-profile-loading-container">
+        <div className="admin-profile-spinner"></div>
         <p>Loading profile...</p>
       </div>
     );
   }
 
   return (
-    <div className="ap-container">
-      {/* Welcome Header with Edit Profile Button */}
-      <div className="ds-welcome-header">
-        <div className="ds-welcome-content">
-          <div className="ds-user-avatar-large">
+    <div className="admin-profile-container">
+      {/* Welcome Header */}
+      <div className="admin-profile-welcome-header">
+        <div className="admin-profile-welcome-content">
+          <div className="admin-profile-user-avatar-large">
             {user?.profilePicture ? (
-              <img src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} alt={user.name} className="ds-avatar-image" />
+              <img src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} alt={user.name} className="admin-profile-avatar-image" />
             ) : (
-              <div className="ds-avatar-placeholder">
+              <div className="admin-profile-avatar-placeholder">
                 <FaShieldAlt size={32} />
               </div>
             )}
           </div>
-          <div className="ds-welcome-text">
+          <div className="admin-profile-welcome-text">
             <h2>Welcome back, {user?.name?.split(' ')[0] || 'Admin'}! 👑</h2>
             <p>Manage your profile, security, and notification preferences.</p>
-            <div className="ds-user-meta">
+            <div className="admin-profile-user-meta">
               <span><FaUsers /> {welcomeStats.totalUsers} total users</span>
               <span><FaBuilding /> {welcomeStats.totalCompanies} companies</span>
               <span><FaBriefcase /> {welcomeStats.totalJobs} jobs posted</span>
             </div>
           </div>
         </div>
-        <div className="ds-welcome-actions">
-          {/* Refresh Stats Button */}
-          <button className="ds-icon-btn" onClick={fetchWelcomeStats} title="Refresh Stats">
+        <div className="admin-profile-welcome-actions">
+          <button className="admin-profile-icon-btn" onClick={fetchWelcomeStats} title="Refresh Stats">
             <FaSyncAlt />
           </button>
-          {/* Edit Profile Button */}
           {!editing && !changingPassword && (
-            <button className="ap-btn ap-btn-primary" onClick={() => setEditing(true)} style={{ marginLeft: '0.5rem' }}>
+            <button className="admin-profile-btn admin-profile-btn-primary" onClick={() => setEditing(true)} style={{ marginLeft: '0.5rem' }}>
               <FaEdit /> Edit Profile
             </button>
           )}
         </div>
       </div>
 
-      <div className="ap-grid">
+      <div className="admin-profile-grid">
         {/* Left Column */}
-        <div className="ap-col ap-col-left">
+        <div className="admin-profile-col admin-profile-col-left">
           {/* Admin Info Card */}
-          <div className="ap-card ap-info-card">
-            <div className="ap-card-body">
-              <div className="ap-avatar">
+          <div className="admin-profile-card admin-profile-info-card">
+            <div className="admin-profile-card-body">
+              <div className="admin-profile-avatar">
                 <FaUserShield size={50} />
               </div>
-              <h4 className="ap-name">{user?.name}</h4>
-              <p className="ap-email">{user?.email}</p>
-              <span className="ap-badge ap-badge-admin">Administrator</span>
+              <div className="admin-profile-name-badge">
+                <h4 className="admin-profile-name">{user?.name}</h4>
+                <span className="admin-profile-badge admin-profile-badge-admin">Administrator</span>
+              </div>
+              <p className="admin-profile-email">{user?.email}</p>
               
-              <hr className="ap-divider" />
+              <hr className="admin-profile-divider" />
               
-              <div className="ap-info-list">
+              <div className="admin-profile-info-list">
                 <p><FaPhone /> <strong>Phone:</strong> {user?.phoneNumber || 'Not provided'}</p>
-                <p><FaMapMarkerAlt /> <strong>Location:</strong> {user?.address?.city || 'Not provided'}, {user?.address?.country || ''}</p>
+                <p><FaMapMarkerAlt /> <strong>Location:</strong> {
+                  (user?.address?.city || user?.address?.country) 
+                    ? `${user?.address?.city || ''}${user?.address?.city && user?.address?.country ? ', ' : ''}${user?.address?.country || ''}`
+                    : 'Not provided'
+                }</p>
                 <p><FaEnvelope /> <strong>Member since:</strong> {new Date(user?.createdAt || Date.now()).toLocaleDateString()}</p>
               </div>
             </div>
           </div>
 
           {/* Account Statistics Card */}
-          <div className="ap-card ap-stats-card">
-            <div className="ap-card-header">
+          <div className="admin-profile-card admin-profile-stats-card">
+            <div className="admin-profile-card-header">
               <h5>Account Statistics</h5>
             </div>
-            <div className="ap-card-body">
-              <div className="ap-stats-list">
-                <div><span>Account Status</span><span className="ap-badge ap-badge-success">Active</span></div>
+            <div className="admin-profile-card-body">
+              <div className="admin-profile-stats-list">
+                <div><span>Account Status</span><span className="admin-profile-badge admin-profile-badge-success">Active</span></div>
                 <div><span>Last Login</span><span>Today</span></div>
-                <div><span>Security Level</span><span className="ap-badge ap-badge-info">High</span></div>
-                <div><span>2FA Status</span><span className="ap-badge ap-badge-warning">Not Enabled</span></div>
+                <div><span>Security Level</span><span className="admin-profile-badge admin-profile-badge-info">High</span></div>
+                <div><span>2FA Status</span><span className="admin-profile-badge admin-profile-badge-warning">Not Enabled</span></div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Right Column */}
-        <div className="ap-col ap-col-right">
+        <div className="admin-profile-col admin-profile-col-right">
           {/* Edit Profile Form */}
           {editing && (
-            <div className="ap-card ap-form-card">
-              <div className="ap-card-header">
+            <div className="admin-profile-card admin-profile-form-card">
+              <div className="admin-profile-card-header">
                 <h5><FaEdit /> Edit Profile</h5>
-                <button className="ap-btn ap-btn-outline" onClick={() => setEditing(false)}>
+                <button className="admin-profile-btn admin-profile-btn-outline" onClick={() => setEditing(false)}>
                   <FaTimes /> Cancel
                 </button>
               </div>
-              <div className="ap-card-body">
+              <div className="admin-profile-card-body">
                 <form onSubmit={handleProfileSubmit}>
-                  <div className="ap-form-row">
-                    <div className="ap-form-group">
+                  <div className="admin-profile-form-row">
+                    <div className="admin-profile-form-group">
                       <label><FaUser /> Full Name *</label>
                       <input type="text" name="name" value={formData.name} onChange={handleInputChange} required />
                     </div>
-                    <div className="ap-form-group">
+                    <div className="admin-profile-form-group">
                       <label><FaEnvelope /> Email</label>
                       <input type="email" value={formData.email} disabled readOnly />
                       <small>Email cannot be changed</small>
                     </div>
                   </div>
 
-                  <div className="ap-form-group">
+                  <div className="admin-profile-form-group">
                     <label><FaPhone /> Phone Number</label>
                     <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} placeholder="Enter phone number" />
                   </div>
 
                   <h6>Address</h6>
-                  <div className="ap-form-row">
-                    <div className="ap-form-group">
+                  <div className="admin-profile-form-row">
+                    <div className="admin-profile-form-group">
                       <label>Street Address</label>
                       <input type="text" name="address.street" value={formData.address.street} onChange={handleInputChange} />
                     </div>
-                    <div className="ap-form-group">
+                    <div className="admin-profile-form-group">
                       <label>City</label>
                       <input type="text" name="address.city" value={formData.address.city} onChange={handleInputChange} />
                     </div>
                   </div>
-                  <div className="ap-form-row">
-                    <div className="ap-form-group">
+                  <div className="admin-profile-form-row">
+                    <div className="admin-profile-form-group">
                       <label>State</label>
                       <input type="text" name="address.state" value={formData.address.state} onChange={handleInputChange} />
                     </div>
-                    <div className="ap-form-group">
+                    <div className="admin-profile-form-group">
                       <label>Country</label>
                       <input type="text" name="address.country" value={formData.address.country} onChange={handleInputChange} />
                     </div>
-                    <div className="ap-form-group">
+                    <div className="admin-profile-form-group">
                       <label>Zip Code</label>
                       <input type="text" name="address.zipCode" value={formData.address.zipCode} onChange={handleInputChange} />
                     </div>
                   </div>
 
-                  <div className="ap-form-actions">
-                    <button type="submit" className="ap-btn ap-btn-primary" disabled={saving}>
+                  <div className="admin-profile-form-actions">
+                    <button type="submit" className="admin-profile-btn admin-profile-btn-primary" disabled={saving}>
                       {saving ? 'Saving...' : <><FaSave /> Save Changes</>}
                     </button>
                   </div>
@@ -537,73 +533,78 @@ const AdminProfile = () => {
             </div>
           )}
 
-          {/* Security / Password Section */}
+          {/* Security Section */}
           {!editing && (
-            <div className="ap-card ap-security-card">
-              <div className="ap-card-header">
+            <div className="admin-profile-card admin-profile-security-card">
+              <div className="admin-profile-card-header">
                 <h5><FaKey /> Security</h5>
                 {!changingPassword && (
-                  <button className="ap-btn ap-btn-outline" onClick={() => setChangingPassword(true)}>
+                  <button className="admin-profile-btn admin-profile-btn-outline" onClick={() => setChangingPassword(true)}>
                     Change Password
                   </button>
                 )}
               </div>
 
               {changingPassword ? (
-                <div className="ap-card-body">
+                <div className="admin-profile-card-body">
                   <form onSubmit={handlePasswordSubmit}>
-                    <div className="ap-form-group">
+                    <div className="admin-profile-form-group">
                       <label>Current Password</label>
-                      <div className="ap-input-group">
+                      <div className="admin-profile-input-group">
                         <input type={showCurrentPassword ? "text" : "password"} name="currentPassword" value={passwordData.currentPassword} onChange={handlePasswordChange} />
                         <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
                           {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
                         </button>
                       </div>
-                      {passwordErrors.currentPassword && <div className="ap-error">{passwordErrors.currentPassword}</div>}
+                      {passwordErrors.currentPassword && <div className="admin-profile-error">{passwordErrors.currentPassword}</div>}
                     </div>
 
-                    <div className="ap-form-group">
+                    <div className="admin-profile-form-group">
                       <label>New Password</label>
-                      <div className="ap-input-group">
+                      <div className="admin-profile-input-group">
                         <input type={showNewPassword ? "text" : "password"} name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} />
                         <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}>
                           {showNewPassword ? <FaEyeSlash /> : <FaEye />}
                         </button>
                       </div>
-                      {passwordErrors.newPassword && <div className="ap-error">{passwordErrors.newPassword}</div>}
+                      {passwordErrors.newPassword && <div className="admin-profile-error">{passwordErrors.newPassword}</div>}
                       {passwordData.newPassword && (
-                        <div className="ap-password-strength">
-                          <div className="ap-strength-bar">
-                            <div className="ap-strength-progress" style={{ width: `${(passwordStrength.score / 5) * 100}%`, backgroundColor: `var(--ap-${getPasswordStrengthColor()})` }}></div>
+                        <div className="admin-profile-password-strength">
+                          <div className="admin-profile-strength-bar">
+                            <div className="admin-profile-strength-progress" style={{ 
+                              width: `${(passwordStrength.score / 5) * 100}%`, 
+                              backgroundColor: getPasswordStrengthColor() === 'admin-profile-danger' ? '#dc2626' : 
+                                             getPasswordStrengthColor() === 'admin-profile-warning' ? '#f59e0b' : 
+                                             getPasswordStrengthColor() === 'admin-profile-info' ? '#3b82f6' : '#10b981' 
+                            }}></div>
                           </div>
-                          <div className="ap-strength-text">
+                          <div className="admin-profile-strength-text">
                             <span>Password Strength: </span>
-                            <span className={`ap-${getPasswordStrengthColor()}`}>{getPasswordStrengthText()}</span>
+                            <span className={getPasswordStrengthColor()}>{getPasswordStrengthText()}</span>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    <div className="ap-form-group">
+                    <div className="admin-profile-form-group">
                       <label>Confirm New Password</label>
-                      <div className="ap-input-group">
+                      <div className="admin-profile-input-group">
                         <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} />
                         <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                           {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                         </button>
                       </div>
-                      {passwordErrors.confirmPassword && <div className="ap-error">{passwordErrors.confirmPassword}</div>}
+                      {passwordErrors.confirmPassword && <div className="admin-profile-error">{passwordErrors.confirmPassword}</div>}
                       {passwordData.newPassword && passwordData.confirmPassword && passwordData.newPassword === passwordData.confirmPassword && (
-                        <div className="ap-success"><FaCheckCircle /> Passwords match</div>
+                        <div className="admin-profile-success"><FaCheckCircle /> Passwords match</div>
                       )}
                     </div>
 
-                    <div className="ap-form-actions">
-                      <button type="submit" className="ap-btn ap-btn-primary" disabled={saving}>
+                    <div className="admin-profile-form-actions">
+                      <button type="submit" className="admin-profile-btn admin-profile-btn-primary" disabled={saving}>
                         {saving ? 'Updating...' : 'Update Password'}
                       </button>
-                      <button type="button" className="ap-btn ap-btn-outline" onClick={() => {
+                      <button type="button" className="admin-profile-btn admin-profile-btn-outline" onClick={() => {
                         setChangingPassword(false);
                         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                         setPasswordErrors({});
@@ -614,8 +615,8 @@ const AdminProfile = () => {
                   </form>
                 </div>
               ) : (
-                <div className="ap-security-info">
-                  <FaCheckCircle className="ap-text-success" /> Password last changed: {new Date().toLocaleDateString()}
+                <div className="admin-profile-security-info">
+                  <FaCheckCircle className="admin-profile-text-success" /> Password last changed: {new Date().toLocaleDateString()}
                 </div>
               )}
             </div>
@@ -623,14 +624,14 @@ const AdminProfile = () => {
 
           {/* Notification Preferences */}
           {!editing && !changingPassword && (
-            <div className="ap-card ap-notifications-card">
-              <div className="ap-card-header">
+            <div className="admin-profile-card admin-profile-notifications-card">
+              <div className="admin-profile-card-header">
                 <h5><FaBell /> Notification Preferences</h5>
               </div>
-              <div className="ap-notifications-list">
+              <div className="admin-profile-notifications-list">
                 {Object.entries(formData.notifications).map(([key, value]) => (
-                  <div key={key} className="ap-notification-item">
-                    <div className="ap-switch">
+                  <div key={key} className="admin-profile-notification-item">
+                    <div className="admin-profile-switch">
                       <input
                         type="checkbox"
                         id={`notif-${key}`}
@@ -658,8 +659,8 @@ const AdminProfile = () => {
                   </div>
                 ))}
               </div>
-              <div className="ap-form-actions" style={{ padding: '0 1.5rem 1.5rem' }}>
-                <button className="ap-btn ap-btn-primary" onClick={() => toast.success('Notification preferences saved!')}>
+              <div className="admin-profile-form-actions" style={{ padding: '0 1.5rem 1.5rem' }}>
+                <button className="admin-profile-btn admin-profile-btn-primary" onClick={() => toast.success('Notification preferences saved!')}>
                   Save Preferences
                 </button>
               </div>

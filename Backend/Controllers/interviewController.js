@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 const Interview = require('../Models/Interview');
-const Application = require('../models/Application');
+const Application = require('../Models/Application');
+const User = require('../models/User'); // added for user lookups
+const { createNotification } = require('./notificationController'); // added notification helper
 
-// Helper function to get relative time (same as in routes)
+// Helper function to get relative time
 const getRelativeTime = (dateString) => {
   if (!dateString) return '';
   try {
@@ -80,7 +82,6 @@ const scheduleInterview = async (req, res) => {
 
     // Get models
     const Job = mongoose.model('Job');
-    const User = mongoose.model('User');
     
     // Get job details
     const job = await Job.findById(application.jobId);
@@ -163,6 +164,32 @@ const scheduleInterview = async (req, res) => {
     };
     application.updatedAt = new Date();
     await application.save();
+
+    // ========== NOTIFICATION: Notify student ==========
+    try {
+      await createNotification(
+        student._id,
+        'interview_scheduled',
+        'Interview Scheduled',
+        `Interview for ${job.title} on ${interviewDate.toLocaleDateString()} at ${interviewDate.toLocaleTimeString()}`,
+        `/student/interviews/${interview._id}`
+      );
+    } catch (notifError) {
+      console.error('Error sending student interview notification:', notifError);
+    }
+
+    // ========== NOTIFICATION: Notify company ==========
+    try {
+      await createNotification(
+        req.user.id,
+        'interview_scheduled',
+        'Interview Scheduled',
+        `Interview with ${student.name} for ${job.title} on ${interviewDate.toLocaleDateString()}`,
+        `/company/interviews/${interview._id}`
+      );
+    } catch (notifError) {
+      console.error('Error sending company interview notification:', notifError);
+    }
 
     // Return populated interview
     const populatedInterview = await Interview.findById(interview._id)
@@ -304,6 +331,8 @@ const updateInterview = async (req, res) => {
     }
 
     const { scheduledDate, duration, mode, meetingLink, location, notes } = req.body;
+    let dateChanged = false;
+    let oldDate = interview.scheduledDate;
 
     if (scheduledDate) {
       const newDate = new Date(scheduledDate);
@@ -313,6 +342,7 @@ const updateInterview = async (req, res) => {
           message: 'Interview date must be in the future'
         });
       }
+      if (newDate.getTime() !== oldDate.getTime()) dateChanged = true;
       interview.scheduledDate = newDate;
     }
     
@@ -324,6 +354,25 @@ const updateInterview = async (req, res) => {
 
     interview.updatedAt = new Date();
     await interview.save();
+
+    // If date changed, notify student
+    if (dateChanged) {
+      const student = await User.findById(interview.studentId);
+      const job = await mongoose.model('Job').findById(interview.jobId);
+      if (student && job) {
+        try {
+          await createNotification(
+            student._id,
+            'interview_scheduled',
+            'Interview Rescheduled',
+            `Your interview for ${job.title} has been moved to ${interview.scheduledDate.toLocaleDateString()}`,
+            `/student/interviews/${interview._id}`
+          );
+        } catch (notifError) {
+          console.error('Error sending reschedule notification:', notifError);
+        }
+      }
+    }
 
     // Reload with populated fields
     const updatedInterview = await Interview.findById(interview._id)
@@ -384,6 +433,23 @@ const confirmInterview = async (req, res) => {
     interview.status = 'confirmed';
     interview.updatedAt = new Date();
     await interview.save();
+
+    // Notify company that student confirmed
+    const company = await User.findById(interview.companyId);
+    const job = await mongoose.model('Job').findById(interview.jobId);
+    if (company && job) {
+      try {
+        await createNotification(
+          company._id,
+          'interview_scheduled',
+          'Interview Confirmed',
+          `Student ${req.user.name} confirmed the interview for ${job.title}`,
+          `/company/interviews/${interview._id}`
+        );
+      } catch (notifError) {
+        console.error('Error sending confirmation notification:', notifError);
+      }
+    }
 
     // Reload with populated fields
     const updatedInterview = await Interview.findById(interview._id)
@@ -467,6 +533,32 @@ const addFeedback = async (req, res) => {
       await application.save();
     }
 
+    // Notify student about interview feedback/outcome
+    const student = await User.findById(interview.studentId);
+    const job = await mongoose.model('Job').findById(interview.jobId);
+    if (student && job) {
+      let title = 'Interview Completed';
+      let message = `Interview for ${job.title} has been completed. `;
+      if (recommendation === 'Hire') {
+        message += 'Congratulations! You have been selected for the position.';
+      } else if (recommendation === 'Reject') {
+        message += 'Thank you for your interest. Unfortunately, you were not selected.';
+      } else {
+        message += 'Check your application status for updates.';
+      }
+      try {
+        await createNotification(
+          student._id,
+          'interview_feedback',
+          title,
+          message,
+          `/student/interviews/${interview._id}`
+        );
+      } catch (notifError) {
+        console.error('Error sending feedback notification:', notifError);
+      }
+    }
+
     // Reload with populated fields
     const updatedInterview = await Interview.findById(interview._id)
       .populate('jobId', 'title description location employmentType salary')
@@ -518,13 +610,32 @@ const cancelInterview = async (req, res) => {
     }
 
     const { reason } = req.body;
+    const cancelledBy = req.user.id === interview.companyId.toString() ? 'Company' : 'Student';
     
     interview.status = 'cancelled';
     if (reason) {
-      interview.notes = `Cancelled: ${reason}\n\n${interview.notes || ''}`;
+      interview.notes = `Cancelled by ${cancelledBy}: ${reason}\n\n${interview.notes || ''}`;
     }
     interview.updatedAt = new Date();
     await interview.save();
+
+    // Notify the other party
+    const otherPartyId = req.user.id === interview.companyId.toString() ? interview.studentId : interview.companyId;
+    const otherParty = await User.findById(otherPartyId);
+    const job = await mongoose.model('Job').findById(interview.jobId);
+    if (otherParty && job) {
+      try {
+        await createNotification(
+          otherParty._id,
+          'interview_cancelled',
+          'Interview Cancelled',
+          `${cancelledBy} cancelled the interview for ${job.title}${reason ? `: ${reason}` : ''}`,
+          `/interviews`
+        );
+      } catch (notifError) {
+        console.error('Error sending cancellation notification:', notifError);
+      }
+    }
 
     res.json({
       success: true,

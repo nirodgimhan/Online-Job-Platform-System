@@ -46,30 +46,33 @@ const Login = () => {
   };
 
   return (
-    <div className="ds-login-container">
-      <div className="ds-login-wrapper">
+    <div className="lg-login-container">
+      <div className="lg-login-wrapper">
         {/* Left Side - Sign In Form */}
-        <div className="ds-login-form-side">
-          <div className="ds-login-content">
-            <h2 className="ds-login-title">Welcome Back!</h2>
-            <p className="ds-login-subtitle">To keep connected with us please login with your personal info</p>
+        <div className="lg-login-form-side">
+          <div className="lg-login-content">
+            <h2 className="lg-login-title">Welcome Back!</h2>
+            <p className="lg-login-subtitle">To keep connected with us please login with your personal info</p>
             
-            <button className="ds-social-btn ds-social-facebook">
-              <FaFacebookF /> Sign in with Facebook
-            </button>
-            <button className="ds-social-btn ds-social-google">
-              <FaGoogle /> Sign in with Google
-            </button>
-            <button className="ds-social-btn ds-social-linkedin">
-              <FaLinkedinIn /> Sign in with LinkedIn
-            </button>
+            {/* Social Icons - Inline Centered */}
+            <div className="lg-social-icons">
+              <button className="lg-social-icon lg-social-facebook">
+                <FaFacebookF />
+              </button>
+              <button className="lg-social-icon lg-social-google">
+                <FaGoogle />
+              </button>
+              <button className="lg-social-icon lg-social-linkedin">
+                <FaLinkedinIn />
+              </button>
+            </div>
             
-            <div className="ds-login-divider">
+            <div className="lg-login-divider">
               <span>or use your email for registration</span>
             </div>
             
-            <form onSubmit={handleSubmit} className="ds-login-form">
-              <div className="ds-form-group">
+            <form onSubmit={handleSubmit} className="lg-login-form">
+              <div className="lg-form-group">
                 <input
                   type="email"
                   name="email"
@@ -77,11 +80,11 @@ const Login = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="ds-form-input"
+                  className="lg-form-input"
                 />
               </div>
               
-              <div className="ds-form-group">
+              <div className="lg-form-group">
                 <input
                   type="password"
                   name="password"
@@ -89,13 +92,13 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="ds-form-input"
+                  className="lg-form-input"
                 />
               </div>
               
               <button 
                 type="submit" 
-                className="ds-login-btn"
+                className="lg-login-btn"
                 disabled={loading}
               >
                 {loading ? 'Signing In...' : 'SIGN IN'}
@@ -105,11 +108,11 @@ const Login = () => {
         </div>
         
         {/* Right Side - Sign Up Info */}
-        <div className="ds-signup-side">
-          <div className="ds-signup-content">
-            <h2 className="ds-signup-title">Welcome </h2>
-            <p className="ds-signup-subtitle">Create Account</p>
-            <Link to="/register" className="ds-signup-btn">
+        <div className="lg-signup-side">
+          <div className="lg-signup-content">
+            <h2 className="lg-signup-title">Welcome</h2>
+            <p className="lg-signup-subtitle">Create Account</p>
+            <Link to="/register" className="lg-signup-btn">
               SIGN UP
             </Link>
           </div>

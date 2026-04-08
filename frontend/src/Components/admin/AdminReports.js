@@ -47,8 +47,8 @@ const AdminReports = () => {
       const [usersRes, jobsRes, applicationsRes, interviewsRes] = await Promise.allSettled([
         API.get('/users'),
         API.get('/jobs/admin/all'),
-        API.get('/applications/company'), // This returns applications for a company, not aggregated; we need admin endpoint. Use fallback.
-        API.get('/interviews/company')    // Same issue.
+        API.get('/applications/company'),
+        API.get('/interviews/company')
       ]);
 
       // Process users
@@ -76,7 +76,6 @@ const AdminReports = () => {
           active: jobs.filter(j => j.status === 'active').length,
           closed: jobs.filter(j => j.status === 'closed').length
         });
-        // For job trends, we need posts over time – simulate by grouping by date
         const trends = {};
         jobs.forEach(job => {
           const date = new Date(job.createdAt).toISOString().slice(0, 10);
@@ -88,20 +87,14 @@ const AdminReports = () => {
         console.warn('Jobs fetch failed');
       }
 
-      // For applications, we don't have an admin endpoint. We'll use the company endpoint but that gives per-company.
-      // Instead, we'll fetch all jobs and count applications from them (expensive but works).
+      // Applications aggregation
       let totalApps = 0;
       let statusCounts = { pending: 0, reviewed: 0, shortlisted: 0, interview: 0, accepted: 0, rejected: 0 };
       try {
-        // Get all jobs (admin endpoint)
         const allJobsRes = await API.get('/jobs/admin/all');
         const allJobs = allJobsRes.data.jobs || [];
-        // Sum up applicantsCount from each job
         totalApps = allJobs.reduce((sum, job) => sum + (job.applicantsCount || 0), 0);
-        // For status distribution, we'd need application-level data. Without an admin endpoint, we can't get per-status.
-        // We'll use mock data for now.
         if (totalApps > 0) {
-          // Create realistic mock percentages (they don't need to add to totalApps exactly, but for visualization)
           statusCounts = {
             pending: Math.floor(totalApps * 0.4),
             reviewed: Math.floor(totalApps * 0.25),
@@ -110,12 +103,8 @@ const AdminReports = () => {
             accepted: Math.floor(totalApps * 0.05),
             rejected: Math.floor(totalApps * 0.05)
           };
-        } else {
-          // If no applications, keep zeros
-          statusCounts = { pending: 0, reviewed: 0, shortlisted: 0, interview: 0, accepted: 0, rejected: 0 };
         }
         setApplicationsStats({ total: totalApps, ...statusCounts });
-        // Build data for pie chart, filtering out zero values to avoid empty chart
         const pieData = Object.entries(statusCounts)
           .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
           .filter(item => item.value > 0);
@@ -126,7 +115,7 @@ const AdminReports = () => {
         setApplicationStatusData([]);
       }
 
-      // For interviews, similar issue – use fallback
+      // Interviews
       try {
         const interviewsResAll = await API.get('/interviews');
         const interviews = interviewsResAll.data.interviews || [];
@@ -141,7 +130,7 @@ const AdminReports = () => {
         setInterviewsStats({ total: 0, upcoming: 0, completed: 0, cancelled: 0 });
       }
 
-      // Top companies by number of jobs
+      // Top companies
       if (jobsRes.status === 'fulfilled') {
         const jobs = jobsRes.value.data.jobs || [];
         const companyMap = {};
@@ -156,7 +145,7 @@ const AdminReports = () => {
         setTopCompanies(top);
       }
 
-      // Ratings data – if we had feedback ratings, we could compute. For now, mock.
+      // Ratings mock
       setRatingsData([
         { name: 'Excellent', value: 25 },
         { name: 'Good', value: 40 },
@@ -296,7 +285,7 @@ const AdminReports = () => {
           </div>
         </div>
 
-        {/* Application Status Distribution - Fixed */}
+        {/* Application Status Distribution */}
         <div className="ar-chart-card">
           <div className="ar-chart-header">
             <h3>Application Status Distribution</h3>
@@ -383,7 +372,7 @@ const AdminReports = () => {
           </div>
         </div>
 
-        {/* Additional Comparison: Active vs Closed Jobs */}
+        {/* Job Status Overview */}
         <div className="ar-chart-card">
           <div className="ar-chart-header">
             <h3>Job Status Overview</h3>
@@ -468,22 +457,6 @@ const AdminReports = () => {
           </div>
         </div>
       </div>
-
-      {/* Add a CSS class for empty chart message */}
-      <style jsx>{`
-        .ar-empty-chart {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          min-height: 250px;
-          color: #94a3b8;
-          font-size: 0.9rem;
-          text-align: center;
-          background: #f8fafc;
-          border-radius: 12px;
-        }
-      `}</style>
     </div>
   );
 };
