@@ -31101,7 +31101,7 @@ body {
 
 
 
-/* Dashboard.css - Professional Job Platform Dashboard */
+/* Dashboard.css - Professional Job Platform Dashboard (Compact Stats Cards) */
 
 /* ==================== Global & Loading ==================== */
 .jobdash-loading-container {
@@ -31153,7 +31153,6 @@ body {
 /* ==================== Common Layout ==================== */
 .jobdash-student-dashboard,
 .jobdash-company-dashboard {
-
   margin: 0 auto;
   padding: 24px;
   background: #f8fafc;
@@ -31176,7 +31175,7 @@ body {
   min-width: 280px;
 }
 
-/* Welcome Header with Background Image */
+/* Welcome Header */
 .jobdash-welcome-header {
   position: relative;
   background-size: cover;
@@ -31370,98 +31369,70 @@ body {
   color: #94a3b8;
 }
 
-/* ==================== Stats Cards - Smaller Size ==================== */
+/* ==================== STATS CARDS - REDUCED HEIGHT ==================== */
 .jobdash-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
   margin-bottom: 24px;
 }
 
 @media (max-width: 992px) {
   .jobdash-stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    gap: 12px;
   }
 }
-
 @media (max-width: 480px) {
   .jobdash-stats-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 10px;
   }
 }
 
 .jobdash-stat-card {
   background: white;
-  border-radius: 16px;
-  padding: 12px 16px;
+  border-radius: 14px;
+  padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
-  width: 100%;
-  min-width: 0;
+  transition: all 0.2s ease;
+  min-height: 60px;
 }
 
 .jobdash-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
-}
-
-.jobdash-stat-info {
-  flex: 1;
-  min-width: 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
 }
 
 .jobdash-stat-info h3 {
   margin: 0 0 2px 0;
-  font-size: 22px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
   line-height: 1.2;
-  word-break: break-word;
 }
 
 .jobdash-stat-info p {
   margin: 0;
   color: #64748b;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (max-width: 768px) {
-  .jobdash-stat-info h3 {
-    font-size: 20px;
-  }
-  .jobdash-stat-info p {
-    font-size: 11px;
-    white-space: normal;
-  }
+  font-size: 10px;
+  font-weight: 500;
 }
 
 .jobdash-stat-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 16px;
   color: white;
   flex-shrink: 0;
-}
-
-@media (max-width: 768px) {
-  .jobdash-stat-icon {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
-  }
 }
 
 .jobdash-stat-icon-primary { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
@@ -31476,7 +31447,7 @@ body {
   border: 1px solid #e2e8f0;
   margin-bottom: 24px;
   overflow: hidden;
-  transition: all 0.2s;
+  transition: box-shadow 0.2s;
 }
 
 .jobdash-card-header {
@@ -31485,13 +31456,13 @@ body {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #f1f5f9;
-  background: #fefefe;
+  background: white;
 }
 
 .jobdash-card-header h5 {
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
   display: flex;
   align-items: center;
@@ -31532,13 +31503,15 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 13px;
   color: #334155;
+  font-weight: 500;
 }
 
 .jobdash-status-value {
-  font-weight: 600;
-  color: #1e293b;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 15px;
 }
 
 .jobdash-text-success { color: #10b981; }
@@ -31554,6 +31527,7 @@ body {
   align-items: center;
   padding: 12px 0;
   border-bottom: 1px solid #f1f5f9;
+  gap: 12px;
 }
 
 .jobdash-recommended-item:last-child {
@@ -31567,20 +31541,20 @@ body {
 .jobdash-recommended-content h6 {
   margin: 0 0 4px 0;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
 }
 
 .jobdash-recommended-content p {
   margin: 0 0 6px 0;
   font-size: 12px;
-  color: #64748b;
+  color: #475569;
 }
 
 .jobdash-job-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   font-size: 11px;
   color: #64748b;
   align-items: center;
@@ -31598,7 +31572,7 @@ body {
   padding: 3px 8px;
   border-radius: 20px;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .jobdash-badge-primary { background: #e0e7ff; color: #4f46e5; }
@@ -31612,13 +31586,13 @@ body {
 .jobdash-pipeline-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
 .jobdash-pipeline-item {
   text-align: center;
-  padding: 10px;
+  padding: 12px;
   background: #f8fafc;
   border-radius: 14px;
 }
@@ -31626,7 +31600,7 @@ body {
 .jobdash-pipeline-item h3 {
   margin: 0 0 4px 0;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 800;
   color: #0f172a;
 }
 
@@ -31640,7 +31614,7 @@ body {
 .jobdash-distribution {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .jobdash-distribution-header {
@@ -31649,18 +31623,19 @@ body {
   font-size: 12px;
   margin-bottom: 5px;
   color: #334155;
+  font-weight: 500;
 }
 
 .jobdash-progress {
   background: #e2e8f0;
-  border-radius: 10px;
+  border-radius: 20px;
   height: 6px;
   overflow: hidden;
 }
 
 .jobdash-progress-bar {
   height: 100%;
-  border-radius: 10px;
+  border-radius: 20px;
   transition: width 0.4s ease;
 }
 
@@ -31680,7 +31655,7 @@ body {
   align-items: center;
   padding: 14px;
   background: #f8fafc;
-  border-radius: 14px;
+  border-radius: 16px;
   transition: all 0.2s;
 }
 
@@ -31690,8 +31665,8 @@ body {
 
 .jobdash-interview-info h6 {
   margin: 0 0 4px 0;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: #0f172a;
 }
 
@@ -31699,6 +31674,7 @@ body {
   margin: 0 0 6px 0;
   font-size: 12px;
   color: #4f46e5;
+  font-weight: 500;
 }
 
 .jobdash-interview-meta {
@@ -31733,7 +31709,7 @@ body {
   padding: 8px 16px;
   border-radius: 30px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s;
@@ -31752,7 +31728,7 @@ body {
 
 .jobdash-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 .jobdash-btn-outline-primary {
@@ -31776,32 +31752,39 @@ body {
   text-decoration: underline;
 }
 
-/* ==================== Quick Actions - Larger & Colored Icons ==================== */
+/* ==================== Quick Actions (Compact, Centered, Inline) ==================== */
+.jobdash-quick-actions-wrapper {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.jobdash-quick-actions-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .jobdash-quick-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 16px;
-  margin-top: 20px;
-}
-
-@media (max-width: 768px) {
-  .jobdash-quick-actions {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .jobdash-quick-actions {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
 }
 
 .jobdash-quick-action-card {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 14px 8px;
+  border-radius: 12px;
+  padding: 8px 12px;
   text-align: center;
   text-decoration: none;
   transition: all 0.2s;
@@ -31809,24 +31792,17 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  min-width: 80px;
+  flex: 0 1 auto;
 }
 
 .jobdash-quick-action-card svg {
-  font-size: 26px;
-  margin-bottom: 0;
+  font-size: 20px;
   transition: transform 0.2s;
 }
 
-/* Different colors for each quick action icon (Student) */
-.jobdash-quick-action-card:nth-child(1) svg { color: #4f46e5; }
-.jobdash-quick-action-card:nth-child(2) svg { color: #10b981; }
-.jobdash-quick-action-card:nth-child(3) svg { color: #ef4444; }
-.jobdash-quick-action-card:nth-child(4) svg { color: #f59e0b; }
-.jobdash-quick-action-card:nth-child(5) svg { color: #8b5cf6; }
-.jobdash-quick-action-card:nth-child(6) svg { color: #06b6d4; }
-
-/* Company quick actions colors */
+/* Icon colors */
 .jobdash-quick-action-card:nth-child(1) svg { color: #4f46e5; }
 .jobdash-quick-action-card:nth-child(2) svg { color: #10b981; }
 .jobdash-quick-action-card:nth-child(3) svg { color: #ef4444; }
@@ -31835,15 +31811,14 @@ body {
 .jobdash-quick-action-card:nth-child(6) svg { color: #06b6d4; }
 
 .jobdash-quick-action-card span {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .jobdash-quick-action-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
   border-color: #cbd5e1;
-  background: #fafcff;
 }
 
 .jobdash-quick-action-card:hover svg {
@@ -31853,20 +31828,20 @@ body {
 /* ==================== Calendar Widget ==================== */
 .jobdash-calendar-card {
   position: sticky;
-  top: 20px;
+  top: 24px;
 }
 
 .jobdash-calendar-nav {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .jobdash-icon-btn-sm {
   background: #f1f5f9;
   border: none;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -31912,6 +31887,7 @@ body {
   cursor: default;
   transition: all 0.2s;
   color: #1e293b;
+  font-weight: 500;
 }
 
 .jobdash-calendar-day:hover {
@@ -31950,15 +31926,15 @@ body {
 }
 
 .jobdash-upcoming-events {
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid #e2e8f0;
 }
 
 .jobdash-upcoming-events h6 {
   margin: 0 0 10px 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
 }
 
@@ -31973,11 +31949,12 @@ body {
 
 .jobdash-event-item svg {
   color: #4f46e5;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .jobdash-event-item span {
   flex: 1;
+  font-weight: 500;
 }
 
 .jobdash-event-item small {
@@ -32030,7 +32007,7 @@ body {
 .jobdash-follow-details h6 {
   margin: 0 0 2px 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
 }
 
@@ -32043,12 +32020,12 @@ body {
 /* Empty State */
 .jobdash-empty-state {
   text-align: center;
-  padding: 20px;
+  padding: 20px 12px;
   color: #64748b;
 }
 
 .jobdash-empty-state p {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   font-size: 12px;
 }
 
@@ -32057,7 +32034,7 @@ body {
   color: #94a3b8;
   font-style: italic;
   padding: 10px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 /* Responsive */
@@ -32065,13 +32042,8 @@ body {
   .jobdash-two-column {
     flex-direction: column;
   }
-  
   .jobdash-side-col {
     width: 100%;
-  }
-  
-  .jobdash-calendar-card {
-    position: static;
   }
 }
 
@@ -32080,37 +32052,44 @@ body {
   .jobdash-company-dashboard {
     padding: 16px;
   }
-
   .jobdash-welcome-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
     padding: 20px;
   }
-
   .jobdash-welcome-content {
     flex-direction: column;
     align-items: flex-start;
   }
-
   .jobdash-user-meta {
     flex-wrap: wrap;
     gap: 12px;
   }
-
   .jobdash-row {
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
   }
-
   .jobdash-pipeline-grid {
     grid-template-columns: 1fr 1fr;
   }
-
   .jobdash-interview-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+  }
+  .jobdash-quick-actions {
+    gap: 8px;
+  }
+  .jobdash-quick-action-card {
+    min-width: 70px;
+    padding: 6px 8px;
+  }
+  .jobdash-quick-action-card svg {
+    font-size: 18px;
+  }
+  .jobdash-quick-action-card span {
+    font-size: 10px;
   }
 }
 

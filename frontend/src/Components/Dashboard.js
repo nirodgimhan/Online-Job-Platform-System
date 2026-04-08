@@ -50,7 +50,7 @@ const Dashboard = () => {
     hireRate: 0
   });
   
-  // New states for calendar and follow
+  // Calendar and follow states
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [companiesToFollow, setCompaniesToFollow] = useState([]);
@@ -310,7 +310,6 @@ const Dashboard = () => {
   // ==================== CALENDAR FUNCTIONS ====================
   const fetchCalendarEvents = async () => {
     try {
-      // Fetch upcoming interviews as calendar events
       const endpoint = user?.role === 'student' ? '/interviews/student' : '/interviews/company';
       const response = await API.get(endpoint);
       const interviews = response.data.interviews || [];
@@ -368,7 +367,6 @@ const Dashboard = () => {
       const response = await API.post(`/students/follow-company/${companyId}`);
       if (response.data.success) {
         toast.success('Company followed successfully!');
-        // Update the list by removing the followed company or updating its follow status
         setCompaniesToFollow(prev => prev.filter(c => c._id !== companyId));
       } else {
         toast.error('Failed to follow company');
@@ -504,7 +502,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Two Column Layout: Left (Main Content) + Right (Calendar + Companies to Follow) */}
+        {/* Two Column Layout */}
         <div className="jobdash-two-column">
           {/* Left Column */}
           <div className="jobdash-main-col">
@@ -551,7 +549,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Application Status & Recommended Jobs */}
+            {/* Application Status & Recommended Jobs Row */}
             <div className="jobdash-row">
               <div className="jobdash-col-6">
                 <div className="jobdash-card">
@@ -618,32 +616,37 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Quick Actions Buttons */}
-            <div className="jobdash-quick-actions">
-              <Link to="/student/jobs" className="jobdash-quick-action-card">
-                <FaBriefcase />
-                <h6>Browse Jobs</h6>
-              </Link>
-              <Link to="/student/cv-manager" className="jobdash-quick-action-card">
-                <FaFileAlt />
-                <h6>Manage CVs</h6>
-              </Link>
-              <Link to="/student/saved-jobs" className="jobdash-quick-action-card">
-                <FaHeart />
-                <h6>Saved Jobs</h6>
-              </Link>
-              <Link to="/student/profile" className="jobdash-quick-action-card">
-                <FaUserGraduate />
-                <h6>My Profile</h6>
-              </Link>
-              <Link to="/student/skill-tests" className="jobdash-quick-action-card">
-                <FaCode />
-                <h6>Skill Tests</h6>
-              </Link>
-              <Link to="/student/interviews" className="jobdash-quick-action-card">
-                <FaCalendarAlt />
-                <h6>Interviews</h6>
-              </Link>
+            {/* Quick Actions - placed right under Application Status row */}
+            <div className="jobdash-quick-actions-wrapper">
+              <h5 className="jobdash-quick-actions-title">
+                <FaRegClock /> Quick Actions
+              </h5>
+              <div className="jobdash-quick-actions">
+                <Link to="/student/jobs" className="jobdash-quick-action-card">
+                  <FaBriefcase />
+                  <span>Browse Jobs</span>
+                </Link>
+                <Link to="/student/cv-manager" className="jobdash-quick-action-card">
+                  <FaFileAlt />
+                  <span>Manage CVs</span>
+                </Link>
+                <Link to="/student/saved-jobs" className="jobdash-quick-action-card">
+                  <FaHeart />
+                  <span>Saved Jobs</span>
+                </Link>
+                <Link to="/student/profile" className="jobdash-quick-action-card">
+                  <FaUserGraduate />
+                  <span>My Profile</span>
+                </Link>
+                <Link to="/student/skill-tests" className="jobdash-quick-action-card">
+                  <FaCode />
+                  <span>Skill Tests</span>
+                </Link>
+                <Link to="/student/interviews" className="jobdash-quick-action-card">
+                  <FaCalendarAlt />
+                  <span>Interviews</span>
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -797,7 +800,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Two Column Layout: Left (Main Content) + Right (Calendar + Followers) */}
+        {/* Two Column Layout */}
         <div className="jobdash-two-column">
           {/* Left Column */}
           <div className="jobdash-main-col">
@@ -930,6 +933,39 @@ const Dashboard = () => {
               </div>
             </div>
 
+            {/* Quick Actions - placed under the company stats row */}
+            <div className="jobdash-quick-actions-wrapper">
+              <h5 className="jobdash-quick-actions-title">
+                <FaRegClock /> Quick Actions
+              </h5>
+              <div className="jobdash-quick-actions">
+                <Link to="/company/post-job" className="jobdash-quick-action-card">
+                  <FaBriefcase />
+                  <span>Post New Job</span>
+                </Link>
+                <Link to="/company/jobs" className="jobdash-quick-action-card">
+                  <FaNewspaper />
+                  <span>Manage Jobs</span>
+                </Link>
+                <Link to="/company/applicants" className="jobdash-quick-action-card">
+                  <FaUsers />
+                  <span>View Applicants</span>
+                </Link>
+                <Link to="/company/profile" className="jobdash-quick-action-card">
+                  <FaBuilding />
+                  <span>Company Profile</span>
+                </Link>
+                <Link to="/company/interviews" className="jobdash-quick-action-card">
+                  <FaCalendarAlt />
+                  <span>Interviews</span>
+                </Link>
+                <Link to="/company/reports" className="jobdash-quick-action-card">
+                  <FaChartLine />
+                  <span>Analytics</span>
+                </Link>
+              </div>
+            </div>
+
             {/* Upcoming Interviews Section */}
             {upcomingInterviews.length > 0 && (
               <div className="jobdash-card jobdash-interviews-card">
@@ -996,34 +1032,6 @@ const Dashboard = () => {
                 </div>
               </div>
             )}
-
-            {/* Quick Actions Buttons */}
-            <div className="jobdash-quick-actions">
-              <Link to="/company/post-job" className="jobdash-quick-action-card">
-                <FaBriefcase />
-                <h6>Post New Job</h6>
-              </Link>
-              <Link to="/company/jobs" className="jobdash-quick-action-card">
-                <FaNewspaper />
-                <h6>Manage Jobs</h6>
-              </Link>
-              <Link to="/company/applicants" className="jobdash-quick-action-card">
-                <FaUsers />
-                <h6>View Applicants</h6>
-              </Link>
-              <Link to="/company/profile" className="jobdash-quick-action-card">
-                <FaBuilding />
-                <h6>Company Profile</h6>
-              </Link>
-              <Link to="/company/interviews" className="jobdash-quick-action-card">
-                <FaCalendarAlt />
-                <h6>Interviews</h6>
-              </Link>
-              <Link to="/company/reports" className="jobdash-quick-action-card">
-                <FaChartLine />
-                <h6>Analytics</h6>
-              </Link>
-            </div>
           </div>
 
           {/* Right Column - Calendar & Followers */}
