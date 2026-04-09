@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
+const fileUpload = require('express-fileupload');   // <-- ADDED
 require('dotenv').config();
 
 const app = express();
@@ -136,6 +137,13 @@ app.options('*', cors(corsOptions));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
+// ==================== FILE UPLOAD MIDDLEWARE (NEW) ====================
+app.use(fileUpload({
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+    abortOnLimit: true,
+}));
+console.log('✅ File upload middleware enabled');
+
 // ==================== STATIC FILES ====================
 
 app.use('/uploads', express.static(uploadsDir));
@@ -239,7 +247,7 @@ process.on('SIGTERM', async () => {
 // ==================== IMPORT MODELS ====================
 
 try {
-    require('./Models/User');
+    require('./models/User');
     require('./models/Student');
     require('./models/Company');
     require('./models/Post');
@@ -275,7 +283,7 @@ try {
 
 // User Routes
 try {
-    userRoutes = require('./routes/userRoutes');
+    userRoutes = require('./Routes/userRoutes');
     console.log('✅ userRoutes loaded');
 } catch (err) {
     console.error('❌ Error loading userRoutes:', err.message);

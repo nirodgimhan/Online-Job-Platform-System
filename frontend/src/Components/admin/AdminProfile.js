@@ -26,7 +26,7 @@ import {
 } from 'react-icons/fa';
 
 const AdminProfile = () => {
-  const { user, logout, setUser, token } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   
@@ -46,14 +46,6 @@ const AdminProfile = () => {
     totalUsers: 0,
     totalCompanies: 0,
     totalJobs: 0
-  });
-
-  // Account stats (real data)
-  const [accountStats, setAccountStats] = useState({
-    accountStatus: 'Active',
-    lastLogin: 'Today',
-    securityLevel: 'High',
-    twoFAStatus: 'Not Enabled'
   });
 
   const [formData, setFormData] = useState({
@@ -95,7 +87,6 @@ const AdminProfile = () => {
   useEffect(() => {
     checkAuthAndFetchProfile();
     fetchWelcomeStats();
-    fetchAccountStats();
     fetchNotificationPreferences();
   }, []);
 
@@ -141,7 +132,6 @@ const AdminProfile = () => {
         }
       });
       
-      // Set last login from user data if available
       if (user?.lastLogin) {
         const lastLoginDate = new Date(user.lastLogin);
         const today = new Date();
@@ -164,7 +154,6 @@ const AdminProfile = () => {
 
   const fetchWelcomeStats = async () => {
     try {
-      // Fetch users
       const usersRes = await API.get('/users');
       const allUsers = usersRes.data.users || [];
       const students = allUsers.filter(u => u.role === 'student').length;
@@ -172,7 +161,6 @@ const AdminProfile = () => {
       const admins = allUsers.filter(u => u.role === 'admin').length;
       const totalUsers = students + companies + admins;
       
-      // Fetch jobs
       let totalJobs = 0;
       try {
         const jobsRes = await API.get('/jobs/admin/all');
@@ -188,29 +176,7 @@ const AdminProfile = () => {
       });
     } catch (err) {
       console.warn('Could not fetch welcome stats', err);
-      // Fallback to mock data if needed
       setWelcomeStats({ totalUsers: 1, totalCompanies: 1, totalJobs: 0 });
-    }
-  };
-
-  const fetchAccountStats = async () => {
-    try {
-      // Get user's last login from local storage or backend
-      const lastLoginStorage = localStorage.getItem('lastLogin');
-      if (lastLoginStorage) {
-        const lastLoginDate = new Date(lastLoginStorage);
-        const today = new Date();
-        if (lastLoginDate.toDateString() === today.toDateString()) {
-          setAccountStats(prev => ({ ...prev, lastLogin: 'Today' }));
-        } else {
-          setAccountStats(prev => ({ ...prev, lastLogin: lastLoginDate.toLocaleDateString() }));
-        }
-      }
-      
-      // You can also fetch from backend if available
-      // For now, keep hardcoded values for security level and 2FA
-    } catch (error) {
-      console.error('Error fetching account stats:', error);
     }
   };
 
@@ -224,7 +190,10 @@ const AdminProfile = () => {
         }));
       }
     } catch (error) {
-      console.log('No saved notification preferences, using defaults');
+      // Silently ignore 404 (endpoint not implemented) – use defaults
+      if (error.response?.status !== 404) {
+        console.error('Error fetching notification preferences:', error);
+      }
     }
   };
 
@@ -238,8 +207,12 @@ const AdminProfile = () => {
         toast.error('Failed to save preferences');
       }
     } catch (error) {
-      console.error('Error saving notifications:', error);
-      toast.error('Failed to save preferences');
+      if (error.response?.status === 404) {
+        toast.error('Notification preferences endpoint not available. Please contact administrator.');
+      } else {
+        console.error('Error saving notifications:', error);
+        toast.error('Failed to save preferences');
+      }
     } finally {
       setSaving(false);
     }
@@ -274,10 +247,12 @@ const AdminProfile = () => {
         localStorage.setItem('user', JSON.stringify(updatedUser));
         if (setUser) setUser(updatedUser);
         await fetchProfile();
+      } else {
+        toast.error(response.data.message || 'Failed to upload profile picture');
       }
     } catch (error) {
       console.error('Error uploading profile picture:', error);
-      toast.error('Failed to upload profile picture');
+      toast.error(error.response?.data?.message || 'Failed to upload profile picture');
     } finally {
       setUploadingPhoto(false);
     }
@@ -490,10 +465,10 @@ const AdminProfile = () => {
 
   const getPasswordStrengthColor = () => {
     const score = passwordStrength.score;
-    if (score <= 2) return 'admin-profile-danger';
-    if (score <= 3) return 'admin-profile-warning';
-    if (score <= 4) return 'admin-profile-info';
-    return 'admin-profile-success';
+    if (score <= 2) return '#dc2626';
+    if (score <= 3) return '#f59e0b';
+    if (score <= 4) return '#3b82f6';
+    return '#10b981';
   };
 
   const getPasswordStrengthText = () => {
@@ -520,12 +495,16 @@ const AdminProfile = () => {
         <div className="admin-profile-welcome-content">
           <div className="admin-profile-user-avatar-large" style={{ position: 'relative' }}>
             {user?.profilePicture ? (
-              <img src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} alt={user.name} className="admin-profile-avatar-image" />
-            ) : (
-              <div className="admin-profile-avatar-placeholder">
-                <FaShieldAlt size={32} />
-              </div>
-            )}
+              <img 
+                src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} 
+                alt={user.name} 
+                className="admin-profile-avatar-image" 
+                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+              />
+            ) : null}
+            <div className="admin-profile-avatar-placeholder" style={{ display: user?.profilePicture ? 'none' : 'flex' }}>
+              <FaShieldAlt size={32} />
+            </div>
             <button 
               className="admin-profile-upload-photo-btn"
               onClick={() => fileInputRef.current?.click()}
@@ -593,7 +572,7 @@ const AdminProfile = () => {
             </div>
           </div>
 
-          {/* Account Statistics Card - Now with real data */}
+          {/* Account Statistics Card */}
           <div className="admin-profile-card admin-profile-stats-card">
             <div className="admin-profile-card-header">
               <h5>Account Statistics</h5>
@@ -715,14 +694,12 @@ const AdminProfile = () => {
                           <div className="admin-profile-strength-bar">
                             <div className="admin-profile-strength-progress" style={{ 
                               width: `${(passwordStrength.score / 5) * 100}%`, 
-                              backgroundColor: getPasswordStrengthColor() === 'admin-profile-danger' ? '#dc2626' : 
-                                             getPasswordStrengthColor() === 'admin-profile-warning' ? '#f59e0b' : 
-                                             getPasswordStrengthColor() === 'admin-profile-info' ? '#3b82f6' : '#10b981' 
+                              backgroundColor: getPasswordStrengthColor()
                             }}></div>
                           </div>
                           <div className="admin-profile-strength-text">
                             <span>Password Strength: </span>
-                            <span className={getPasswordStrengthColor()}>{getPasswordStrengthText()}</span>
+                            <span style={{ color: getPasswordStrengthColor() }}>{getPasswordStrengthText()}</span>
                           </div>
                         </div>
                       )}
