@@ -17,6 +17,8 @@ import Login from './Components/Login';
 import Register from './Components/Register';
 import Dashboard from './Components/Dashboard';
 import ProtectedRoute from './Components/ProtectedRoute';
+import Settings from './Components/Settings';
+import HelpSupport from './Components/HelpSupport';  // <-- ADDED
 
 // Public Job Search Components
 import JobSearch from './Components/student/JobSearch';
@@ -88,6 +90,12 @@ function App() {
             {/* ========== Protected Routes with Sidebar ========== */}
             <Route element={<ProtectedRoute />}> {/* Generic auth check */}
               <Route element={<AuthenticatedLayout />}>
+                {/* Settings – accessible to all authenticated users */}
+                <Route path="/settings" element={<Settings />} />
+
+                {/* Help & Support – accessible to all authenticated users */}
+                <Route path="/help" element={<HelpSupport />} />  {/* <-- ADDED */}
+
                 {/* Student Routes */}
                 <Route path="/student">
                   <Route index element={<Navigate to="dashboard" replace />} />
@@ -126,8 +134,11 @@ function App() {
                   <Route path="verifications" element={<VerificationRequests />} />
                   <Route path="reports" element={<AdminReports />} />
                   <Route path="contact-messages" element={<AdminContactMessages />} />
+
                   <Route path="feedback" element={<FeedbackManager />} />
                   
+
+
                 </Route>
               </Route>
             </Route>

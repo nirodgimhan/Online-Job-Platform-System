@@ -20,6 +20,12 @@ const Sidebar = ({ children }) => {
   const [studentProfile, setStudentProfile] = useState(null);
   const [profilePicture, setProfilePicture] = useState(null);
 
+  // Dynamic badge counts
+  const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
+  const [upcomingInterviewsCount, setUpcomingInterviewsCount] = useState(0);
+  const [pendingCompanyVerificationsCount, setPendingCompanyVerificationsCount] = useState(0);
+  const [unreadContactMessagesCount, setUnreadContactMessagesCount] = useState(0);
+
   useEffect(() => {
     const loadProfilePicture = async () => {
       if (user?.role === 'student') {
@@ -65,6 +71,50 @@ const Sidebar = ({ children }) => {
     if (user) loadProfilePicture();
   }, [user]);
 
+  // Fetch dynamic counts based on role
+  const fetchCounts = async () => {
+    if (!user) return;
+    const role = user.role;
+    try {
+      if (role === 'student') {
+        // Pending applications
+        const appsRes = await API.get('/applications/student');
+        const apps = appsRes.data.applications || [];
+        const pending = apps.filter(app => app.status === 'pending' || app.status === 'Pending').length;
+        setPendingApplicationsCount(pending);
+        // Upcoming interviews
+        const interviewsRes = await API.get('/interviews/student');
+        const interviews = interviewsRes.data.interviews || [];
+        const upcoming = interviews.filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled').length;
+        setUpcomingInterviewsCount(upcoming);
+      } else if (role === 'company') {
+        // Pending applications for company
+        const appsRes = await API.get('/applications/company');
+        const apps = appsRes.data.applications || [];
+        const pending = apps.filter(app => app.status === 'pending' || app.status === 'Pending').length;
+        setPendingApplicationsCount(pending);
+      } else if (role === 'admin') {
+        // Pending company verifications (unverified companies)
+        const usersRes = await API.get('/users');
+        const companies = (usersRes.data.users || []).filter(u => u.role === 'company');
+        const pendingVerifications = companies.filter(c => !c.isVerified).length;
+        setPendingCompanyVerificationsCount(pendingVerifications);
+        // Unread contact messages
+        const contactRes = await API.get('/contact/admin?status=unread&limit=1');
+        const totalUnread = contactRes.data.pagination?.total || 0;
+        setUnreadContactMessagesCount(totalUnread);
+      }
+    } catch (err) {
+      console.error('Error fetching counts:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const handleLogout = () => logout();
   const toggleSidebar = () => setIsOpen(!isOpen);
   const getProfilePictureUrl = () => {
@@ -75,11 +125,15 @@ const Sidebar = ({ children }) => {
   const studentMenuItems = [
     { title: 'Dashboard', path: '/student/dashboard', icon: <FaTachometerAlt /> },
     { title: 'My Profile', path: '/student/profile', icon: <FaUser /> },
-    { title: 'My Applications', path: '/student/applied-jobs', icon: <FaClipboardList />, badge: 'new' },
+    { title: 'My Applications', path: '/student/applied-jobs', icon: <FaClipboardList />, badge: pendingApplicationsCount > 0 ? pendingApplicationsCount : null },
     { title: 'Saved Jobs', path: '/student/saved-jobs', icon: <FaHeart /> },
     { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> },
+
     { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' },
     { title: 'Give Feedback', path: '/student/feedback', icon: <FaComments /> },
+
+    { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: upcomingInterviewsCount > 0 ? upcomingInterviewsCount : null },
+
   ];
 
   const companyMenuItems = [
@@ -87,7 +141,7 @@ const Sidebar = ({ children }) => {
     { title: 'Company Profile', path: '/company/profile', icon: <FaBuilding /> },
     { title: 'Post New Job', path: '/company/post-job', icon: <FaPlusCircle /> },
     { title: 'Manage Jobs', path: '/company/manage-jobs', icon: <FaListAlt /> },
-    { title: 'Applications', path: '/company/applicants', icon: <FaUsers />, badge: 'new' },
+    { title: 'Applications', path: '/company/applicants', icon: <FaUsers />, badge: pendingApplicationsCount > 0 ? pendingApplicationsCount : null },
     { title: 'Interviews', path: '/company/interviews', icon: <FaCalendarAlt /> },
     { title: 'Confirmed Interviews', path: '/company/confirmed-interviews', icon: <FaCheckCircle /> },
   ];
@@ -97,9 +151,14 @@ const Sidebar = ({ children }) => {
     { title: 'Admin Profile', path: '/admin/profile', icon: <FaUserTie /> },
     { title: 'Manage Users', path: '/admin/users', icon: <FaUsers /> },
     { title: 'Manage Companies', path: '/admin/companies', icon: <FaBuilding /> },
+
     { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: 'pending' },
     { title: 'Contact Messages', path: '/admin/contact-messages', icon: <FaEnvelope />, badge: 'new' },  // <-- ADDED
     { title: 'Manage Feedback', path: '/admin/feedback', icon: <FaStar /> },
+
+    { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: pendingCompanyVerificationsCount > 0 ? pendingCompanyVerificationsCount : null },
+    { title: 'Contact Messages', path: '/admin/contact-messages', icon: <FaEnvelope />, badge: unreadContactMessagesCount > 0 ? unreadContactMessagesCount : null },
+
     { title: 'Reports', path: '/admin/reports', icon: <FaChartLine /> },
   ];
 
@@ -159,7 +218,9 @@ const Sidebar = ({ children }) => {
                 >
                   <span className="sb-nav-icon">{item.icon}</span>
                   <span className="sb-nav-title">{item.title}</span>
-                  {item.badge && <span className={`sb-nav-badge sb-badge-${item.badge}`}>{item.badge}</span>}
+                  {item.badge !== undefined && item.badge !== null && item.badge !== 0 && (
+                    <span className="sb-nav-badge sb-badge-count">{item.badge}</span>
+                  )}
                 </Link>
               </li>
             ))}

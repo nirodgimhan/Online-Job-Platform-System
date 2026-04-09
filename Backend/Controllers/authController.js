@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../Models/User');
 const Student = require('../models/Student');
 const Company = require('../models/Company');
 const jwt = require('jsonwebtoken');
@@ -383,4 +383,32 @@ exports.createAdmin = async (req, res) => {
             message: 'Error creating admin' 
         });
     }
+};
+
+
+// Add this function to your existing authController.js
+// @desc    Change password
+// @route   POST /api/auth/change-password
+// @access  Private
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+    user.password = newPassword;
+    await user.save();
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 };

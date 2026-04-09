@@ -26,51 +26,58 @@ API.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Simplified response interceptor – no retry queue
+// Global flag to prevent multiple network error toasts
+let networkErrorToastShown = false;
+let networkErrorTimeout = null;
+
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
-    // Network errors (server unreachable, connection lost)
+
+    // ========== SILENTLY IGNORE CANCELLED REQUESTS ==========
+    // මේවා page navigation නිසා cancel වන requests – toast නොපෙන්වයි
+    if (axios.isCancel(error) ||
+        error.code === 'ERR_CANCELED' ||
+        error.message === 'canceled' ||
+        error.message === 'Request aborted' ||
+        (originalRequest && originalRequest.signal?.aborted)) {
+      return Promise.reject(error);
+    }
+
+    // ========== REAL NETWORK ERROR (connection lost) ==========
     if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
-      // Only show toast once per error to avoid spam
-      if (!originalRequest._toastShown) {
-        originalRequest._toastShown = true;
+      if (!networkErrorToastShown) {
+        networkErrorToastShown = true;
         toast.error('Connection lost. Please check your internet connection or try again later.');
+        networkErrorTimeout = setTimeout(() => {
+          networkErrorToastShown = false;
+        }, 5000);
       }
       return Promise.reject(error);
     }
-    
-    // 503 Service Unavailable – database connecting
-    if (error.response?.status === 503) {
-      if (!originalRequest._retry) {
-        originalRequest._retry = true;
-        // Wait 2 seconds and retry silently (no toast)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return API(originalRequest);
-      }
-      return Promise.reject(error);
+
+    // 503 – silent retry once (no toast)
+    if (error.response?.status === 503 && !originalRequest?._retry) {
+      originalRequest._retry = true;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return API(originalRequest);
     }
-    
-    // 500 Internal Server Error
+
+    // 500 – server error
     if (error.response?.status === 500) {
       toast.error('Server error. Please try again later.');
       return Promise.reject(error);
     }
-    
-    // 401 Unauthorized – token expired or invalid
+
+    // 401 – session expired
     if (error.response?.status === 401) {
-      const isCVUpload = originalRequest.url?.includes('/cv/upload');
+      const isCVUpload = originalRequest?.url?.includes('/cv/upload');
       if (!isCVUpload) {
         localStorage.removeItem('token');
-        // Only redirect if not already on login page
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
@@ -80,12 +87,12 @@ API.interceptors.response.use(
       }
       return Promise.reject(error);
     }
-    
-    // 404 Not Found – let components handle it
+
+    // 404 – let components handle it (no toast)
     if (error.response?.status === 404) {
       return Promise.reject(error);
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -101,9 +108,7 @@ export const AuthProvider = ({ children }) => {
     const handleOnline = () => {
       setIsOnline(true);
       toast.info('Connection restored!');
-      if (token) {
-        loadUser();
-      }
+      if (token) loadUser();
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -118,22 +123,16 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      loadUser();
-    } else {
-      setLoading(false);
-    }
+    if (token) loadUser();
+    else setLoading(false);
   }, []);
 
   const loadUser = async () => {
     try {
       const response = await API.get('/auth/me');
-      if (response.data.success) {
-        setUser(response.data.user);
-      }
+      if (response.data.success) setUser(response.data.user);
     } catch (error) {
       console.error('Error loading user:', error);
-      // Only remove token on 401 (unauthorized) – not on network or 503
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         setToken(null);
@@ -159,7 +158,6 @@ export const AuthProvider = ({ children }) => {
         return { success: true, data: response.data };
       }
     } catch (error) {
-      console.error('Registration error:', error);
       const errorMessage = error.response?.data?.message || 'Registration failed';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -182,7 +180,6 @@ export const AuthProvider = ({ children }) => {
         return { success: true, data: response.data };
       }
     } catch (error) {
-      console.error('Login error:', error);
       const errorMessage = error.response?.data?.message || 'Login failed';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -218,7 +215,6 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: response.data.message };
       }
     } catch (error) {
-      console.error('Contact submission error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to send message. Please try again later.';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };

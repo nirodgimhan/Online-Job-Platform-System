@@ -52,11 +52,17 @@ const UserSchema = new mongoose.Schema({
         validate: {
             validator: function(v) {
                 if (!v) return true;
-                // Basic international phone number pattern (optional)
                 return /^[\+]?[(]?[0-9]{1,3}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{3,4}[-\s\.]?[0-9]{3,4}$/.test(v);
             },
             message: 'Please enter a valid phone number'
         }
+    },
+    address: {
+        street: { type: String, default: '' },
+        city: { type: String, default: '' },
+        state: { type: String, default: '' },
+        country: { type: String, default: '' },
+        zipCode: { type: String, default: '' }
     },
     isVerified: {
         type: Boolean,
@@ -87,6 +93,13 @@ const UserSchema = new mongoose.Schema({
         default: 0,
         min: [0, 'Posts count cannot be negative'],
         max: [10000, 'Posts count cannot exceed 10,000']
+    },
+    notificationPreferences: {
+        emailNotifications: { type: Boolean, default: true },
+        newUserAlerts: { type: Boolean, default: true },
+        companyVerificationAlerts: { type: Boolean, default: true },
+        reportAlerts: { type: Boolean, default: true },
+        systemUpdates: { type: Boolean, default: true }
     }
 }, {
     timestamps: true

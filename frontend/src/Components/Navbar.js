@@ -170,7 +170,7 @@ const Navbar = () => {
             <Link to="/jobs" className="nc-nav-link">Browse Jobs</Link>
             <Link to="/about" className="nc-nav-link">About Us</Link>
             <Link to="/services" className="nc-nav-link">Services</Link>
-            <Link to="/contact" className="nc-nav-link">Contact</Link>
+            <Link to="/contact" className="nc-nav-link">ContactUs</Link>
           </div>
 
           {/* Right Side */}
@@ -232,11 +232,7 @@ const Navbar = () => {
                   )}
                 </div>
 
-                {/* Messages (placeholder) */}
-                <button className="nc-icon-btn">
-                  <FaEnvelope />
-                  <span className="nc-badge">5</span>
-                </button>
+                {/* Messages button removed */}
 
                 {/* User Dropdown */}
                 <div className="nc-dropdown">
