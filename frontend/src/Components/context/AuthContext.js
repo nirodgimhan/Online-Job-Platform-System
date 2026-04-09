@@ -24,18 +24,12 @@ API.interceptors.request.use(
     if (token) {
       config.headers['x-auth-token'] = token;
     }
-    // Attach a cancel token source to every request (for later aborting)
-    if (!config.signal) {
-      const controller = new AbortController();
-      config.signal = controller.signal;
-      config._abortController = controller;
-    }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Flag to limit network error toasts
+// Global flag to prevent multiple network error toasts
 let networkErrorToastShown = false;
 let networkErrorTimeout = null;
 
@@ -44,19 +38,17 @@ API.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // ========== SILENTLY IGNORE ABORTED/CANCELLED REQUESTS ==========
-    // These happen when components unmount (e.g., page navigation)
+    // ========== SILENTLY IGNORE CANCELLED REQUESTS ==========
+    // මේවා page navigation නිසා cancel වන requests – toast නොපෙන්වයි
     if (axios.isCancel(error) ||
         error.code === 'ERR_CANCELED' ||
-        error.name === 'CanceledError' ||
-        error.name === 'AbortError' ||
-        (error.message && error.message.includes('canceled')) ||
-        (error.message && error.message.includes('aborted')) ||
+        error.message === 'canceled' ||
+        error.message === 'Request aborted' ||
         (originalRequest && originalRequest.signal?.aborted)) {
       return Promise.reject(error);
     }
 
-    // Real network errors (server unreachable)
+    // ========== REAL NETWORK ERROR (connection lost) ==========
     if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
       if (!networkErrorToastShown) {
         networkErrorToastShown = true;
@@ -68,7 +60,7 @@ API.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // 503 – silent retry once
+    // 503 – silent retry once (no toast)
     if (error.response?.status === 503 && !originalRequest?._retry) {
       originalRequest._retry = true;
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -105,18 +97,13 @@ API.interceptors.response.use(
   }
 );
 
-// Helper to create an abortable request (used by components)
-export const createAbortableRequest = () => {
-  const controller = new AbortController();
-  return { signal: controller.signal, abort: () => controller.abort() };
-};
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
+  // Monitor online status
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
