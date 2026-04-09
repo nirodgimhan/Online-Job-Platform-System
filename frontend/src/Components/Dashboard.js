@@ -41,7 +41,6 @@ const Dashboard = () => {
   const [recentApplications, setRecentApplications] = useState([]);
   const [upcomingInterviews, setUpcomingInterviews] = useState([]);
   const [activeJobs, setActiveJobs] = useState([]);
-  const [recentNotifications, setRecentNotifications] = useState([]);
   const [companyStats, setCompanyStats] = useState({
     profileViews: 0,
     jobViews: 0,
@@ -51,22 +50,19 @@ const Dashboard = () => {
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [calendarEvents, setCalendarEvents] = useState([]);
-  const [companiesToFollow, setCompaniesToFollow] = useState([]);
   const [followersList, setFollowersList] = useState([]);
   const [followingLoading, setFollowingLoading] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false); // kept for potential future use but button removed
 
   useEffect(() => {
     if (user) {
       loadProfilePicture();
       fetchAllDashboardData();
       fetchCalendarEvents();
-      if (user.role === 'student') {
-        fetchCompaniesToFollow();
-      } else if (user.role === 'company') {
+      if (user.role === 'company') {
         fetchFollowersList();
       }
     }
@@ -106,7 +102,6 @@ const Dashboard = () => {
       } else if (user?.role === 'company') {
         await fetchCompanyDashboardData();
       }
-      await fetchNotifications();
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setError('Failed to load some dashboard data');
@@ -177,8 +172,8 @@ const Dashboard = () => {
         rejectedApplications: rejected,
         upcomingInterviews: upcomingCount,
         completedInterviews: interviews.filter(i => i.status === 'completed').length,
-        notifications: 5,
-        unreadMessages: 3
+        notifications: 0,
+        unreadMessages: 0
       });
 
       setCompanyStats({
@@ -282,26 +277,13 @@ const Dashboard = () => {
         completedInterviews: completed,
         totalViews: totalViews,
         companyFollowers: company?.followers?.length || 0,
-        notifications: 5,
-        unreadMessages: 3
+        notifications: 0,
+        unreadMessages: 0
       });
 
     } catch (error) {
       console.error('Error in company dashboard:', error);
       throw error;
-    }
-  };
-
-  const fetchNotifications = async () => {
-    try {
-      const endpoint = user?.role === 'student' ? '/notifications/student' : '/notifications/company';
-      const response = await API.get(endpoint);
-      setRecentNotifications(response.data.notifications?.slice(0, 5) || []);
-    } catch (error) {
-      setRecentNotifications([
-        { _id: '1', message: 'New application received for Software Engineer position', time: '2 hours ago', read: false },
-        { _id: '2', message: 'Your job post has been viewed 50 times', time: '1 day ago', read: false }
-      ]);
     }
   };
 
@@ -346,34 +328,6 @@ const Dashboard = () => {
       event.date.getMonth() === date.getMonth() &&
       event.date.getFullYear() === date.getFullYear()
     );
-  };
-
-  // ==================== FOLLOW COMPANIES (STUDENT) ====================
-  const fetchCompaniesToFollow = async () => {
-    try {
-      const response = await API.get('/companies?limit=6');
-      setCompaniesToFollow(response.data.companies || []);
-    } catch (error) {
-      console.log('Fetch companies failed:', error);
-      setCompaniesToFollow([]);
-    }
-  };
-
-  const handleFollowCompany = async (companyId) => {
-    setFollowingLoading(true);
-    try {
-      const response = await API.post(`/students/follow-company/${companyId}`);
-      if (response.data.success) {
-        toast.success('Company followed successfully!');
-        setCompaniesToFollow(prev => prev.filter(c => c._id !== companyId));
-      } else {
-        toast.error('Failed to follow company');
-      }
-    } catch (error) {
-      toast.error('Error following company');
-    } finally {
-      setFollowingLoading(false);
-    }
   };
 
   // ==================== FOLLOWERS LIST (COMPANY) ====================
@@ -473,32 +427,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="jobdash-welcome-actions">
-            <button className="jobdash-icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
-              <FaBell />
-              {stats.notifications > 0 && <span className="jobdash-badge-notification">{stats.notifications}</span>}
-            </button>
+            {/* Notification button removed */}
           </div>
         </div>
-
-        {/* Notifications Dropdown */}
-        {showNotifications && (
-          <div className="jobdash-dropdown jobdash-notifications-dropdown">
-            <div className="jobdash-dropdown-header">
-              <h6>Notifications</h6>
-              <Link to="/notifications" className="jobdash-link">View All</Link>
-            </div>
-            <div className="jobdash-dropdown-body">
-              {recentNotifications.map(notif => (
-                <div key={notif._id} className={`jobdash-notification-item ${!notif.read ? 'jobdash-unread' : ''}`}>
-                  <div className="jobdash-notification-content">
-                    <p>{notif.message}</p>
-                    <small>{notif.time}</small>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Stats Cards */}
         <div className="jobdash-stats-grid">
@@ -689,51 +620,13 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Companies to Follow */}
-        <div className="jobdash-card">
-          <div className="jobdash-card-header">
-            <h5><FaBuilding /> Companies to Follow</h5>
-          </div>
-          <div className="jobdash-card-body">
-            {companiesToFollow.length > 0 ? (
-              companiesToFollow.map(company => (
-                <div key={company._id} className="jobdash-follow-item">
-                  <div className="jobdash-follow-info">
-                    <div className="jobdash-follow-logo">
-                      {company.companyLogo ? (
-                        <img src={`http://localhost:5000${company.companyLogo}`} alt={company.companyName} />
-                      ) : (
-                        <div className="jobdash-follow-initials">{getInitials(company.companyName)}</div>
-                      )}
-                    </div>
-                    <div className="jobdash-follow-details">
-                      <h6>{company.companyName}</h6>
-                      <p>{company.industry || 'Company'}</p>
-                    </div>
-                  </div>
-                  <button 
-                    className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary"
-                    onClick={() => handleFollowCompany(company._id)}
-                    disabled={followingLoading}
-                  >
-                    <FaUserPlus /> Follow
-                  </button>
-                </div>
-              ))
-            ) : (
-              <div className="jobdash-empty-state">
-                <p>No companies to follow</p>
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Companies to Follow section removed */}
       </div>
     );
   }
 
   // ==================== COMPANY DASHBOARD RENDER ====================
   if (user?.role === 'company') {
-    // For company, we keep the original layout for now – you can similarly adapt later
     return (
       <div className="jobdash-company-dashboard">
         {/* Welcome Header with Background Image */}
@@ -758,32 +651,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="jobdash-welcome-actions">
-            <button className="jobdash-icon-btn" onClick={() => setShowNotifications(!showNotifications)}>
-              <FaBell />
-              {stats.notifications > 0 && <span className="jobdash-badge-notification">{stats.notifications}</span>}
-            </button>
+            {/* Notification button removed */}
           </div>
         </div>
-
-        {/* Notifications Dropdown */}
-        {showNotifications && (
-          <div className="jobdash-dropdown jobdash-notifications-dropdown">
-            <div className="jobdash-dropdown-header">
-              <h6>Notifications</h6>
-              <Link to="/notifications" className="jobdash-link">View All</Link>
-            </div>
-            <div className="jobdash-dropdown-body">
-              {recentNotifications.map(notif => (
-                <div key={notif._id} className={`jobdash-notification-item ${!notif.read ? 'jobdash-unread' : ''}`}>
-                  <div className="jobdash-notification-content">
-                    <p>{notif.message}</p>
-                    <small>{notif.time}</small>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Original company dashboard content – unchanged */}
         <div className="jobdash-two-column">

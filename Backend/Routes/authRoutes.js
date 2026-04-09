@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const User = require('../Models/User');
 const Student = require('../models/Student');
 const Company = require('../models/Company');
 const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
+const bcrypt = require('bcryptjs'); // added for password hashing in change-password
 
 console.log('✅ authRoutes.js loaded');
 
@@ -282,6 +283,66 @@ router.post('/create-admin', async (req, res) => {
     } catch (error) {
         console.error('❌ Create admin error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// ==================== NEW ROUTE: CHANGE PASSWORD ====================
+// @route   POST /api/auth/change-password
+// @desc    Change user password
+// @access  Private
+router.post('/change-password', auth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Current password and new password are required' 
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'New password must be at least 6 characters' 
+            });
+        }
+
+        // Find user with password field included
+        const user = await User.findById(req.user.id).select('+password');
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+
+        // Verify current password
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Current password is incorrect' 
+            });
+        }
+
+        // Hash new password and save
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        console.log('✅ Password changed for user:', user.email);
+
+        res.json({ 
+            success: true, 
+            message: 'Password changed successfully' 
+        });
+    } catch (error) {
+        console.error('❌ Change password error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error: ' + error.message 
+        });
     }
 });
 

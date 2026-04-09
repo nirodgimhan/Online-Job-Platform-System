@@ -24,53 +24,68 @@ API.interceptors.request.use(
     if (token) {
       config.headers['x-auth-token'] = token;
     }
+    // Attach a cancel token source to every request (for later aborting)
+    if (!config.signal) {
+      const controller = new AbortController();
+      config.signal = controller.signal;
+      config._abortController = controller;
+    }
     return config;
   },
-  (error) => {
-    console.error('Request interceptor error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Simplified response interceptor – no retry queue
+// Flag to limit network error toasts
+let networkErrorToastShown = false;
+let networkErrorTimeout = null;
+
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
-    // Network errors (server unreachable, connection lost)
+
+    // ========== SILENTLY IGNORE ABORTED/CANCELLED REQUESTS ==========
+    // These happen when components unmount (e.g., page navigation)
+    if (axios.isCancel(error) ||
+        error.code === 'ERR_CANCELED' ||
+        error.name === 'CanceledError' ||
+        error.name === 'AbortError' ||
+        (error.message && error.message.includes('canceled')) ||
+        (error.message && error.message.includes('aborted')) ||
+        (originalRequest && originalRequest.signal?.aborted)) {
+      return Promise.reject(error);
+    }
+
+    // Real network errors (server unreachable)
     if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
-      // Only show toast once per error to avoid spam
-      if (!originalRequest._toastShown) {
-        originalRequest._toastShown = true;
+      if (!networkErrorToastShown) {
+        networkErrorToastShown = true;
         toast.error('Connection lost. Please check your internet connection or try again later.');
+        networkErrorTimeout = setTimeout(() => {
+          networkErrorToastShown = false;
+        }, 5000);
       }
       return Promise.reject(error);
     }
-    
-    // 503 Service Unavailable – database connecting
-    if (error.response?.status === 503) {
-      if (!originalRequest._retry) {
-        originalRequest._retry = true;
-        // Wait 2 seconds and retry silently (no toast)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return API(originalRequest);
-      }
-      return Promise.reject(error);
+
+    // 503 – silent retry once
+    if (error.response?.status === 503 && !originalRequest?._retry) {
+      originalRequest._retry = true;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return API(originalRequest);
     }
-    
-    // 500 Internal Server Error
+
+    // 500 – server error
     if (error.response?.status === 500) {
       toast.error('Server error. Please try again later.');
       return Promise.reject(error);
     }
-    
-    // 401 Unauthorized – token expired or invalid
+
+    // 401 – session expired
     if (error.response?.status === 401) {
-      const isCVUpload = originalRequest.url?.includes('/cv/upload');
+      const isCVUpload = originalRequest?.url?.includes('/cv/upload');
       if (!isCVUpload) {
         localStorage.removeItem('token');
-        // Only redirect if not already on login page
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
@@ -80,15 +95,21 @@ API.interceptors.response.use(
       }
       return Promise.reject(error);
     }
-    
-    // 404 Not Found – let components handle it
+
+    // 404 – let components handle it (no toast)
     if (error.response?.status === 404) {
       return Promise.reject(error);
     }
-    
+
     return Promise.reject(error);
   }
 );
+
+// Helper to create an abortable request (used by components)
+export const createAbortableRequest = () => {
+  const controller = new AbortController();
+  return { signal: controller.signal, abort: () => controller.abort() };
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -96,14 +117,11 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Monitor online status
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
       toast.info('Connection restored!');
-      if (token) {
-        loadUser();
-      }
+      if (token) loadUser();
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -118,22 +136,16 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      loadUser();
-    } else {
-      setLoading(false);
-    }
+    if (token) loadUser();
+    else setLoading(false);
   }, []);
 
   const loadUser = async () => {
     try {
       const response = await API.get('/auth/me');
-      if (response.data.success) {
-        setUser(response.data.user);
-      }
+      if (response.data.success) setUser(response.data.user);
     } catch (error) {
       console.error('Error loading user:', error);
-      // Only remove token on 401 (unauthorized) – not on network or 503
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         setToken(null);
@@ -159,7 +171,6 @@ export const AuthProvider = ({ children }) => {
         return { success: true, data: response.data };
       }
     } catch (error) {
-      console.error('Registration error:', error);
       const errorMessage = error.response?.data?.message || 'Registration failed';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -182,7 +193,6 @@ export const AuthProvider = ({ children }) => {
         return { success: true, data: response.data };
       }
     } catch (error) {
-      console.error('Login error:', error);
       const errorMessage = error.response?.data?.message || 'Login failed';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -218,7 +228,6 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: response.data.message };
       }
     } catch (error) {
-      console.error('Contact submission error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to send message. Please try again later.';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };

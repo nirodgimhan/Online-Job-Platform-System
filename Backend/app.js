@@ -75,6 +75,12 @@ if (!fs.existsSync(cvsDir)) {
     console.log('✅ CV upload directory created');
 }
 
+const profilesDir = path.join(__dirname, 'uploads', 'profiles');
+if (!fs.existsSync(profilesDir)) {
+    fs.mkdirSync(profilesDir, { recursive: true });
+    console.log('✅ Profile pictures directory created');
+}
+
 const publicDir = path.join(__dirname, 'public');
 if (!fs.existsSync(publicDir)) {
     fs.mkdirSync(publicDir, { recursive: true });
@@ -233,7 +239,7 @@ process.on('SIGTERM', async () => {
 // ==================== IMPORT MODELS ====================
 
 try {
-    require('./models/User');
+    require('./Models/User');
     require('./models/Student');
     require('./models/Company');
     require('./models/Post');
@@ -243,6 +249,7 @@ try {
     require('./models/CV');
     require('./models/Contact');
     require('./Models/Notification');
+    require('./models/OTP');          // <-- ADDED for phone verification
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -252,7 +259,7 @@ try {
 
 let authRoutes, userRoutes, studentRoutes, companyRoutes, postRoutes, jobRoutes, applicationRoutes;
 let cvRoutes, notificationRoutes, messageRoutes, adminRoutes, searchRoutes, interviewRoutes, activityRoutes;
-let contactRoutes;
+let contactRoutes, otpRoutes;          // <-- ADDED for OTP
 
 // Auth Routes
 try {
@@ -422,7 +429,7 @@ try {
     searchRoutes = express.Router();
 }
 
-// ==================== CONTACT ROUTES ====================
+// Contact Routes
 try {
     contactRoutes = require('./Routes/contactRoutes');
     console.log('✅ contactRoutes loaded');
@@ -434,6 +441,21 @@ try {
     });
     contactRoutes.get('/admin', (req, res) => {
         res.status(501).json({ success: false, message: 'Contact admin routes not implemented' });
+    });
+}
+
+// ==================== OTP ROUTES (NEW) ====================
+try {
+    otpRoutes = require('./routes/otpRoutes');
+    console.log('✅ otpRoutes loaded');
+} catch (err) {
+    console.error('❌ Error loading otpRoutes:', err.message);
+    otpRoutes = express.Router();
+    otpRoutes.post('/send', (req, res) => {
+        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
+    });
+    otpRoutes.post('/verify', (req, res) => {
+        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
     });
 }
 
@@ -454,6 +476,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/otp', otpRoutes);          // <-- ADDED OTP routes
 
 console.log('\n✅ API routes registered:');
 console.log('   - /api/auth');
@@ -471,6 +494,7 @@ console.log('   - /api/activities');
 console.log('   - /api/admin');
 console.log('   - /api/search');
 console.log('   - /api/contact');
+console.log('   - /api/otp');            // <-- ADDED log
 
 // ==================== API HEALTH CHECK ====================
 
@@ -490,11 +514,13 @@ app.get('/api/health', (req, res) => {
         },
         directories: {
             uploads: fs.existsSync(uploadsDir),
-            cvs: fs.existsSync(cvsDir)
+            cvs: fs.existsSync(cvsDir),
+            profiles: fs.existsSync(profilesDir)
         },
         routes: {
             interviews: '/api/interviews',
-            contact: '/api/contact'
+            contact: '/api/contact',
+            otp: '/api/otp'
         }
     });
 });
@@ -518,6 +544,7 @@ app.get('/api', (req, res) => {
             messages: '/api/messages',
             activities: '/api/activities',
             contact: '/api/contact',
+            otp: '/api/otp',
             health: '/api/health'
         }
     });
@@ -626,8 +653,10 @@ const startServer = (port) => {
         console.log(`🔍 Health: http://localhost:${port}/api/health`);
         console.log(`📅 Interviews: http://localhost:${port}/api/interviews`);
         console.log(`📞 Contact: http://localhost:${port}/api/contact`);
+        console.log(`📱 OTP: http://localhost:${port}/api/otp`);
         console.log(`⚙️  Environment: ${NODE_ENV}`);
         console.log(`📁 CV Uploads: ${cvsDir}`);
+        console.log(`📁 Profile Pictures: ${profilesDir}`);
         console.log('=================================\n');
         
         if (socketIo) {

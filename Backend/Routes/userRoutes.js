@@ -1,9 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const User = require('../models/User');
+const User = require('../Models/User');
 const Student = require('../models/Student');
 const Company = require('../models/Company');
+const fs = require('fs');
+const path = require('path');
+
+// ==================== EXISTING ROUTES (UNCHANGED) ====================
 
 // @route   GET api/users
 // @desc    Get all users (Admin only)
@@ -387,6 +391,152 @@ router.get('/search/:query', auth, auth.authorize('admin'), async (req, res) => 
             success: false, 
             message: 'Server Error: ' + error.message 
         });
+    }
+});
+
+// ==================== NEW ROUTES (ADDED) ====================
+
+// @route   GET api/users/notifications
+// @desc    Get user's notification preferences
+// @access  Private
+router.get('/notifications', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('notificationPreferences');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.json({ 
+            success: true, 
+            notifications: user.notificationPreferences || {
+                emailNotifications: true,
+                newUserAlerts: true,
+                companyVerificationAlerts: true,
+                reportAlerts: true,
+                systemUpdates: true
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error fetching notification preferences:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   PUT api/users/notifications
+// @desc    Update user's notification preferences
+// @access  Private
+router.put('/notifications', auth, async (req, res) => {
+    try {
+        const { emailNotifications, newUserAlerts, companyVerificationAlerts, reportAlerts, systemUpdates } = req.body;
+        const update = {
+            'notificationPreferences.emailNotifications': emailNotifications,
+            'notificationPreferences.newUserAlerts': newUserAlerts,
+            'notificationPreferences.companyVerificationAlerts': companyVerificationAlerts,
+            'notificationPreferences.reportAlerts': reportAlerts,
+            'notificationPreferences.systemUpdates': systemUpdates
+        };
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { $set: update },
+            { new: true, runValidators: true }
+        ).select('notificationPreferences');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.json({ 
+            success: true, 
+            message: 'Notification preferences updated', 
+            notifications: user.notificationPreferences 
+        });
+    } catch (error) {
+        console.error('❌ Error updating notification preferences:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   PUT api/users/profile-picture
+// @desc    Upload profile picture
+// @access  Private
+router.put('/profile-picture', auth, async (req, res) => {
+    try {
+        if (!req.files || !req.files.profilePicture) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        const file = req.files.profilePicture;
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+        if (!allowedTypes.includes(file.mimetype)) {
+            return res.status(400).json({ success: false, message: 'Only images allowed' });
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            return res.status(400).json({ success: false, message: 'File size must be less than 2MB' });
+        }
+
+        const fileName = `profile_${req.user.id}_${Date.now()}.${file.name.split('.').pop()}`;
+        const uploadPath = path.join(__dirname, '../uploads/profiles', fileName);
+        
+        // Ensure directory exists
+        if (!fs.existsSync(path.join(__dirname, '../uploads/profiles'))) {
+            fs.mkdirSync(path.join(__dirname, '../uploads/profiles'), { recursive: true });
+        }
+        
+        await file.mv(uploadPath);
+        const profilePictureUrl = `/uploads/profiles/${fileName}`;
+        
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { profilePicture: profilePictureUrl },
+            { new: true }
+        ).select('-password');
+        
+        res.json({ 
+            success: true, 
+            message: 'Profile picture updated', 
+            profilePicture: profilePictureUrl,
+            user
+        });
+    } catch (error) {
+        console.error('❌ Error uploading profile picture:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   PUT api/users/deactivate
+// @desc    Deactivate own account (self)
+// @access  Private
+router.put('/deactivate', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        user.isActive = false;
+        await user.save();
+        res.json({ success: true, message: 'Account deactivated. You can reactivate by contacting support.' });
+    } catch (error) {
+        console.error('Deactivate error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// @route   DELETE api/users/me
+// @desc    Delete own account (self)
+// @access  Private
+router.delete('/me', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        // Delete role-specific profile
+        if (user.role === 'student') {
+            await Student.findOneAndDelete({ userId: user._id });
+        } else if (user.role === 'company') {
+            await Company.findOneAndDelete({ userId: user._id });
+        }
+        await user.deleteOne();
+        res.json({ success: true, message: 'Account permanently deleted' });
+    } catch (error) {
+        console.error('Self-delete error:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
