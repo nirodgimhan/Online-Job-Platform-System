@@ -569,15 +569,6 @@ const StudentProfile = () => {
               </div>
             )}
 
-            {!editing && (
-              <div className="jobp-profile-actions">
-                <button className="jobp-follow-btn" onClick={handleFollow}>
-                  {isFollowing ? <FaUserCheck /> : <FaUserPlus />}
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
-              </div>
-            )}
-
             {editing && (
               <div className="jobp-edit-actions">
                 <button className="jobp-cancel-btn" onClick={handleCancelEdit}><FaTimes /> Cancel</button>

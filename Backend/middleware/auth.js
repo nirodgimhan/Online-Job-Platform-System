@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
 const auth = async (req, res, next) => {
@@ -14,8 +15,31 @@ const auth = async (req, res, next) => {
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        
+        // Verify JWT first (doesn't need database)
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        } catch (jwtError) {
+            console.error('❌ JWT verification error:', jwtError.message);
+            if (jwtError.name === 'JsonWebTokenError') {
+                return res.status(401).json({ success: false, message: 'Invalid token' });
+            }
+            if (jwtError.name === 'TokenExpiredError') {
+                return res.status(401).json({ success: false, message: 'Token expired' });
+            }
+            return res.status(401).json({ success: false, message: 'Authentication failed' });
+        }
+
+        // Check database connection before query
+        if (mongoose.connection.readyState !== 1) {
+            console.error('❌ Database not connected (readyState:', mongoose.connection.readyState, ')');
+            return res.status(503).json({ 
+                success: false, 
+                message: 'Database connection unavailable. Please try again later.',
+                retry: true 
+            });
+        }
+
         const user = await User.findById(decoded.id).select('-password');
         
         if (!user) {
@@ -45,17 +69,12 @@ const auth = async (req, res, next) => {
     } catch (error) {
         console.error('❌ Auth error:', error.message);
         
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Invalid token' 
-            });
-        }
-        
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Token expired' 
+        // Handle unexpected errors (e.g., database query timeout)
+        if (error.name === 'MongoTimeoutError' || error.name === 'MongoNetworkError') {
+            return res.status(503).json({
+                success: false,
+                message: 'Database timeout. Please try again.',
+                retry: true
             });
         }
         

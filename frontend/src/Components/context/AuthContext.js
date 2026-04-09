@@ -32,28 +32,29 @@ API.interceptors.request.use(
   }
 );
 
-// Simplified response interceptor – no retry logic
+// Simplified response interceptor – no retry queue
 API.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // Network errors (no response from server)
+    // Network errors (server unreachable, connection lost)
     if (error.message === 'Network Error' || error.code === 'ECONNABORTED') {
-      toast.error('Network connection error. Please check your internet connection.');
+      // Only show toast once per error to avoid spam
+      if (!originalRequest._toastShown) {
+        originalRequest._toastShown = true;
+        toast.error('Connection lost. Please check your internet connection or try again later.');
+      }
       return Promise.reject(error);
     }
     
-    // 401 Unauthorized – token expired or invalid
-    if (error.response?.status === 401) {
-      // Check if this is a CV upload request to avoid immediate redirect
-      const isCVUpload = originalRequest.url?.includes('/cv/upload');
-      if (!isCVUpload) {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-        toast.error('Session expired. Please login again.');
-      } else {
-        toast.error('Session expired. Please login again to upload CV.');
+    // 503 Service Unavailable – database connecting
+    if (error.response?.status === 503) {
+      if (!originalRequest._retry) {
+        originalRequest._retry = true;
+        // Wait 2 seconds and retry silently (no toast)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return API(originalRequest);
       }
       return Promise.reject(error);
     }
@@ -64,12 +65,27 @@ API.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // 404 Not Found – let components handle it (no toast)
+    // 401 Unauthorized – token expired or invalid
+    if (error.response?.status === 401) {
+      const isCVUpload = originalRequest.url?.includes('/cv/upload');
+      if (!isCVUpload) {
+        localStorage.removeItem('token');
+        // Only redirect if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        toast.error('Session expired. Please login again.');
+      } else {
+        toast.error('Session expired. Please login again to upload CV.');
+      }
+      return Promise.reject(error);
+    }
+    
+    // 404 Not Found – let components handle it
     if (error.response?.status === 404) {
       return Promise.reject(error);
     }
     
-    // For other status codes, pass through
     return Promise.reject(error);
   }
 );
@@ -85,7 +101,9 @@ export const AuthProvider = ({ children }) => {
     const handleOnline = () => {
       setIsOnline(true);
       toast.info('Connection restored!');
-      if (token) loadUser();
+      if (token) {
+        loadUser();
+      }
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -115,7 +133,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading user:', error);
-      // Only remove token on 401 (unauthorized) – not on network errors
+      // Only remove token on 401 (unauthorized) – not on network or 503
       if (error.response?.status === 401) {
         localStorage.removeItem('token');
         setToken(null);

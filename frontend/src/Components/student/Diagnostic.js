@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { useAuth, API } from '../context/AuthContext';
+import { FaSyncAlt, FaTrash, FaCheckCircle, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
 
 const Diagnostic = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -15,108 +15,149 @@ const Diagnostic = () => {
     setResults([]);
   };
 
-  const checkAll = async () => {
+  const runDiagnostics = async () => {
     clearResults();
     setLoading(true);
     
-    // Check 1: Token
+    // 1. Token check
     const token = localStorage.getItem('token');
-    addResult(`Token in localStorage: ${token ? '✅ Present' : '❌ Missing'}`, token ? 'success' : 'error');
-    
-    if (token) {
-      addResult(`Token preview: ${token.substring(0, 20)}...`);
-    }
+    addResult(`Token in localStorage: ${token ? 'Present' : 'Missing'}`, token ? 'success' : 'error');
+    if (token) addResult(`Token preview: ${token.substring(0, 20)}...`, 'info');
 
-    // Check 2: User from context
-    addResult(`User from context: ${user ? '✅ Present' : '❌ Missing'}`, user ? 'success' : 'error');
+    // 2. User from context
+    addResult(`User from context: ${user ? 'Present' : 'Missing'}`, user ? 'success' : 'error');
     if (user) {
-      addResult(`User role: ${user.role}`);
-      addResult(`User ID: ${user.id}`);
+      addResult(`User role: ${user.role}`, 'info');
+      addResult(`User ID: ${user.id}`, 'info');
+      addResult(`Authenticated: ${isAuthenticated ? 'Yes' : 'No'}`, isAuthenticated ? 'success' : 'error');
     }
 
-    // Check 3: Backend health
+    // 3. Backend health check (via API instance)
     try {
-      const healthRes = await axios.get('http://localhost:5000/api/health');
-      addResult(`Backend health: ✅ OK (${healthRes.data.message})`, 'success');
+      const healthRes = await API.get('/health');
+      addResult(`Backend health: OK (${healthRes.data.message})`, 'success');
+      addResult(`MongoDB state: ${healthRes.data.mongodb?.state || 'unknown'}`, 'info');
     } catch (error) {
-      addResult(`Backend health: ❌ Failed - ${error.message}`, 'error');
+      addResult(`Backend health: Failed - ${error.message}`, 'error');
     }
 
-    // Check 4: Auth me endpoint
+    // 4. Auth/me endpoint
     try {
-      const meRes = await axios.get('http://localhost:5000/api/auth/me', {
-        headers: { 'x-auth-token': token }
-      });
-      addResult(`Auth/me: ✅ Success`, 'success');
-      addResult(`Auth/me data: ${JSON.stringify(meRes.data.user)}`);
+      const meRes = await API.get('/auth/me');
+      addResult(`Auth/me: Success`, 'success');
+      addResult(`Auth/me data: ${meRes.data.user?.name} (${meRes.data.user?.email})`, 'info');
     } catch (error) {
-      addResult(`Auth/me: ❌ Failed - ${error.response?.data?.message || error.message}`, 'error');
+      addResult(`Auth/me: Failed - ${error.response?.data?.message || error.message}`, 'error');
+      if (error.response) addResult(`Status: ${error.response.status}`, 'error');
     }
 
-    // Check 5: Student profile
-    try {
-      const profileRes = await axios.get('http://localhost:5000/api/students/profile', {
-        headers: { 'x-auth-token': token }
-      });
-      addResult(`Student profile: ✅ Found`, 'success');
-      addResult(`Profile ID: ${profileRes.data.student._id}`);
-    } catch (error) {
-      addResult(`Student profile: ❌ Failed - ${error.response?.data?.message || error.message}`, 'error');
-    }
-
-    // Check 6: Applications
-    try {
-      const appsRes = await axios.get('http://localhost:5000/api/applications/student', {
-        headers: { 'x-auth-token': token }
-      });
-      addResult(`Applications: ✅ Success`, 'success');
-      addResult(`Applications count: ${appsRes.data.applications?.length || 0}`);
-    } catch (error) {
-      addResult(`Applications: ❌ Failed - ${error.response?.data?.message || error.message}`, 'error');
-      if (error.response) {
-        addResult(`Status: ${error.response.status}`, 'error');
-        addResult(`Response: ${JSON.stringify(error.response.data)}`, 'error');
+    // 5. Student profile (only if role is student)
+    if (user?.role === 'student') {
+      try {
+        const profileRes = await API.get('/students/profile');
+        addResult(`Student profile: Found`, 'success');
+        addResult(`Profile ID: ${profileRes.data.student?._id}`, 'info');
+      } catch (error) {
+        addResult(`Student profile: Failed - ${error.response?.data?.message || error.message}`, 'error');
+        if (error.response) addResult(`Status: ${error.response.status}`, 'error');
       }
     }
+
+    // 6. Applications (student only)
+    if (user?.role === 'student') {
+      try {
+        const appsRes = await API.get('/applications/student');
+        addResult(`Applications: Success`, 'success');
+        addResult(`Applications count: ${appsRes.data.applications?.length || 0}`, 'info');
+      } catch (error) {
+        addResult(`Applications: Failed - ${error.response?.data?.message || error.message}`, 'error');
+        if (error.response) addResult(`Status: ${error.response.status}`, 'error');
+      }
+    }
+
+    // 7. Jobs endpoint (public)
+    try {
+      const jobsRes = await API.get('/jobs?limit=1');
+      addResult(`Jobs endpoint: Success`, 'success');
+      addResult(`Total jobs: ${jobsRes.data.total || 0}`, 'info');
+    } catch (error) {
+      addResult(`Jobs endpoint: Failed - ${error.message}`, 'error');
+    }
+
+    // 8. Notifications endpoint (authenticated)
+    if (isAuthenticated) {
+      try {
+        const notifRes = await API.get('/notifications?limit=1');
+        addResult(`Notifications endpoint: Success`, 'success');
+        addResult(`Unread count: ${notifRes.data.unreadCount || 0}`, 'info');
+      } catch (error) {
+        addResult(`Notifications endpoint: Failed - ${error.message}`, 'error');
+      }
+    }
+
+    // Summary
+    const successCount = results.filter(r => r.type === 'success').length;
+    const errorCount = results.filter(r => r.type === 'error').length;
+    addResult(`--- DIAGNOSTIC COMPLETE ---`, 'info');
+    addResult(`Successes: ${successCount} / Errors: ${errorCount}`, errorCount > 0 ? 'error' : 'success');
 
     setLoading(false);
   };
 
-  return (
-    <div className="container py-4">
-      <h2 className="mb-4">Diagnostic Tool</h2>
-      
-      <button 
-        className="btn btn-primary mb-3"
-        onClick={checkAll}
-        disabled={loading}
-      >
-        {loading ? 'Running...' : 'Run Diagnostics'}
-      </button>
-      
-      <button 
-        className="btn btn-secondary mb-3 ms-2"
-        onClick={clearResults}
-      >
-        Clear
-      </button>
+  const getIcon = (type) => {
+    switch(type) {
+      case 'success': return <FaCheckCircle className="text-success" />;
+      case 'error': return <FaTimesCircle className="text-danger" />;
+      default: return <FaInfoCircle className="text-info" />;
+    }
+  };
 
-      <div className="card">
-        <div className="card-header">
-          <h5 className="mb-0">Results</h5>
+  return (
+    <div className="jobdash-student-dashboard" style={{ padding: '24px' }}>
+      <div className="jobdash-card" style={{ marginBottom: '24px' }}>
+        <div className="jobdash-card-header">
+          <h5>Diagnostic Tool</h5>
+          <div>
+            <button 
+              className="jobdash-btn jobdash-btn-primary me-2"
+              onClick={runDiagnostics}
+              disabled={loading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <FaSyncAlt className={loading ? 'jobdash-spin' : ''} />
+              {loading ? 'Running...' : 'Run Diagnostics'}
+            </button>
+            <button 
+              className="jobdash-btn jobdash-btn-outline-primary"
+              onClick={clearResults}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <FaTrash /> Clear
+            </button>
+          </div>
         </div>
-        <div className="card-body">
+        <div className="jobdash-card-body">
           {results.length === 0 ? (
-            <p className="text-muted">Click "Run Diagnostics" to start</p>
+            <p className="jobdash-empty-text">Click "Run Diagnostics" to start checking your system.</p>
           ) : (
-            <div className="list-group">
+            <div className="diagnostic-results">
               {results.map((result, index) => (
                 <div 
                   key={index} 
-                  className={`list-group-item list-group-item-${result.type === 'error' ? 'danger' : result.type === 'success' ? 'success' : 'light'}`}
+                  className={`diagnostic-item diagnostic-item-${result.type}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    borderBottom: '1px solid #e2e8f0',
+                    fontSize: '13px',
+                    fontFamily: 'monospace'
+                  }}
                 >
-                  <small className="text-muted me-2">[{result.timestamp}]</small>
-                  {result.message}
+                  <span style={{ minWidth: '80px', color: '#64748b' }}>[{result.timestamp}]</span>
+                  <span style={{ minWidth: '24px' }}>{getIcon(result.type)}</span>
+                  <span>{result.message}</span>
                 </div>
               ))}
             </div>

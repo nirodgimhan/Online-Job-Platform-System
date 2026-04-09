@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, API } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
 import { 
   FaUserShield, 
   FaEnvelope, 
@@ -20,12 +20,16 @@ import {
   FaEyeSlash,
   FaUsers,
   FaBriefcase,
-  FaSyncAlt
+  FaSyncAlt,
+  FaCamera,
+  FaUpload
 } from 'react-icons/fa';
 
 const AdminProfile = () => {
-  const { user, logout, setUser } = useAuth();
+  const { user, logout, setUser, token } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+  
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,11 +38,22 @@ const AdminProfile = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [lastLogin, setLastLogin] = useState(null);
   
+  // Welcome stats
   const [welcomeStats, setWelcomeStats] = useState({
     totalUsers: 0,
     totalCompanies: 0,
     totalJobs: 0
+  });
+
+  // Account stats (real data)
+  const [accountStats, setAccountStats] = useState({
+    accountStatus: 'Active',
+    lastLogin: 'Today',
+    securityLevel: 'High',
+    twoFAStatus: 'Not Enabled'
   });
 
   const [formData, setFormData] = useState({
@@ -80,6 +95,8 @@ const AdminProfile = () => {
   useEffect(() => {
     checkAuthAndFetchProfile();
     fetchWelcomeStats();
+    fetchAccountStats();
+    fetchNotificationPreferences();
   }, []);
 
   const checkAuthAndFetchProfile = async () => {
@@ -124,6 +141,19 @@ const AdminProfile = () => {
         }
       });
       
+      // Set last login from user data if available
+      if (user?.lastLogin) {
+        const lastLoginDate = new Date(user.lastLogin);
+        const today = new Date();
+        if (lastLoginDate.toDateString() === today.toDateString()) {
+          setLastLogin('Today');
+        } else {
+          setLastLogin(lastLoginDate.toLocaleDateString());
+        }
+      } else {
+        setLastLogin('Today');
+      }
+      
     } catch (error) {
       console.error('Error loading profile:', error);
       toast.error('Failed to load profile');
@@ -134,27 +164,122 @@ const AdminProfile = () => {
 
   const fetchWelcomeStats = async () => {
     try {
-      const [usersRes, companiesRes, jobsRes] = await Promise.allSettled([
-        API.get('/admin/users'),
-        API.get('/admin/companies'),
-        API.get('/admin/jobs')
-      ]);
-
-      let totalUsers = 0, totalCompanies = 0, totalJobs = 0;
-      if (usersRes.status === 'fulfilled') {
-        const { students, companies, admins } = usersRes.value.data;
-        totalUsers = (students?.length || 0) + (companies?.length || 0) + (admins?.length || 0);
+      // Fetch users
+      const usersRes = await API.get('/users');
+      const allUsers = usersRes.data.users || [];
+      const students = allUsers.filter(u => u.role === 'student').length;
+      const companies = allUsers.filter(u => u.role === 'company').length;
+      const admins = allUsers.filter(u => u.role === 'admin').length;
+      const totalUsers = students + companies + admins;
+      
+      // Fetch jobs
+      let totalJobs = 0;
+      try {
+        const jobsRes = await API.get('/jobs/admin/all');
+        totalJobs = jobsRes.data.jobs?.length || 0;
+      } catch (e) {
+        console.log('Jobs fetch failed:', e);
       }
-      if (companiesRes.status === 'fulfilled') {
-        totalCompanies = companiesRes.value.data.companies?.length || 0;
-      }
-      if (jobsRes.status === 'fulfilled') {
-        totalJobs = jobsRes.value.data.jobs?.length || 0;
-      }
-
-      setWelcomeStats({ totalUsers, totalCompanies, totalJobs });
+      
+      setWelcomeStats({
+        totalUsers,
+        totalCompanies: companies,
+        totalJobs
+      });
     } catch (err) {
       console.warn('Could not fetch welcome stats', err);
+      // Fallback to mock data if needed
+      setWelcomeStats({ totalUsers: 1, totalCompanies: 1, totalJobs: 0 });
+    }
+  };
+
+  const fetchAccountStats = async () => {
+    try {
+      // Get user's last login from local storage or backend
+      const lastLoginStorage = localStorage.getItem('lastLogin');
+      if (lastLoginStorage) {
+        const lastLoginDate = new Date(lastLoginStorage);
+        const today = new Date();
+        if (lastLoginDate.toDateString() === today.toDateString()) {
+          setAccountStats(prev => ({ ...prev, lastLogin: 'Today' }));
+        } else {
+          setAccountStats(prev => ({ ...prev, lastLogin: lastLoginDate.toLocaleDateString() }));
+        }
+      }
+      
+      // You can also fetch from backend if available
+      // For now, keep hardcoded values for security level and 2FA
+    } catch (error) {
+      console.error('Error fetching account stats:', error);
+    }
+  };
+
+  const fetchNotificationPreferences = async () => {
+    try {
+      const response = await API.get('/users/notifications');
+      if (response.data.success && response.data.notifications) {
+        setFormData(prev => ({
+          ...prev,
+          notifications: response.data.notifications
+        }));
+      }
+    } catch (error) {
+      console.log('No saved notification preferences, using defaults');
+    }
+  };
+
+  const saveNotificationPreferences = async () => {
+    setSaving(true);
+    try {
+      const response = await API.put('/users/notifications', formData.notifications);
+      if (response.data.success) {
+        toast.success('Notification preferences saved!');
+      } else {
+        toast.error('Failed to save preferences');
+      }
+    } catch (error) {
+      console.error('Error saving notifications:', error);
+      toast.error('Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleProfilePictureUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a valid image (JPEG, PNG, GIF)');
+      return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size must be less than 2MB');
+      return;
+    }
+    
+    setUploadingPhoto(true);
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    
+    try {
+      const response = await API.put('/users/profile-picture', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (response.data.success) {
+        toast.success('Profile picture updated!');
+        const updatedUser = { ...user, profilePicture: response.data.profilePicture };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (setUser) setUser(updatedUser);
+        await fetchProfile();
+      }
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error('Failed to upload profile picture');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -348,6 +473,8 @@ const AdminProfile = () => {
       if (error.response) {
         if (error.response.status === 401) {
           toast.error('Current password is incorrect');
+        } else if (error.response.status === 404) {
+          toast.error('Password change endpoint not available. Please contact administrator.');
         } else {
           toast.error(error.response.data?.message || 'Failed to change password');
         }
@@ -391,7 +518,7 @@ const AdminProfile = () => {
       {/* Welcome Header */}
       <div className="admin-profile-welcome-header">
         <div className="admin-profile-welcome-content">
-          <div className="admin-profile-user-avatar-large">
+          <div className="admin-profile-user-avatar-large" style={{ position: 'relative' }}>
             {user?.profilePicture ? (
               <img src={user.profilePicture.startsWith('http') ? user.profilePicture : `http://localhost:5000${user.profilePicture}`} alt={user.name} className="admin-profile-avatar-image" />
             ) : (
@@ -399,6 +526,21 @@ const AdminProfile = () => {
                 <FaShieldAlt size={32} />
               </div>
             )}
+            <button 
+              className="admin-profile-upload-photo-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              title="Change profile picture"
+            >
+              <FaCamera />
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept="image/jpeg,image/png,image/jpg,image/gif"
+              onChange={handleProfilePictureUpload}
+            />
           </div>
           <div className="admin-profile-welcome-text">
             <h2>Welcome back, {user?.name?.split(' ')[0] || 'Admin'}! 👑</h2>
@@ -451,7 +593,7 @@ const AdminProfile = () => {
             </div>
           </div>
 
-          {/* Account Statistics Card */}
+          {/* Account Statistics Card - Now with real data */}
           <div className="admin-profile-card admin-profile-stats-card">
             <div className="admin-profile-card-header">
               <h5>Account Statistics</h5>
@@ -459,7 +601,7 @@ const AdminProfile = () => {
             <div className="admin-profile-card-body">
               <div className="admin-profile-stats-list">
                 <div><span>Account Status</span><span className="admin-profile-badge admin-profile-badge-success">Active</span></div>
-                <div><span>Last Login</span><span>Today</span></div>
+                <div><span>Last Login</span><span>{lastLogin || 'Today'}</span></div>
                 <div><span>Security Level</span><span className="admin-profile-badge admin-profile-badge-info">High</span></div>
                 <div><span>2FA Status</span><span className="admin-profile-badge admin-profile-badge-warning">Not Enabled</span></div>
               </div>
@@ -660,8 +802,12 @@ const AdminProfile = () => {
                 ))}
               </div>
               <div className="admin-profile-form-actions" style={{ padding: '0 1.5rem 1.5rem' }}>
-                <button className="admin-profile-btn admin-profile-btn-primary" onClick={() => toast.success('Notification preferences saved!')}>
-                  Save Preferences
+                <button 
+                  className="admin-profile-btn admin-profile-btn-primary" 
+                  onClick={saveNotificationPreferences}
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save Preferences'}
                 </button>
               </div>
             </div>

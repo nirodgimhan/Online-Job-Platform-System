@@ -3,41 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth, API } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { 
-  FaBriefcase, 
-  FaMapMarkerAlt, 
-  FaDollarSign,
-  FaClock,
-  FaBuilding,
-  FaGlobe,
-  FaGraduationCap,
-  FaCode,
-  FaHeart,
-  FaRegHeart,
-  FaCalendarAlt,
-  FaUsers,
-  FaEye,
-  FaShare,
-  FaFileAlt,
-  FaPaperPlane,
-  FaCheckCircle,
-  FaExclamationTriangle,
-  FaUpload,
-  FaFilePdf,
-  FaFileWord,
-  FaTrash,
-  FaTimes,
-  FaSpinner,
-  FaArrowLeft,
-  FaStar,
-  FaRegStar,
-  FaLinkedin,
-  FaTwitter,
-  FaFacebook,
-  FaEnvelope,
-  FaWhatsapp,
-  FaDownload,
-  FaPlus
+  FaBriefcase, FaMapMarkerAlt, FaDollarSign, FaClock, FaBuilding, FaGlobe,
+  FaGraduationCap, FaCode, FaHeart, FaRegHeart, FaCalendarAlt, FaUsers, FaEye,
+  FaShare, FaFileAlt, FaPaperPlane, FaCheckCircle, FaExclamationTriangle,
+  FaUpload, FaFilePdf, FaFileWord, FaTrash, FaTimes, FaSpinner, FaArrowLeft
 } from 'react-icons/fa';
+
 
 const JobDetails = () => {
   const { id } = useParams();
@@ -173,13 +144,11 @@ const JobDetails = () => {
     }
   };
 
-  // ========== MODIFIED ==========
   const checkIfApplied = async () => {
     try {
       const response = await API.get('/applications/student');
       if (response.data.success) {
         const applications = response.data.applications || [];
-        // Only consider applications that are NOT Withdrawn or Rejected
         const activeApplications = applications.filter(app => 
           app.status !== 'Withdrawn' && app.status !== 'Rejected'
         );
@@ -189,7 +158,6 @@ const JobDetails = () => {
       console.error('Error checking application status:', error);
     }
   };
-  // ========== END MODIFIED ==========
 
   const fetchUserCVs = async () => {
     setFetchingCVs(true);
@@ -474,9 +442,9 @@ const JobDetails = () => {
 
   const getFileIcon = (filename) => {
     const ext = filename?.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') return <FaFilePdf className="jd-file-icon-pdf" />;
-    if (ext === 'doc' || ext === 'docx') return <FaFileWord className="jd-file-icon-word" />;
-    return <FaFileAlt className="jd-file-icon-default" />;
+    if (ext === 'pdf') return <FaFilePdf className="jobdetail-file-icon-pdf" />;
+    if (ext === 'doc' || ext === 'docx') return <FaFileWord className="jobdetail-file-icon-word" />;
+    return <FaFileAlt className="jobdetail-file-icon-default" />;
   };
 
   const formatFileSize = (bytes) => {
@@ -489,8 +457,8 @@ const JobDetails = () => {
 
   if (loading) {
     return (
-      <div className="jd-loading-container">
-        <div className="jd-spinner"></div>
+      <div className="jobdetail-loading-container">
+        <div className="jobdetail-spinner"></div>
         <h4>Loading job details...</h4>
         <p>Please wait while we fetch the job information</p>
       </div>
@@ -499,12 +467,12 @@ const JobDetails = () => {
 
   if (!job) {
     return (
-      <div className="jd-error-container">
-        <div className="jd-error-card">
-          <FaExclamationTriangle className="jd-error-icon" />
+      <div className="jobdetail-error-container">
+        <div className="jobdetail-error-card">
+          <FaExclamationTriangle className="jobdetail-error-icon" />
           <h3>Job Not Found</h3>
           <p>The job you're looking for doesn't exist or has been removed.</p>
-          <Link to="/student/jobs" className="jd-btn jd-btn-primary">
+          <Link to="/student/jobs" className="jobdetail-btn jobdetail-btn-primary">
             Browse Jobs
           </Link>
         </div>
@@ -513,53 +481,48 @@ const JobDetails = () => {
   }
 
   return (
-    <div className="jd-job-details">
-      <div className="jd-job-details-container">
-        {/* Navigation */}
-        <div className="jd-back-nav">
-          <Link to="/student/jobs" className="jd-back-link">
-            <FaArrowLeft /> Back to Jobs
-          </Link>
-        </div>
+    <div className="jobdetail-job-details">
+      <div className="jobdetail-job-details-container">
+        
 
-        <div className="jd-job-details-grid">
+        <div className="jobdetail-job-details-grid">
           {/* Main Content */}
-          <div className="jd-job-main">
+          <div className="jobdetail-job-main">
             {/* Job Header Card */}
-            <div className="jd-job-header-card">
-              <div className="jd-job-header-content">
-                <div className="jd-company-section">
-                  <div className="jd-company-logo-wrapper">
+            <div className="jobdetail-job-header-card">
+              <div className="jobdetail-job-header-content">
+                <div className="jobdetail-company-section">
+                  <div className="jobdetail-company-logo-wrapper">
                     {job.companyId?.companyLogo ? (
                       <img 
                         src={job.companyId.companyLogo.startsWith('http') ? job.companyId.companyLogo : `http://localhost:5000${job.companyId.companyLogo}`}
                         alt={job.companyId.companyName}
-                        className="jd-company-logo"
+                        className="jobdetail-company-logo"
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'flex';
                         }}
                       />
                     ) : null}
-                    <div className="jd-company-logo-placeholder" style={{ display: job.companyId?.companyLogo ? 'none' : 'flex' }}>
+                    <div className="jobdetail-company-logo-placeholder" style={{ display: job.companyId?.companyLogo ? 'none' : 'flex' }}>
                       <FaBuilding />
                     </div>
                   </div>
-                  <div className="jd-job-title-section">
+                  <div className="jobdetail-job-title-section">
                     <h1>{job.title}</h1>
-                    <p className="jd-company-name">{job.companyId?.companyName}</p>
-                    <div className="jd-job-meta-tags">
-                      <span className="jd-meta-tag"><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span>
-                      <span className="jd-meta-tag"><FaBriefcase /> {job.employmentType}</span>
-                      <span className="jd-meta-tag"><FaGlobe /> {job.workMode}</span>
+                    <p className="jobdetail-company-name">{job.companyId?.companyName}</p>
+                    <div className="jobdetail-job-meta-tags">
+                      <span className="jobdetail-meta-tag"><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span>
+                      <span className="jobdetail-meta-tag"><FaBriefcase /> {job.employmentType}</span>
+                      <span className="jobdetail-meta-tag"><FaGlobe /> {job.workMode}</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="jd-job-actions">
+                <div className="jobdetail-job-actions">
                   {user?.role === 'student' && (
                     <button 
-                      className={`jd-save-job-btn ${saved ? 'jd-saved' : ''}`}
+                      className={`jobdetail-save-job-btn ${saved ? 'jobdetail-saved' : ''}`}
                       onClick={handleSaveJob}
                       title={saved ? 'Remove from saved' : 'Save job'}
                     >
@@ -568,7 +531,7 @@ const JobDetails = () => {
                     </button>
                   )}
                   <button 
-                    className="jd-share-job-btn"
+                    className="jobdetail-share-job-btn"
                     onClick={handleShareJob}
                     title="Share job"
                   >
@@ -578,40 +541,40 @@ const JobDetails = () => {
               </div>
 
               {/* Key Stats */}
-              <div className="jd-job-stats-grid">
-                <div className="jd-stat-item">
-                  <FaDollarSign className="jd-stat-icon jd-salary-icon" />
+              <div className="jobdetail-job-stats-grid">
+                <div className="jobdetail-stat-item">
+                  <FaDollarSign className="jobdetail-stat-icon jobdetail-salary-icon" />
                   <div>
-                    <span className="jd-stat-label">Salary</span>
-                    <span className="jd-stat-value">{formatSalary(job.salary)}</span>
+                    <span className="jobdetail-stat-label">Salary</span>
+                    <span className="jobdetail-stat-value">{formatSalary(job.salary)}</span>
                   </div>
                 </div>
-                <div className="jd-stat-item">
-                  <FaClock className="jd-stat-icon jd-exp-icon" />
+                <div className="jobdetail-stat-item">
+                  <FaClock className="jobdetail-stat-icon jobdetail-exp-icon" />
                   <div>
-                    <span className="jd-stat-label">Experience</span>
-                    <span className="jd-stat-value">{job.experience?.min || 0} - {job.experience?.max || 0} years</span>
+                    <span className="jobdetail-stat-label">Experience</span>
+                    <span className="jobdetail-stat-value">{job.experience?.min || 0} - {job.experience?.max || 0} years</span>
                   </div>
                 </div>
-                <div className="jd-stat-item">
-                  <FaUsers className="jd-stat-icon jd-applicants-icon" />
+                <div className="jobdetail-stat-item">
+                  <FaUsers className="jobdetail-stat-icon jobdetail-applicants-icon" />
                   <div>
-                    <span className="jd-stat-label">Applicants</span>
-                    <span className="jd-stat-value">{job.applications || 0}</span>
+                    <span className="jobdetail-stat-label">Applicants</span>
+                    <span className="jobdetail-stat-value">{job.applications || 0}</span>
                   </div>
                 </div>
-                <div className="jd-stat-item">
-                  <FaEye className="jd-stat-icon jd-views-icon" />
+                <div className="jobdetail-stat-item">
+                  <FaEye className="jobdetail-stat-icon jobdetail-views-icon" />
                   <div>
-                    <span className="jd-stat-label">Views</span>
-                    <span className="jd-stat-value">{job.views || 0}</span>
+                    <span className="jobdetail-stat-label">Views</span>
+                    <span className="jobdetail-stat-value">{job.views || 0}</span>
                   </div>
                 </div>
               </div>
 
               {/* Deadline Alert */}
               {job.applicationDeadline && (
-                <div className={`jd-deadline-alert ${new Date(job.applicationDeadline) < new Date() ? 'jd-expired' : 'jd-active'}`}>
+                <div className={`jobdetail-deadline-alert ${new Date(job.applicationDeadline) < new Date() ? 'jobdetail-expired' : 'jobdetail-active'}`}>
                   <FaCalendarAlt />
                   <span>
                     <strong>Application Deadline:</strong> {formatDate(job.applicationDeadline)}
@@ -623,7 +586,7 @@ const JobDetails = () => {
               {/* Apply Button or Status */}
               {user?.role === 'student' && !hasApplied && !showApplyForm && (
                 <button 
-                  className="jd-apply-btn jd-btn-primary"
+                  className="jobdetail-apply-btn jobdetail-btn-primary"
                   onClick={handleApplyClick}
                   disabled={job.applicationDeadline && new Date(job.applicationDeadline) < new Date()}
                 >
@@ -632,7 +595,7 @@ const JobDetails = () => {
               )}
 
               {hasApplied && (
-                <div className="jd-applied-alert">
+                <div className="jobdetail-applied-alert">
                   <FaCheckCircle />
                   <div>
                     <strong>You have already applied for this job!</strong>
@@ -643,50 +606,50 @@ const JobDetails = () => {
 
               {/* Apply Form */}
               {showApplyForm && (
-                <div className="jd-apply-form">
-                  <div className="jd-apply-form-header">
+                <div className="jobdetail-apply-form">
+                  <div className="jobdetail-apply-form-header">
                     <h3>Apply for this Position</h3>
-                    <button className="jd-upload-cv-btn" onClick={() => setShowCVUploadModal(true)}>
+                    <button className="jobdetail-upload-cv-btn" onClick={() => setShowCVUploadModal(true)}>
                       <FaUpload /> Upload New CV
                     </button>
                   </div>
                   
                   <form onSubmit={handleApplySubmit}>
                     {/* CV Selection */}
-                    <div className="jd-form-group">
-                      <label className="jd-form-label">Select CV/Resume <span className="jd-required">*</span></label>
+                    <div className="jobdetail-form-group">
+                      <label className="jobdetail-form-label">Select CV/Resume <span className="jobdetail-required">*</span></label>
                       
                       {ensuringProfile ? (
-                        <div className="jd-loading-cvs">
-                          <FaSpinner className="jd-spin" /> Loading your profile...
+                        <div className="jobdetail-loading-cvs">
+                          <FaSpinner className="jobdetail-spin" /> Loading your profile...
                         </div>
                       ) : fetchingCVs ? (
-                        <div className="jd-loading-cvs">
-                          <FaSpinner className="jd-spin" /> Loading your CVs...
+                        <div className="jobdetail-loading-cvs">
+                          <FaSpinner className="jobdetail-spin" /> Loading your CVs...
                         </div>
                       ) : userCVs.length > 0 ? (
-                        <div className="jd-cv-list">
+                        <div className="jobdetail-cv-list">
                           {userCVs.map((cv) => (
                             <div 
                               key={cv._id} 
-                              className={`jd-cv-item ${selectedCV === cv._id ? 'jd-selected' : ''}`}
+                              className={`jobdetail-cv-item ${selectedCV === cv._id ? 'jobdetail-selected' : ''}`}
                               onClick={() => setSelectedCV(cv._id)}
                             >
-                              <div className="jd-cv-item-icon">
+                              <div className="jobdetail-cv-item-icon">
                                 {getFileIcon(cv.filename)}
                               </div>
-                              <div className="jd-cv-item-info">
-                                <div className="jd-cv-item-name">{cv.filename}</div>
-                                <div className="jd-cv-item-meta">
+                              <div className="jobdetail-cv-item-info">
+                                <div className="jobdetail-cv-item-name">{cv.filename}</div>
+                                <div className="jobdetail-cv-item-meta">
                                   <span>{formatFileSize(cv.fileSize)}</span>
                                   <span>Uploaded: {new Date(cv.uploadedAt).toLocaleDateString()}</span>
-                                  {cv.isPrimary && <span className="jd-primary-badge">Primary</span>}
+                                  {cv.isPrimary && <span className="jobdetail-primary-badge">Primary</span>}
                                 </div>
                               </div>
-                              <div className="jd-cv-item-actions">
+                              <div className="jobdetail-cv-item-actions">
                                 <button 
                                   type="button"
-                                  className="jd-delete-cv-btn"
+                                  className="jobdetail-delete-cv-btn"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeleteCV(cv._id);
@@ -696,7 +659,7 @@ const JobDetails = () => {
                                 >
                                   <FaTrash />
                                 </button>
-                                <div className="jd-radio-select">
+                                <div className="jobdetail-radio-select">
                                   <input 
                                     type="radio" 
                                     name="cvSelection" 
@@ -710,12 +673,12 @@ const JobDetails = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="jd-no-cv-warning">
+                        <div className="jobdetail-no-cv-warning">
                           <FaExclamationTriangle />
                           <p>No CV found. Please upload your first CV.</p>
                           <button 
                             type="button"
-                            className="jd-btn jd-btn-outline-primary"
+                            className="jobdetail-btn jobdetail-btn-outline-primary"
                             onClick={() => setShowCVUploadModal(true)}
                           >
                             <FaUpload /> Upload CV
@@ -725,30 +688,30 @@ const JobDetails = () => {
                     </div>
 
                     {/* Cover Letter */}
-                    <div className="jd-form-group">
-                      <label className="jd-form-label">Cover Letter <span className="jd-optional">(Optional)</span></label>
+                    <div className="jobdetail-form-group">
+                      <label className="jobdetail-form-label">Cover Letter <span className="jobdetail-optional">(Optional)</span></label>
                       <textarea
-                        className="jd-form-control"
+                        className="jobdetail-form-control"
                         rows="5"
                         value={coverLetter}
                         onChange={(e) => setCoverLetter(e.target.value)}
                         placeholder="Write a brief cover letter explaining why you're a good fit for this position..."
                       />
-                      <small className="jd-form-hint">
+                      <small className="jobdetail-form-hint">
                         A well-written cover letter increases your chances of getting hired.
                       </small>
                     </div>
 
                     {/* Form Actions */}
-                    <div className="jd-form-actions">
+                    <div className="jobdetail-form-actions">
                       <button 
                         type="submit" 
-                        className="jd-btn jd-btn-primary"
+                        className="jobdetail-btn jobdetail-btn-primary"
                         disabled={applying || userCVs.length === 0 || !selectedCV || ensuringProfile}
                       >
                         {applying ? (
                           <>
-                            <FaSpinner className="jd-spin" /> Submitting...
+                            <FaSpinner className="jobdetail-spin" /> Submitting...
                           </>
                         ) : (
                           <>
@@ -758,7 +721,7 @@ const JobDetails = () => {
                       </button>
                       <button 
                         type="button" 
-                        className="jd-btn jd-btn-outline-secondary"
+                        className="jobdetail-btn jobdetail-btn-outline-secondary"
                         onClick={() => setShowApplyForm(false)}
                       >
                         Cancel
@@ -770,18 +733,18 @@ const JobDetails = () => {
             </div>
 
             {/* Job Description */}
-            <div className="jd-info-card">
+            <div className="jobdetail-info-card">
               <h3>Job Description</h3>
-              <div className="jd-job-description">
+              <div className="jobdetail-job-description">
                 <p>{job.description}</p>
               </div>
             </div>
 
             {/* Requirements */}
             {job.requirements && job.requirements.length > 0 && (
-              <div className="jd-info-card">
+              <div className="jobdetail-info-card">
                 <h3>Requirements</h3>
-                <ul className="jd-list-check">
+                <ul className="jobdetail-list-check">
                   {job.requirements.map((req, index) => (
                     <li key={index}><FaCheckCircle /> {req}</li>
                   ))}
@@ -791,9 +754,9 @@ const JobDetails = () => {
 
             {/* Responsibilities */}
             {job.responsibilities && job.responsibilities.length > 0 && (
-              <div className="jd-info-card">
+              <div className="jobdetail-info-card">
                 <h3>Responsibilities</h3>
-                <ul className="jd-list-check">
+                <ul className="jobdetail-list-check">
                   {job.responsibilities.map((resp, index) => (
                     <li key={index}><FaCheckCircle /> {resp}</li>
                   ))}
@@ -803,14 +766,14 @@ const JobDetails = () => {
 
             {/* Skills */}
             {job.skills && job.skills.length > 0 && (
-              <div className="jd-info-card">
+              <div className="jobdetail-info-card">
                 <h3><FaCode /> Required Skills</h3>
-                <div className="jd-skills-list">
+                <div className="jobdetail-skills-list">
                   {job.skills.map((skill, index) => (
-                    <span key={index} className="jd-skill-badge">
+                    <span key={index} className="jobdetail-skill-badge">
                       {skill.name}
                       {skill.importance && (
-                        <span className={`jd-skill-importance jd-${skill.importance.toLowerCase()}`}>
+                        <span className={`jobdetail-skill-importance jobdetail-${skill.importance.toLowerCase()}`}>
                           {skill.importance}
                         </span>
                       )}
@@ -822,11 +785,11 @@ const JobDetails = () => {
 
             {/* Benefits */}
             {job.benefits && job.benefits.length > 0 && (
-              <div className="jd-info-card">
+              <div className="jobdetail-info-card">
                 <h3>Benefits</h3>
-                <div className="jd-benefits-grid">
+                <div className="jobdetail-benefits-grid">
                   {job.benefits.map((benefit, index) => (
-                    <div key={index} className="jd-benefit-item">
+                    <div key={index} className="jobdetail-benefit-item">
                       <FaHeart /> {benefit}
                     </div>
                   ))}
@@ -836,24 +799,24 @@ const JobDetails = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="jd-job-sidebar">
+          <div className="jobdetail-job-sidebar">
             {/* Company Info */}
-            <div className="jd-info-card">
+            <div className="jobdetail-info-card">
               <h3>About the Company</h3>
-              <div className="jd-company-info">
+              <div className="jobdetail-company-info">
                 <h4>{job.companyId?.companyName}</h4>
                 {job.companyId?.industry && (
-                  <p className="jd-company-industry"><FaBuilding /> {job.companyId.industry}</p>
+                  <p className="jobdetail-company-industry"><FaBuilding /> {job.companyId.industry}</p>
                 )}
                 {job.companyId?.description && (
-                  <p className="jd-company-description">{job.companyId.description.substring(0, 200)}...</p>
+                  <p className="jobdetail-company-description">{job.companyId.description.substring(0, 200)}...</p>
                 )}
                 {job.companyId?.website && (
                   <a 
                     href={job.companyId.website} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="jd-company-website"
+                    className="jobdetail-company-website"
                   >
                     <FaGlobe /> Visit Website
                   </a>
@@ -862,38 +825,38 @@ const JobDetails = () => {
             </div>
 
             {/* Job Overview */}
-            <div className="jd-info-card">
+            <div className="jobdetail-info-card">
               <h3>Job Overview</h3>
-              <div className="jd-overview-list">
-                <div className="jd-overview-item">
+              <div className="jobdetail-overview-list">
+                <div className="jobdetail-overview-item">
                   <FaCalendarAlt />
                   <div>
                     <span>Posted Date</span>
                     <strong>{formatDate(job.postedDate || job.createdAt)}</strong>
                   </div>
                 </div>
-                <div className="jd-overview-item">
+                <div className="jobdetail-overview-item">
                   <FaMapMarkerAlt />
                   <div>
                     <span>Location</span>
                     <strong>{job.location?.city || 'Remote'}, {job.location?.country || ''}</strong>
                   </div>
                 </div>
-                <div className="jd-overview-item">
+                <div className="jobdetail-overview-item">
                   <FaBriefcase />
                   <div>
                     <span>Job Type</span>
                     <strong>{job.employmentType}</strong>
                   </div>
                 </div>
-                <div className="jd-overview-item">
+                <div className="jobdetail-overview-item">
                   <FaGlobe />
                   <div>
                     <span>Work Mode</span>
                     <strong>{job.workMode}</strong>
                   </div>
                 </div>
-                <div className="jd-overview-item">
+                <div className="jobdetail-overview-item">
                   <FaClock />
                   <div>
                     <span>Experience</span>
@@ -901,7 +864,7 @@ const JobDetails = () => {
                   </div>
                 </div>
                 {job.education?.level && (
-                  <div className="jd-overview-item">
+                  <div className="jobdetail-overview-item">
                     <FaGraduationCap />
                     <div>
                       <span>Education</span>
@@ -914,18 +877,18 @@ const JobDetails = () => {
 
             {/* Similar Jobs */}
             {similarJobs.length > 0 && (
-              <div className="jd-info-card">
+              <div className="jobdetail-info-card">
                 <h3>Similar Jobs</h3>
-                <div className="jd-similar-jobs">
+                <div className="jobdetail-similar-jobs">
                   {similarJobs.map(similarJob => (
                     <div 
                       key={similarJob._id} 
-                      className="jd-similar-job"
+                      className="jobdetail-similar-job"
                       onClick={() => navigate(`/student/job/${similarJob._id}`)}
                     >
                       <h4>{similarJob.title}</h4>
-                      <p className="jd-similar-company">{similarJob.companyId?.companyName}</p>
-                      <div className="jd-similar-meta">
+                      <p className="jobdetail-similar-company">{similarJob.companyId?.companyName}</p>
+                      <div className="jobdetail-similar-meta">
                         <span><FaMapMarkerAlt /> {similarJob.location?.city || 'Remote'}</span>
                         <span><FaBriefcase /> {similarJob.employmentType}</span>
                       </div>
@@ -940,50 +903,50 @@ const JobDetails = () => {
 
       {/* CV Upload Modal */}
       {showCVUploadModal && (
-        <div className="jd-modal-overlay" onClick={() => { setShowCVUploadModal(false); setCvFile(null); setCvFileName(''); }}>
-          <div className="jd-modal" onClick={e => e.stopPropagation()}>
-            <div className="jd-modal-header">
-              <FaUpload className="jd-modal-icon" />
+        <div className="jobdetail-modal-overlay" onClick={() => { setShowCVUploadModal(false); setCvFile(null); setCvFileName(''); }}>
+          <div className="jobdetail-modal" onClick={e => e.stopPropagation()}>
+            <div className="jobdetail-modal-header">
+              <FaUpload className="jobdetail-modal-icon" />
               <h3>Upload CV/Resume</h3>
-              <button className="jd-modal-close" onClick={() => { setShowCVUploadModal(false); setCvFile(null); setCvFileName(''); }}>
+              <button className="jobdetail-modal-close" onClick={() => { setShowCVUploadModal(false); setCvFile(null); setCvFileName(''); }}>
                 <FaTimes />
               </button>
             </div>
-            <div className="jd-modal-body">
-              <div className="jd-upload-area">
+            <div className="jobdetail-modal-body">
+              <div className="jobdetail-upload-area">
                 <input
                   type="file"
                   id="cvFile"
                   accept=".pdf,.doc,.docx"
                   onChange={handleCVFileChange}
-                  className="jd-file-input"
+                  className="jobdetail-file-input"
                 />
-                <label htmlFor="cvFile" className="jd-upload-label">
+                <label htmlFor="cvFile" className="jobdetail-upload-label">
                   <FaUpload />
                   <span>Choose File</span>
                 </label>
                 
                 {cvFileName && (
-                  <div className="jd-selected-file">
+                  <div className="jobdetail-selected-file">
                     {getFileIcon(cvFileName)}
                     <span>{cvFileName}</span>
-                    <button className="jd-remove-file" onClick={() => { setCvFile(null); setCvFileName(''); }}>
+                    <button className="jobdetail-remove-file" onClick={() => { setCvFile(null); setCvFileName(''); }}>
                       <FaTrash />
                     </button>
                   </div>
                 )}
                 
-                <p className="jd-upload-hint">
+                <p className="jobdetail-upload-hint">
                   Supported formats: PDF, DOC, DOCX (Max 5MB)
                 </p>
               </div>
             </div>
-            <div className="jd-modal-footer">
-              <button className="jd-btn jd-btn-secondary" onClick={() => { setShowCVUploadModal(false); setCvFile(null); setCvFileName(''); }}>
+            <div className="jobdetail-modal-footer">
+              <button className="jobdetail-btn jobdetail-btn-secondary" onClick={() => { setShowCVUploadModal(false); setCvFile(null); setCvFileName(''); }}>
                 Cancel
               </button>
-              <button className="jd-btn jd-btn-primary" onClick={handleCVUpload} disabled={uploadingCV || !cvFile}>
-                {uploadingCV ? <><FaSpinner className="jd-spin" /> Uploading...</> : <><FaUpload /> Upload CV</>}
+              <button className="jobdetail-btn jobdetail-btn-primary" onClick={handleCVUpload} disabled={uploadingCV || !cvFile}>
+                {uploadingCV ? <><FaSpinner className="jobdetail-spin" /> Uploading...</> : <><FaUpload /> Upload CV</>}
               </button>
             </div>
           </div>
