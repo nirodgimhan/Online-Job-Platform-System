@@ -79,6 +79,7 @@ const Sidebar = ({ children }) => {
     { title: 'Saved Jobs', path: '/student/saved-jobs', icon: <FaHeart /> },
     { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> },
     { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' },
+    { title: 'Give Feedback', path: '/student/feedback', icon: <FaComments /> },
   ];
 
   const companyMenuItems = [
@@ -98,6 +99,7 @@ const Sidebar = ({ children }) => {
     { title: 'Manage Companies', path: '/admin/companies', icon: <FaBuilding /> },
     { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: 'pending' },
     { title: 'Contact Messages', path: '/admin/contact-messages', icon: <FaEnvelope />, badge: 'new' },  // <-- ADDED
+    { title: 'Manage Feedback', path: '/admin/feedback', icon: <FaStar /> },
     { title: 'Reports', path: '/admin/reports', icon: <FaChartLine /> },
   ];
 

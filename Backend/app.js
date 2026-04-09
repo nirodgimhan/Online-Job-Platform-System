@@ -243,6 +243,7 @@ try {
     require('./models/CV');
     require('./models/Contact');
     require('./Models/Notification');
+    require('./Models/Feedback'); 
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -437,6 +438,16 @@ try {
     });
 }
 
+let feedbackRoutes; // Define variable
+
+try {
+    feedbackRoutes = require('./Routes/feedbackRoutes');
+    console.log('✅ feedbackRoutes loaded');
+} catch (err) {
+    console.error('❌ Error loading feedbackRoutes:', err.message);
+    feedbackRoutes = express.Router();
+}
+
 // ==================== API ROUTES ====================
 
 app.use('/api/auth', authRoutes);
@@ -454,6 +465,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 console.log('\n✅ API routes registered:');
 console.log('   - /api/auth');
