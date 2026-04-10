@@ -4,7 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
-const fileUpload = require('express-fileupload');   // <-- ADDED
+// const fileUpload = require('express-fileupload');   // <-- REMOVED (conflicts with multer)
 require('dotenv').config();
 
 const app = express();
@@ -137,12 +137,9 @@ app.options('*', cors(corsOptions));
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
-// ==================== FILE UPLOAD MIDDLEWARE (NEW) ====================
-app.use(fileUpload({
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
-    abortOnLimit: true,
-}));
-console.log('✅ File upload middleware enabled');
+// ==================== FILE UPLOAD MIDDLEWARE (REMOVED – using multer in cvRoutes) ====================
+// app.use(fileUpload({ limits: { fileSize: 5 * 1024 * 1024 }, abortOnLimit: true }));
+// console.log('✅ File upload middleware enabled');
 
 // ==================== STATIC FILES ====================
 
@@ -257,6 +254,7 @@ try {
     require('./models/CV');
     require('./models/Contact');
     require('./Models/Notification');
+    require('./models/OTP');          // <-- ADDED for phone verification
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -266,7 +264,7 @@ try {
 
 let authRoutes, userRoutes, studentRoutes, companyRoutes, postRoutes, jobRoutes, applicationRoutes;
 let cvRoutes, notificationRoutes, messageRoutes, adminRoutes, searchRoutes, interviewRoutes, activityRoutes;
-let contactRoutes, otpRoutes;          // <-- ADDED for OTP
+let contactRoutes, otpRoutes;          // <-- for OTP
 
 // Auth Routes
 try {
@@ -354,7 +352,7 @@ try {
 
 // CV Routes
 try {
-    cvRoutes = require('./routes/cvRoutes');
+    cvRoutes = require('./Routes/cvRoutes');
     console.log('✅ cvRoutes loaded');
 } catch (err) {
     console.error('❌ Error loading cvRoutes:', err.message);
@@ -451,6 +449,21 @@ try {
     });
 }
 
+// ==================== OTP ROUTES ====================
+try {
+    otpRoutes = require('./routes/otpRoutes');
+    console.log('✅ otpRoutes loaded');
+} catch (err) {
+    console.error('❌ Error loading otpRoutes:', err.message);
+    otpRoutes = express.Router();
+    otpRoutes.post('/send', (req, res) => {
+        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
+    });
+    otpRoutes.post('/verify', (req, res) => {
+        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
+    });
+}
+
 // ==================== API ROUTES ====================
 
 app.use('/api/auth', authRoutes);
@@ -468,6 +481,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/otp', otpRoutes);          // <-- ADDED OTP routes
 
 console.log('\n✅ API routes registered:');
 console.log('   - /api/auth');
@@ -485,7 +499,7 @@ console.log('   - /api/activities');
 console.log('   - /api/admin');
 console.log('   - /api/search');
 console.log('   - /api/contact');
-console.log('   - /api/otp');            // <-- ADDED log
+console.log('   - /api/otp');
 
 // ==================== API HEALTH CHECK ====================
 
