@@ -257,7 +257,6 @@ try {
     require('./models/CV');
     require('./models/Contact');
     require('./Models/Notification');
-    require('./models/OTP');          // <-- ADDED for phone verification
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -452,21 +451,6 @@ try {
     });
 }
 
-// ==================== OTP ROUTES (NEW) ====================
-try {
-    otpRoutes = require('./routes/otpRoutes');
-    console.log('✅ otpRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading otpRoutes:', err.message);
-    otpRoutes = express.Router();
-    otpRoutes.post('/send', (req, res) => {
-        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
-    });
-    otpRoutes.post('/verify', (req, res) => {
-        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
-    });
-}
-
 // ==================== API ROUTES ====================
 
 app.use('/api/auth', authRoutes);
@@ -484,7 +468,6 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/contact', contactRoutes);
-app.use('/api/otp', otpRoutes);          // <-- ADDED OTP routes
 
 console.log('\n✅ API routes registered:');
 console.log('   - /api/auth');

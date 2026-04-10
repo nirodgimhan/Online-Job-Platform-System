@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../Components/context/AuthContext';
+import axios from 'axios';
 import { 
   FaBriefcase, FaSearch, FaFileAlt, FaBuilding, FaUsers, FaChartLine,
   FaCheckCircle, FaStar, FaArrowRight, FaClock, FaMapMarkerAlt,
@@ -23,10 +24,12 @@ const Home = () => {
   // Featured jobs
   const [featuredJobs, setFeaturedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [bestThree, setBestThree] = useState([]);
 
   useEffect(() => {
     fetchInitialData();
-  }, []);
+    fetchFeaturedFeedback(); // Moved inside useEffect
+  }, []); // Corrected the closing of useEffect
 
   const fetchInitialData = () => {
     setTimeout(() => {
@@ -103,6 +106,15 @@ const Home = () => {
     }, 1000);
   };
 
+  const fetchFeaturedFeedback = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/feedback/featured');
+      setBestThree(res.data);
+    } catch (err) {
+      console.error("Error fetching feedback:", err);
+    }
+  };
+
   const features = [
     {
       icon: <FaSearch />,
@@ -133,33 +145,6 @@ const Home = () => {
       icon: <FaShieldAlt />,
       title: 'Secure Platform',
       description: 'Your data is protected with enterprise-grade security.'
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: 'Sarah Johnson',
-      role: 'Software Engineer',
-      company: 'Tech Corp',
-      content: 'JobPortal helped me land my dream job within 2 weeks. The platform is intuitive and the job matches were perfect!',
-      rating: 5,
-      image: null
-    },
-    {
-      name: 'Michael Chen',
-      role: 'Product Manager',
-      company: 'Innovation Labs',
-      content: 'As a company, we\'ve found amazing talent through this platform. Highly recommended!',
-      rating: 5,
-      image: null
-    },
-    {
-      name: 'Priya Kumar',
-      role: 'UX Designer',
-      company: 'Creative Studio',
-      content: 'The CV analysis feature helped me improve my resume significantly. Got multiple interview calls!',
-      rating: 5,
-      image: null
     }
   ];
 
@@ -364,41 +349,25 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="home-testimonials-section">
-        <div className="home-container">
-          <div className="home-section-header">
-            <h2>What Our Users Say</h2>
-            <p>Success stories from our community</p>
+      <section className="hp-feedback-section">
+        <div className="hp-container">
+          <div className="hp-section-header">
+            <h2>What Our <span className="hp-gradient-text">Users Say</span></h2>
+            <p>Selected success stories from our community</p>
           </div>
 
-          <div className="home-testimonials-grid">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="home-testimonial-card">
-                <div className="home-quote-icon">
-                  <FaQuoteLeft />
+          <div className="hp-testimonials-grid">
+            {bestThree.map((item) => (
+              <div key={item._id} className="hp-testimonial-card">
+                <div className="hp-quote-icon"><FaQuoteLeft /></div>
+                <p className="hp-testimonial-content">{item.comment}</p>
+                <div className="hp-testimonial-rating">
+                  {renderStars(item.rating)}
                 </div>
-                <p className="home-testimonial-content">{testimonial.content}</p>
-                <div className="home-testimonial-rating">
-                  {renderStars(testimonial.rating)}
-                </div>
-                <div className="home-testimonial-author">
-                  <div className="home-author-avatar">
-                    {testimonial.image ? (
-                      <img src={testimonial.image} alt={testimonial.name} />
-                    ) : (
-                      <div className="home-avatar-placeholder">
-                        {testimonial.name.charAt(0)}
-                      </div>
-                    )}
+                <div className="hp-testimonial-author">
+                  <div className="hp-author-info">
+                    <h4>{item.name}</h4>
                   </div>
-                  <div className="home-author-info">
-                    <h4>{testimonial.name}</h4>
-                    <p>{testimonial.role} at {testimonial.company}</p>
-                  </div>
-                </div>
-                <div className="home-quote-icon-end">
-                  <FaQuoteRight />
                 </div>
               </div>
             ))}

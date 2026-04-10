@@ -30,6 +30,7 @@ import AppliedJobs from './Components/student/AppliedJobs';
 import SavedJobs from './Components/student/SavedJobs';
 import CvManager from './Components/student/CvManager';
 import StudentInterviews from './Components/student/StudentInterviews';
+import FeedbackForm from './Components/student/FeedbackForm';
 
 // Company Components
 import CompanyProfile from './Components/company/CompanyProfile';
@@ -49,6 +50,7 @@ import AdminProfile from './Components/admin/AdminProfile';
 import VerificationRequests from './Components/admin/VerificationRequests';
 import AdminReports from './Components/admin/AdminReports';
 import AdminContactMessages from './Components/admin/AdminContactMessages';
+import FeedbackManager from './Components/admin/FeedbackManager';
 
 // ========== Layout for Authenticated Users ==========
 // This layout includes Sidebar + main content area with centered container
@@ -105,6 +107,7 @@ function App() {
                   <Route path="saved-jobs" element={<SavedJobs />} />
                   <Route path="cv-manager" element={<CvManager />} />
                   <Route path="interviews" element={<StudentInterviews />} />
+                  <Route path="feedback" element={<FeedbackForm />} />
                 </Route>
 
                 {/* Company Routes */}
@@ -131,6 +134,11 @@ function App() {
                   <Route path="verifications" element={<VerificationRequests />} />
                   <Route path="reports" element={<AdminReports />} />
                   <Route path="contact-messages" element={<AdminContactMessages />} />
+
+                  <Route path="feedback" element={<FeedbackManager />} />
+                  
+
+
                 </Route>
               </Route>
             </Route>

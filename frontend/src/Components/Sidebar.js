@@ -128,7 +128,12 @@ const Sidebar = ({ children }) => {
     { title: 'My Applications', path: '/student/applied-jobs', icon: <FaClipboardList />, badge: pendingApplicationsCount > 0 ? pendingApplicationsCount : null },
     { title: 'Saved Jobs', path: '/student/saved-jobs', icon: <FaHeart /> },
     { title: 'CV Manager', path: '/student/cv-manager', icon: <FaFileAlt /> },
+
+    { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: 'new' },
+    { title: 'Give Feedback', path: '/student/feedback', icon: <FaComments /> },
+
     { title: 'My Interviews', path: '/student/interviews', icon: <FaCalendarAlt />, badge: upcomingInterviewsCount > 0 ? upcomingInterviewsCount : null },
+
   ];
 
   const companyMenuItems = [
@@ -146,8 +151,14 @@ const Sidebar = ({ children }) => {
     { title: 'Admin Profile', path: '/admin/profile', icon: <FaUserTie /> },
     { title: 'Manage Users', path: '/admin/users', icon: <FaUsers /> },
     { title: 'Manage Companies', path: '/admin/companies', icon: <FaBuilding /> },
+
+    { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: 'pending' },
+    { title: 'Contact Messages', path: '/admin/contact-messages', icon: <FaEnvelope />, badge: 'new' },  // <-- ADDED
+    { title: 'Manage Feedback', path: '/admin/feedback', icon: <FaStar /> },
+
     { title: 'Verification Requests', path: '/admin/verifications', icon: <FaCheckCircle />, badge: pendingCompanyVerificationsCount > 0 ? pendingCompanyVerificationsCount : null },
     { title: 'Contact Messages', path: '/admin/contact-messages', icon: <FaEnvelope />, badge: unreadContactMessagesCount > 0 ? unreadContactMessagesCount : null },
+
     { title: 'Reports', path: '/admin/reports', icon: <FaChartLine /> },
   ];
 
