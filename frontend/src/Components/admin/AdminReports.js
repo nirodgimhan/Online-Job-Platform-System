@@ -36,14 +36,13 @@ const AdminReports = () => {
     }
   }, [user]);
 
-  // Helper to safely fetch any URL without throwing
   const safeFetch = async (url, fallbackValue = null) => {
     try {
       const response = await API.get(url);
       return response.data;
     } catch (err) {
       if (err.response?.status === 403) {
-        console.warn(`Access denied to ${url} – admin may not have permission.`);
+        console.warn(`Access denied to ${url}`);
       } else {
         console.error(`Error fetching ${url}:`, err.message);
       }
@@ -70,7 +69,7 @@ const AdminReports = () => {
         verified: users.filter(u => u.isVerified).length
       });
 
-      // 2. Jobs (admin endpoint already exists)
+      // 2. Jobs
       const jobsRes = await safeFetch('/jobs/admin/all', { jobs: [] });
       const jobs = jobsRes.jobs || [];
       setJobsStats({
@@ -86,14 +85,13 @@ const AdminReports = () => {
       const trendData = Object.entries(trends).map(([date, count]) => ({ date, count })).sort((a,b) => a.date.localeCompare(b.date));
       setJobTrends(trendData);
 
-      // 3. Applications – try admin endpoint first, fallback to company
+      // 3. Applications
       let allApplications = [];
       try {
         const adminApps = await API.get('/applications/admin/all');
         allApplications = adminApps.data.applications || [];
       } catch (err) {
         if (err.response?.status === 403 || err.response?.status === 404) {
-          console.warn('Admin applications endpoint not available, using company endpoint');
           const companyApps = await API.get('/applications/company');
           allApplications = companyApps.data.applications || [];
         } else {
@@ -111,7 +109,6 @@ const AdminReports = () => {
             else statusCounts.pending++;
           });
         } else {
-          // fallback mock
           statusCounts = {
             pending: Math.floor(totalApps * 0.4),
             reviewed: Math.floor(totalApps * 0.25),
@@ -128,24 +125,20 @@ const AdminReports = () => {
         .filter(item => item.value > 0);
       setApplicationStatusData(pieData);
 
-      // 4. INTERVIEWS – FIXED: try admin endpoint, then company, then fallback
+      // 4. Interviews
       let allInterviews = [];
       try {
-        // Try admin endpoint first (recommended)
         const adminInterviews = await API.get('/interviews/admin/all');
         allInterviews = adminInterviews.data.interviews || [];
       } catch (err) {
         if (err.response?.status === 403 || err.response?.status === 404) {
-          console.warn('Admin interviews endpoint not available, trying company endpoint');
           try {
             const companyInterviews = await API.get('/interviews/company');
             allInterviews = companyInterviews.data.interviews || [];
           } catch (err2) {
-            console.warn('Company interviews endpoint also failed, using empty data');
             allInterviews = [];
           }
         } else {
-          console.warn('Interviews fetch failed:', err.message);
           allInterviews = [];
         }
       }
@@ -231,45 +224,45 @@ const AdminReports = () => {
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
+      {/* Stats Cards - smaller size */}
       <div className="ar-stats-grid">
-        <div className="ar-stat-card ar-stat-total">
-          <div className="ar-stat-icon"><FaUsers /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-total"><FaUsers /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{usersStats.total}</span>
             <span className="ar-stat-label">Total Users</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-students">
-          <div className="ar-stat-icon"><FaUsers /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-students"><FaUsers /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{usersStats.students}</span>
             <span className="ar-stat-label">Students</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-companies">
-          <div className="ar-stat-icon"><FaBuilding /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-companies"><FaBuilding /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{usersStats.companies}</span>
             <span className="ar-stat-label">Companies</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-jobs">
-          <div className="ar-stat-icon"><FaBriefcase /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-jobs"><FaBriefcase /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{jobsStats.total}</span>
             <span className="ar-stat-label">Total Jobs</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-applications">
-          <div className="ar-stat-icon"><FaFileAlt /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-applications"><FaFileAlt /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{applicationsStats.total}</span>
             <span className="ar-stat-label">Applications</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-interviews">
-          <div className="ar-stat-icon"><FaCalendarAlt /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-interviews"><FaCalendarAlt /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{interviewsStats.total}</span>
             <span className="ar-stat-label">Interviews</span>
@@ -287,21 +280,23 @@ const AdminReports = () => {
           </div>
           <div className="ar-chart-body">
             {jobTrends.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={jobTrends}>
-                  <defs>
-                    <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4361ee" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#4361ee" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="count" stroke="#4361ee" fillOpacity={1} fill="url(#colorJobs)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={jobTrends}>
+                    <defs>
+                      <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4361ee" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#4361ee" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="count" stroke="#4361ee" fillOpacity={1} fill="url(#colorJobs)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="ar-empty-chart">No job data available</div>
             )}
@@ -316,28 +311,30 @@ const AdminReports = () => {
           </div>
           <div className="ar-chart-body">
             {applicationStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={applicationStatusData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {applicationStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={applicationStatusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {applicationStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
-              <div className="ar-empty-chart">No application data available yet</div>
+              <div className="ar-empty-chart">No application data available</div>
             )}
           </div>
         </div>
@@ -350,15 +347,17 @@ const AdminReports = () => {
           </div>
           <div className="ar-chart-body">
             {topCompanies.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={topCompanies} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={100} />
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#4361ee" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topCompanies} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={100} />
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#4361ee" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="ar-empty-chart">No company data available</div>
             )}
@@ -372,26 +371,28 @@ const AdminReports = () => {
             <p>Candidate satisfaction distribution</p>
           </div>
           <div className="ar-chart-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={ratingsData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {ratingsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={ratingsData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {ratingsData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -402,17 +403,19 @@ const AdminReports = () => {
             <p>Active vs Closed positions</p>
           </div>
           <div className="ar-chart-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={[{ name: 'Jobs', active: jobsStats.active, closed: jobsStats.closed }]}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="active" fill="#10b981" name="Active Jobs" />
-                <Bar dataKey="closed" fill="#ef4444" name="Closed Jobs" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[{ name: 'Jobs', active: jobsStats.active, closed: jobsStats.closed }]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="active" fill="#10b981" name="Active Jobs" />
+                  <Bar dataKey="closed" fill="#ef4444" name="Closed Jobs" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -423,30 +426,32 @@ const AdminReports = () => {
             <p>Breakdown by user type</p>
           </div>
           <div className="ar-chart-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Students', value: usersStats.students },
-                    { name: 'Companies', value: usersStats.companies },
-                    { name: 'Admins', value: usersStats.admins }
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  <Cell fill="#4361ee" />
-                  <Cell fill="#10b981" />
-                  <Cell fill="#f59e0b" />
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Students', value: usersStats.students },
+                      { name: 'Companies', value: usersStats.companies },
+                      { name: 'Admins', value: usersStats.admins }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    <Cell fill="#4361ee" />
+                    <Cell fill="#10b981" />
+                    <Cell fill="#f59e0b" />
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>

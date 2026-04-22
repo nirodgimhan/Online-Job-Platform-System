@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, API } from '../Components/context/AuthContext';
+import DarkModeToggle from './DarkModeToggle';  // <-- ADD THIS IMPORT
 import { 
   FaBriefcase, FaUserCircle, FaSignOutAlt, FaTachometerAlt,
   FaUser, FaCog, FaChevronDown, FaSearch, FaBell, FaEnvelope,
@@ -175,6 +176,9 @@ const Navbar = () => {
 
           {/* Right Side */}
           <div className="nc-right">
+            {/* Dark Mode Toggle Button */}
+            <DarkModeToggle />
+
             {isAuthenticated ? (
               <>
                 {/* Notifications Dropdown */}
@@ -231,8 +235,6 @@ const Navbar = () => {
                     </div>
                   )}
                 </div>
-
-                {/* Messages button removed */}
 
                 {/* User Dropdown */}
                 <div className="nc-dropdown">
