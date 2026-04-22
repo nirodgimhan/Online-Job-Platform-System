@@ -24,12 +24,12 @@ const Home = () => {
   // Featured jobs
   const [featuredJobs, setFeaturedJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [bestThree, setBestThree] = useState([]);
+  const [bestThree, setBestThree] = useState([]); // ✅ Always an array
 
   useEffect(() => {
     fetchInitialData();
-    fetchFeaturedFeedback(); // Moved inside useEffect
-  }, []); // Corrected the closing of useEffect
+    fetchFeaturedFeedback();
+  }, []); // ✅ Correctly closed
 
   const fetchInitialData = () => {
     setTimeout(() => {
@@ -109,9 +109,13 @@ const Home = () => {
   const fetchFeaturedFeedback = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/feedback/featured');
-      setBestThree(res.data);
+      // ✅ Extract the array correctly – backend returns { success, feedbacks }
+      const feedbacks = res.data.feedbacks || res.data;
+      // ✅ Ensure it's an array before setting state
+      setBestThree(Array.isArray(feedbacks) ? feedbacks : []);
     } catch (err) {
       console.error("Error fetching feedback:", err);
+      setBestThree([]); // ✅ Fallback to empty array
     }
   };
 
@@ -349,6 +353,7 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Feedback Section - FIXED: bestThree is now always an array */}
       <section className="hp-feedback-section">
         <div className="hp-container">
           <div className="hp-section-header">
@@ -357,20 +362,24 @@ const Home = () => {
           </div>
 
           <div className="hp-testimonials-grid">
-            {bestThree.map((item) => (
-              <div key={item._id} className="hp-testimonial-card">
-                <div className="hp-quote-icon"><FaQuoteLeft /></div>
-                <p className="hp-testimonial-content">{item.comment}</p>
-                <div className="hp-testimonial-rating">
-                  {renderStars(item.rating)}
-                </div>
-                <div className="hp-testimonial-author">
-                  <div className="hp-author-info">
-                    <h4>{item.name}</h4>
+            {bestThree.length === 0 ? (
+              <p className="hp-no-feedback">No featured feedback yet. Be the first to share!</p>
+            ) : (
+              bestThree.map((item) => (
+                <div key={item._id} className="hp-testimonial-card">
+                  <div className="hp-quote-icon"><FaQuoteLeft /></div>
+                  <p className="hp-testimonial-content">{item.comment}</p>
+                  <div className="hp-testimonial-rating">
+                    {renderStars(item.rating)}
+                  </div>
+                  <div className="hp-testimonial-author">
+                    <div className="hp-author-info">
+                      <h4>{item.name}</h4>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </section>

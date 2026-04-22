@@ -16,47 +16,35 @@ router.post('/', auth, auth.authorize('student'), async (req, res) => {
         
         const { jobId, coverLetter } = req.body;
 
-        // Check if job exists
         const job = await Job.findById(jobId);
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found' });
         }
 
-        // Get student profile
         const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student profile not found' });
         }
 
-        // ========== ADDED: Allow re‑application if previous application is Withdrawn or Rejected ==========
+        // Allow re‑application if previous is Withdrawn or Rejected
         const existingApplication = await Application.findOne({
             jobId,
             studentId: student._id
         });
 
         if (existingApplication) {
-            // If the existing application is Withdrawn or Rejected, delete it and allow a new one.
             if (['Withdrawn', 'Rejected'].includes(existingApplication.status)) {
                 console.log(`🗑️ Deleting previous ${existingApplication.status} application for job ${jobId}`);
-                
-                // Remove the application from the student's appliedJobs array
                 student.appliedJobs = student.appliedJobs.filter(
                     app => app.applicationId?.toString() !== existingApplication._id.toString()
                 );
                 await student.save();
-                
-                // Delete the old application
                 await Application.findByIdAndDelete(existingApplication._id);
-                
-                // Continue to create a new application (fall through)
             } else {
-                // Active application (Pending, Reviewed, Shortlisted, Interview, etc.) – block
                 return res.status(400).json({ success: false, message: 'Already applied for this job' });
             }
         }
-        // ========== END ADDED ==========
 
-        // Create application
         const newApplication = new Application({
             jobId,
             studentId: student._id,
@@ -69,7 +57,6 @@ router.post('/', auth, auth.authorize('student'), async (req, res) => {
         const application = await newApplication.save();
         console.log('✅ Application created:', application._id);
 
-        // Update student's applied jobs
         student.appliedJobs.push({
             jobId,
             applicationId: application._id,
@@ -77,7 +64,6 @@ router.post('/', auth, auth.authorize('student'), async (req, res) => {
         });
         await student.save();
 
-        // Update job applications count
         job.applications = (job.applications || 0) + 1;
         await job.save();
 
@@ -98,7 +84,6 @@ router.get('/student', auth, auth.authorize('student'), async (req, res) => {
         
         const student = await Student.findOne({ userId: req.user.id });
         if (!student) {
-            console.log('❌ Student profile not found');
             return res.json({ success: true, applications: [] });
         }
 
@@ -112,7 +97,6 @@ router.get('/student', auth, auth.authorize('student'), async (req, res) => {
             })
             .sort({ appliedDate: -1 });
 
-        console.log(`✅ Found ${applications.length} applications`);
         res.json({ success: true, applications });
 
     } catch (error) {
@@ -123,15 +107,17 @@ router.get('/student', auth, auth.authorize('student'), async (req, res) => {
 
 // @route   GET api/applications/company
 // @desc    Get applications for company's jobs
-// @access  Private/Company
-router.get('/company', auth, auth.authorize('company'), async (req, res) => {
+// @access  Private/Company (and Admin)
+router.get('/company', auth, auth.authorize('company', 'admin'), async (req, res) => {
     try {
         console.log('📊 Fetching company applications for user:', req.user.id);
         
         const company = await Company.findOne({ userId: req.user.id });
         if (!company) {
-            console.log('❌ Company profile not found');
-            return res.json({ success: true, applications: [] });
+            if (req.user.role === 'admin') {
+                return res.json({ success: true, applications: [] });
+            }
+            return res.status(404).json({ success: false, message: 'Company profile not found' });
         }
 
         const applications = await Application.find({ companyId: company._id })
@@ -148,9 +134,6 @@ router.get('/company', auth, auth.authorize('company'), async (req, res) => {
             })
             .sort({ appliedDate: -1 });
 
-        console.log(`✅ Found ${applications.length} applications`);
-        
-        // Format applications for frontend compatibility
         const formattedApplications = applications.map(app => ({
             _id: app._id,
             status: app.status,
@@ -172,6 +155,84 @@ router.get('/company', auth, auth.authorize('company'), async (req, res) => {
     }
 });
 
+// ==================== NEW: ADMIN ENDPOINTS ====================
+
+// @route   GET api/applications/admin/all
+// @desc    Get ALL applications (admin only)
+// @access  Private/Admin
+router.get('/admin/all', auth, auth.authorize('admin'), async (req, res) => {
+    try {
+        console.log('📊 Admin fetching all applications');
+
+        const applications = await Application.find({})
+            .populate({
+                path: 'jobId',
+                select: 'title employmentType workMode location salary'
+            })
+            .populate({
+                path: 'studentId',
+                populate: {
+                    path: 'userId',
+                    select: 'name email phoneNumber profilePicture'
+                }
+            })
+            .populate({
+                path: 'companyId',
+                select: 'companyName companyLogo industry'
+            })
+            .sort({ appliedDate: -1 });
+
+        const formattedApplications = applications.map(app => ({
+            _id: app._id,
+            status: app.status,
+            appliedAt: app.appliedDate,
+            coverLetter: app.coverLetter,
+            jobId: app.jobId,
+            companyId: app.companyId,
+            studentId: app.studentId,
+            studentName: app.studentId?.userId?.name || 'Unknown',
+            studentEmail: app.studentId?.userId?.email || 'No email',
+            studentPhone: app.studentId?.userId?.phoneNumber || '',
+            companyName: app.companyId?.companyName || 'Unknown'
+        }));
+
+        res.json({ success: true, applications: formattedApplications });
+
+    } catch (error) {
+        console.error('❌ Error fetching all applications for admin:', error);
+        res.status(500).json({ success: false, message: 'Server Error: ' + error.message });
+    }
+});
+
+// @route   GET api/applications/admin/statistics
+// @desc    Get application statistics for admin dashboard
+// @access  Private/Admin
+router.get('/admin/statistics', auth, auth.authorize('admin'), async (req, res) => {
+    try {
+        const applications = await Application.find({});
+        
+        const statistics = {
+            total: applications.length,
+            pending: applications.filter(app => app.status === 'Pending').length,
+            reviewed: applications.filter(app => app.status === 'Reviewed').length,
+            shortlisted: applications.filter(app => app.status === 'Shortlisted').length,
+            interview: applications.filter(app => app.status === 'Interview').length,
+            offered: applications.filter(app => app.status === 'Offered').length,
+            accepted: applications.filter(app => app.status === 'Accepted').length,
+            rejected: applications.filter(app => app.status === 'Rejected').length,
+            withdrawn: applications.filter(app => app.status === 'Withdrawn').length
+        };
+
+        res.json({ success: true, statistics });
+
+    } catch (error) {
+        console.error('Error fetching admin statistics:', error);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+});
+
+// ==================== END ADMIN ENDPOINTS ====================
+
 // @route   GET api/applications/job/:jobId
 // @desc    Get applications for a specific job
 // @access  Private/Company
@@ -184,7 +245,6 @@ router.get('/job/:jobId', auth, auth.authorize('company'), async (req, res) => {
             return res.status(404).json({ success: false, message: 'Company profile not found' });
         }
 
-        // Verify job belongs to company
         const job = await Job.findOne({ _id: jobId, companyId: company._id });
         if (!job) {
             return res.status(404).json({ success: false, message: 'Job not found or not authorized' });
@@ -233,7 +293,6 @@ router.get('/:id', auth, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Application not found' });
         }
 
-        // Check authorization
         const user = await User.findById(req.user.id);
         if (user.role === 'student' && application.studentId.userId.toString() !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Not authorized' });
@@ -254,7 +313,6 @@ router.get('/:id', auth, async (req, res) => {
     }
 });
 
-// ==================== UPDATED: Allow students to withdraw ====================
 // @route   PUT api/applications/:id/status
 // @desc    Update application status
 // @access  Private (Company or Student for withdrawal)
@@ -267,29 +325,25 @@ router.put('/:id/status', auth, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Application not found' });
         }
 
-        // ---------- STUDENT WITHDRAWAL ----------
+        // Student withdrawal
         if (req.user.role === 'student') {
             const student = await Student.findOne({ userId: req.user.id });
             if (!student) {
                 return res.status(404).json({ success: false, message: 'Student profile not found' });
             }
 
-            // Check ownership
             if (application.studentId.toString() !== student._id.toString()) {
                 return res.status(403).json({ success: false, message: 'Not authorized to modify this application' });
             }
 
-            // Students can only withdraw
             if (status !== 'Withdrawn') {
                 return res.status(403).json({ success: false, message: 'Students can only withdraw their application' });
             }
 
-            // Update status
             application.status = 'Withdrawn';
             application.updatedAt = Date.now();
             await application.save();
 
-            // (Optional) Update student's appliedJobs array
             const studentDoc = await Student.findOne({ userId: req.user.id });
             if (studentDoc) {
                 const appliedIndex = studentDoc.appliedJobs.findIndex(job => job.applicationId?.toString() === application._id.toString());
@@ -299,7 +353,6 @@ router.put('/:id/status', auth, async (req, res) => {
                 }
             }
 
-            // (Optional) Decrement job's applicants count
             const job = await Job.findById(application.jobId);
             if (job && job.applications > 0) {
                 job.applications -= 1;
@@ -309,7 +362,7 @@ router.put('/:id/status', auth, async (req, res) => {
             return res.json({ success: true, application });
         }
 
-        // ---------- COMPANY UPDATE ----------
+        // Company update
         if (req.user.role !== 'company') {
             return res.status(403).json({ success: false, message: 'Access denied. Only companies can update application status.' });
         }
@@ -319,12 +372,10 @@ router.put('/:id/status', auth, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Company profile not found' });
         }
 
-        // Check ownership
         if (application.companyId.toString() !== company._id.toString()) {
             return res.status(403).json({ success: false, message: 'Not authorized' });
         }
 
-        // Update fields
         const updateFields = { 
             status, 
             updatedAt: Date.now() 
@@ -362,7 +413,6 @@ router.put('/:id/status', auth, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
-// ==================== END UPDATE ====================
 
 // @route   GET api/applications/student/applied
 // @desc    Get student's applied jobs with details
@@ -389,8 +439,6 @@ router.get('/student/applied', auth, auth.authorize('student'), async (req, res)
             })
             .sort({ appliedDate: -1 });
 
-        console.log(`✅ Found ${applications.length} applications for student`);
-        
         res.json({ 
             success: true, 
             applications,

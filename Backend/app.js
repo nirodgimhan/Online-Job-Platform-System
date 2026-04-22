@@ -4,13 +4,11 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
-// const fileUpload = require('express-fileupload');   // <-- REMOVED (conflicts with multer)
 require('dotenv').config();
 
 const app = express();
 
 // ==================== OPTIONAL DEPENDENCIES ====================
-
 let helmet, compression, rateLimit, morgan, socketIo;
 
 try {
@@ -49,7 +47,6 @@ try {
 }
 
 // ==================== ENVIRONMENT VARIABLES ====================
-
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/jobportal';
@@ -59,67 +56,33 @@ const CLIENT_URLS = process.env.CLIENT_URLS
     : ['http://localhost:3000', 'http://localhost:4200', 'http://localhost:3001'];
 
 // ==================== CREATE DIRECTORIES ====================
-
 const logDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-}
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
 
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const cvsDir = path.join(__dirname, 'uploads', 'cvs');
-if (!fs.existsSync(cvsDir)) {
-    fs.mkdirSync(cvsDir, { recursive: true });
-    console.log('✅ CV upload directory created');
-}
+if (!fs.existsSync(cvsDir)) fs.mkdirSync(cvsDir, { recursive: true });
 
 const profilesDir = path.join(__dirname, 'uploads', 'profiles');
-if (!fs.existsSync(profilesDir)) {
-    fs.mkdirSync(profilesDir, { recursive: true });
-    console.log('✅ Profile pictures directory created');
-}
+if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir, { recursive: true });
 
 const publicDir = path.join(__dirname, 'public');
-if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-}
+if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
-// ==================== SECURITY MIDDLEWARE ====================
-
-app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    crossOriginEmbedderPolicy: false
-}));
-
-if (compression) {
-    app.use(compression());
-}
-
-if (rateLimit) {
-    const limiter = rateLimit({
-        windowMs: 15 * 60 * 1000,
-        max: 100,
-        message: {
-            success: false,
-            message: 'Too many requests from this IP, please try again later.'
-        }
-    });
-    app.use('/api/', limiter);
-    console.log('✅ Rate limiting enabled');
-}
-
-// ==================== CORS CONFIGURATION ====================
-
+// ==================== CORS CONFIGURATION (MOVED BEFORE RATE LIMITER) ====================
 const corsOptions = {
     origin: function (origin, callback) {
-        if (!origin || CLIENT_URLS.indexOf(origin) !== -1 || NODE_ENV === 'development') {
+        if (!origin || NODE_ENV === 'development') {
             callback(null, true);
         } else {
-            console.log('❌ CORS blocked origin:', origin);
-            callback(new Error('Not allowed by CORS'));
+            if (CLIENT_URLS.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                console.log('❌ CORS blocked origin:', origin);
+                callback(new Error('Not allowed by CORS'));
+            }
         }
     },
     credentials: true,
@@ -132,25 +95,37 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// ==================== BODY PARSER ====================
+// ==================== RATE LIMITER (NOW AFTER CORS) ====================
+if (rateLimit) {
+    const limiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: NODE_ENV === 'development' ? 500 : 100,
+        message: { success: false, message: 'Too many requests from this IP, please try again later.' }
+    });
+    app.use('/api/', limiter);
+    console.log('✅ Rate limiting enabled');
+}
 
+// ==================== SECURITY MIDDLEWARE ====================
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false
+}));
+
+if (compression) app.use(compression());
+
+// ==================== BODY PARSER ====================
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
-// ==================== FILE UPLOAD MIDDLEWARE (REMOVED – using multer in cvRoutes) ====================
-// app.use(fileUpload({ limits: { fileSize: 5 * 1024 * 1024 }, abortOnLimit: true }));
-// console.log('✅ File upload middleware enabled');
-
 // ==================== STATIC FILES ====================
-
 app.use('/uploads', express.static(uploadsDir));
 app.use('/public', express.static(publicDir));
 
 // ==================== LOGGING MIDDLEWARE ====================
-
 if (morgan) {
     const accessLogStream = fs.createWriteStream(
-        path.join(logDir, 'access.log'), 
+        path.join(logDir, 'access.log'),
         { flags: 'a' }
     );
     app.use(morgan('combined', { stream: accessLogStream }));
@@ -158,6 +133,7 @@ if (morgan) {
     console.log('✅ Morgan logging enabled');
 }
 
+// Custom request logger
 app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
@@ -167,8 +143,19 @@ app.use((req, res, next) => {
     next();
 });
 
-// ==================== DATABASE CONNECTION (SIMPLE & STABLE) ====================
+// ==================== DATABASE CONNECTION CHECK ====================
+app.use('/api', (req, res, next) => {
+    if (mongoose.connection.readyState !== 1) {
+        console.error(`❌ DB not connected - rejecting ${req.method} ${req.originalUrl}`);
+        return res.status(503).json({
+            success: false,
+            message: 'Connection lost. Please try again.'
+        });
+    }
+    next();
+});
 
+// ==================== DATABASE CONNECTION ====================
 const dbOptions = {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -196,29 +183,16 @@ mongoose.connect(MONGO_URI, dbOptions)
     .catch(err => {
         console.error('\n❌ MongoDB Connection Error:', err.message);
         console.error('   Please ensure MongoDB is running.\n');
-        // Do not exit process – let the app run but log the error
     });
 
-// Event listeners (for logging only)
-mongoose.connection.on('connected', () => {
-    console.log('✅ MongoDB Connection Established');
-});
+mongoose.connection.on('connected', () => console.log('✅ MongoDB Connection Established'));
+mongoose.connection.on('disconnected', () => console.log('⚠️ MongoDB Connection Lost – auto-reconnect will attempt'));
+mongoose.connection.on('reconnected', () => console.log('✅ MongoDB Reconnected'));
+mongoose.connection.on('error', (err) => console.error('⚠️ MongoDB Error:', err.message));
 
-mongoose.connection.on('disconnected', () => {
-    console.log('⚠️ MongoDB Connection Lost – auto-reconnect will attempt');
-});
-
-mongoose.connection.on('reconnected', () => {
-    console.log('✅ MongoDB Reconnected');
-});
-
-mongoose.connection.on('error', (err) => {
-    console.error('⚠️ MongoDB Error:', err.message);
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-    console.log('\n🔄 Gracefully shutting down...');
+// ==================== GRACEFUL SHUTDOWN ====================
+const shutdown = async (signal) => {
+    console.log(`\n🔄 Received ${signal}, shutting down gracefully...`);
     try {
         await mongoose.connection.close();
         console.log('✅ MongoDB connection closed');
@@ -227,22 +201,20 @@ process.on('SIGINT', async () => {
         console.error('❌ Error during shutdown:', err);
         process.exit(1);
     }
-});
+};
 
-process.on('SIGTERM', async () => {
-    console.log('\n🔄 Received SIGTERM, shutting down...');
-    try {
-        await mongoose.connection.close();
-        console.log('✅ MongoDB connection closed');
-        process.exit(0);
-    } catch (err) {
-        console.error('❌ Error during shutdown:', err);
-        process.exit(1);
-    }
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+// ==================== GLOBAL ERROR HANDLERS ====================
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
 });
 
 // ==================== IMPORT MODELS ====================
-
 try {
     require('./models/User');
     require('./models/Student');
@@ -254,218 +226,51 @@ try {
     require('./models/CV');
     require('./models/Contact');
     require('./Models/Notification');
-    require('./models/OTP');          // <-- ADDED for phone verification
+    require('./models/OTP');
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
 }
 
 // ==================== IMPORT ROUTES ====================
-
 let authRoutes, userRoutes, studentRoutes, companyRoutes, postRoutes, jobRoutes, applicationRoutes;
 let cvRoutes, notificationRoutes, messageRoutes, adminRoutes, searchRoutes, interviewRoutes, activityRoutes;
-let contactRoutes, otpRoutes;          // <-- for OTP
+let contactRoutes, otpRoutes, feedbackRoutes;
 
-// Auth Routes
-try {
-    authRoutes = require('./routes/authRoutes');
-    console.log('✅ authRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading authRoutes:', err.message);
-    authRoutes = express.Router();
-    authRoutes.all('*', (req, res) => {
-        res.status(501).json({ success: false, message: 'Auth routes not implemented' });
-    });
-}
-
-// User Routes
-try {
-    userRoutes = require('./Routes/userRoutes');
-    console.log('✅ userRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading userRoutes:', err.message);
-    userRoutes = express.Router();
-    userRoutes.all('*', (req, res) => {
-        res.status(501).json({ success: false, message: 'User routes not implemented' });
-    });
-}
-
-// Student Routes
-try {
-    studentRoutes = require('./routes/studentRoutes');
-    console.log('✅ studentRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading studentRoutes:', err.message);
-    studentRoutes = express.Router();
-    studentRoutes.all('*', (req, res) => {
-        res.status(501).json({ success: false, message: 'Student routes not implemented' });
-    });
-}
-
-// Company Routes
-try {
-    companyRoutes = require('./routes/companyRoutes');
-    console.log('✅ companyRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading companyRoutes:', err.message);
-    companyRoutes = express.Router();
-    companyRoutes.all('*', (req, res) => {
-        res.status(501).json({ success: false, message: 'Company routes not implemented' });
-    });
-}
-
-// Post Routes
-try {
-    postRoutes = require('./routes/postRoutes');
-    console.log('✅ postRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading postRoutes:', err.message);
-    postRoutes = express.Router();
-    postRoutes.all('*', (req, res) => {
-        res.status(501).json({ success: false, message: 'Post routes not implemented' });
-    });
-}
-
-// Job Routes
-try {
-    jobRoutes = require('./Routes/jobRoutes');
-    console.log('✅ jobRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading jobRoutes:', err.message);
-    jobRoutes = express.Router();
-    jobRoutes.all('*', (req, res) => {
-        res.status(501).json({ success: false, message: 'Job routes not implemented' });
-    });
-}
-
-// Application Routes
-try {
-    applicationRoutes = require('./routes/applicationRoutes');
-    console.log('✅ applicationRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading applicationRoutes:', err.message);
-    applicationRoutes = express.Router();
-    applicationRoutes.all('*', (req, res) => {
-        res.status(501).json({ success: false, message: 'Application routes not implemented' });
-    });
-}
-
-// CV Routes
-try {
-    cvRoutes = require('./Routes/cvRoutes');
-    console.log('✅ cvRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading cvRoutes:', err.message);
-    cvRoutes = express.Router();
-    cvRoutes.get('/', (req, res) => {
-        res.json({ success: false, message: 'CV routes not available' });
-    });
-}
-
-// Interview Routes
-try {
-    interviewRoutes = require('./routes/interviews');
-    console.log('✅ interviewRoutes loaded from ./routes/interviews');
-} catch (err) {
-    console.error('❌ Error loading interviewRoutes:', err.message);
-    interviewRoutes = express.Router();
-    interviewRoutes.post('/', (req, res) => {
-        res.status(501).json({ 
-            success: false, 
-            message: 'Interview routes not properly configured. Please check routes/interviews.js file.'
+const loadRoute = (path, fallbackMessage) => {
+    try {
+        const route = require(path);
+        console.log(`✅ ${path} loaded`);
+        return route;
+    } catch (err) {
+        console.error(`❌ Error loading ${path}:`, err.message);
+        const router = express.Router();
+        router.all('*', (req, res) => {
+            res.status(501).json({ success: false, message: fallbackMessage });
         });
-    });
-    interviewRoutes.get('/', (req, res) => {
-        res.json({ success: false, message: 'Interview routes not available' });
-    });
-}
+        return router;
+    }
+};
 
-// Activity Routes
-try {
-    activityRoutes = require('./routes/activityRoutes');
-    console.log('✅ activityRoutes loaded');
-} catch (err) {
-    console.log('⚠️ activityRoutes not found - creating fallback');
-    activityRoutes = express.Router();
-    activityRoutes.get('/recent', (req, res) => {
-        res.json({ success: true, activities: [] });
-    });
-}
-
-// Notification Routes
-try {
-    notificationRoutes = require('./Routes/notificationRoutes');
-    console.log('✅ notificationRoutes loaded');
-} catch (err) {
-    console.log('⚠️ notificationRoutes not found - optional');
-    notificationRoutes = express.Router();
-    notificationRoutes.get('/', (req, res) => {
-        res.json({ success: true, notifications: [] });
-    });
-}
-
-// Message Routes
-try {
-    messageRoutes = require('./routes/messageRoutes');
-    console.log('✅ messageRoutes loaded');
-} catch (err) {
-    console.log('⚠️ messageRoutes not found - optional');
-    messageRoutes = express.Router();
-    messageRoutes.get('/recent', (req, res) => {
-        res.json({ success: true, messages: [] });
-    });
-}
-
-// Admin Routes
-try {
-    adminRoutes = require('./routes/adminRoutes');
-    console.log('✅ adminRoutes loaded');
-} catch (err) {
-    console.log('⚠️ adminRoutes not found - optional');
-    adminRoutes = express.Router();
-}
-
-// Search Routes
-try {
-    searchRoutes = require('./routes/searchRoutes');
-    console.log('✅ searchRoutes loaded');
-} catch (err) {
-    console.log('⚠️ searchRoutes not found - optional');
-    searchRoutes = express.Router();
-}
-
-// Contact Routes
-try {
-    contactRoutes = require('./Routes/contactRoutes');
-    console.log('✅ contactRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading contactRoutes:', err.message);
-    contactRoutes = express.Router();
-    contactRoutes.post('/', (req, res) => {
-        res.status(501).json({ success: false, message: 'Contact routes not implemented' });
-    });
-    contactRoutes.get('/admin', (req, res) => {
-        res.status(501).json({ success: false, message: 'Contact admin routes not implemented' });
-    });
-}
-
-// ==================== OTP ROUTES ====================
-try {
-    otpRoutes = require('./routes/otpRoutes');
-    console.log('✅ otpRoutes loaded');
-} catch (err) {
-    console.error('❌ Error loading otpRoutes:', err.message);
-    otpRoutes = express.Router();
-    otpRoutes.post('/send', (req, res) => {
-        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
-    });
-    otpRoutes.post('/verify', (req, res) => {
-        res.status(501).json({ success: false, message: 'OTP routes not implemented' });
-    });
-}
+authRoutes          = loadRoute('./routes/authRoutes', 'Auth routes not implemented');
+userRoutes          = loadRoute('./Routes/userRoutes', 'User routes not implemented');
+studentRoutes       = loadRoute('./routes/studentRoutes', 'Student routes not implemented');
+companyRoutes       = loadRoute('./routes/companyRoutes', 'Company routes not implemented');
+postRoutes          = loadRoute('./routes/postRoutes', 'Post routes not implemented');
+jobRoutes           = loadRoute('./Routes/jobRoutes', 'Job routes not implemented');
+applicationRoutes   = loadRoute('./routes/applicationRoutes', 'Application routes not implemented');
+cvRoutes            = loadRoute('./Routes/cvRoutes', 'CV routes not available');
+interviewRoutes     = loadRoute('./routes/interviews', 'Interview routes not properly configured');
+activityRoutes      = loadRoute('./routes/activityRoutes', 'Activity routes not available');
+notificationRoutes  = loadRoute('./Routes/notificationRoutes', 'Notification routes not available');
+messageRoutes       = loadRoute('./routes/messageRoutes', 'Message routes not available');
+adminRoutes         = loadRoute('./routes/adminRoutes', 'Admin routes not available');
+searchRoutes        = loadRoute('./routes/searchRoutes', 'Search routes not available');
+contactRoutes       = loadRoute('./Routes/contactRoutes', 'Contact routes not implemented');
+otpRoutes           = loadRoute('./routes/otpRoutes', 'OTP routes not implemented');
+feedbackRoutes      = loadRoute('./routes/feedbackRoutes', 'Feedback routes not implemented');
 
 // ==================== API ROUTES ====================
-
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/students', studentRoutes);
@@ -481,52 +286,27 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/contact', contactRoutes);
-app.use('/api/otp', otpRoutes);          // <-- ADDED OTP routes
+app.use('/api/otp', otpRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 console.log('\n✅ API routes registered:');
-console.log('   - /api/auth');
-console.log('   - /api/users');
-console.log('   - /api/students');
-console.log('   - /api/companies');
-console.log('   - /api/posts');
-console.log('   - /api/jobs');
-console.log('   - /api/applications');
-console.log('   - /api/cv');
-console.log('   - /api/interviews');
-console.log('   - /api/notifications');
-console.log('   - /api/messages');
-console.log('   - /api/activities');
-console.log('   - /api/admin');
-console.log('   - /api/search');
-console.log('   - /api/contact');
-console.log('   - /api/otp');
+['auth','users','students','companies','posts','jobs','applications','cv','interviews',
+ 'notifications','messages','activities','admin','search','contact','otp','feedback'].forEach(r => {
+    console.log(`   - /api/${r}`);
+});
 
-// ==================== API HEALTH CHECK ====================
-
+// ==================== HEALTH & INFO ====================
 app.get('/api/health', (req, res) => {
     const dbState = mongoose.connection.readyState;
     const dbStateText = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState] || 'unknown';
-    
     res.json({
         success: true,
         message: 'API is running',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         environment: NODE_ENV,
-        mongodb: {
-            state: dbStateText,
-            isConnected: dbState === 1
-        },
-        directories: {
-            uploads: fs.existsSync(uploadsDir),
-            cvs: fs.existsSync(cvsDir),
-            profiles: fs.existsSync(profilesDir)
-        },
-        routes: {
-            interviews: '/api/interviews',
-            contact: '/api/contact',
-            otp: '/api/otp'
-        }
+        mongodb: { state: dbStateText, isConnected: dbState === 1 },
+        directories: { uploads: fs.existsSync(uploadsDir), cvs: fs.existsSync(cvsDir), profiles: fs.existsSync(profilesDir) }
     });
 });
 
@@ -536,31 +316,17 @@ app.get('/api', (req, res) => {
         message: 'Welcome to Job Portal API',
         version: '2.0.0',
         endpoints: {
-            auth: '/api/auth',
-            users: '/api/users',
-            students: '/api/students',
-            companies: '/api/companies',
-            posts: '/api/posts',
-            jobs: '/api/jobs',
-            applications: '/api/applications',
-            cv: '/api/cv',
-            interviews: '/api/interviews',
-            notifications: '/api/notifications',
-            messages: '/api/messages',
-            activities: '/api/activities',
-            contact: '/api/contact',
-            otp: '/api/otp',
-            health: '/api/health'
+            auth: '/api/auth', users: '/api/users', students: '/api/students', companies: '/api/companies',
+            posts: '/api/posts', jobs: '/api/jobs', applications: '/api/applications', cv: '/api/cv',
+            interviews: '/api/interviews', notifications: '/api/notifications', messages: '/api/messages',
+            activities: '/api/activities', contact: '/api/contact', otp: '/api/otp', feedback: '/api/feedback', health: '/api/health'
         }
     });
 });
 
-app.get('/', (req, res) => {
-    res.redirect('/api');
-});
+app.get('/', (req, res) => res.redirect('/api'));
 
 // ==================== 404 HANDLER ====================
-
 app.use('*', (req, res) => {
     res.status(404).json({
         success: false,
@@ -572,74 +338,38 @@ app.use('*', (req, res) => {
 });
 
 // ==================== ERROR HANDLING MIDDLEWARE ====================
-
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid JSON payload'
-        });
+        return res.status(400).json({ success: false, message: 'Invalid JSON payload' });
     }
     next(err);
 });
 
 app.use((err, req, res, next) => {
     console.error('❌ Error:', err.message);
-    
+
     if (err.name === 'ValidationError') {
         return res.status(400).json({
             success: false,
             message: 'Validation Error',
-            errors: Object.values(err.errors).map(e => ({
-                field: e.path,
-                message: e.message
-            }))
+            errors: Object.values(err.errors).map(e => ({ field: e.path, message: e.message }))
         });
     }
-    
     if (err.code === 11000) {
         const field = Object.keys(err.keyPattern)[0];
-        return res.status(400).json({
-            success: false,
-            message: 'Duplicate key error',
-            field,
-            error: `${field} already exists`
-        });
+        return res.status(400).json({ success: false, message: 'Duplicate key error', field, error: `${field} already exists` });
     }
-    
     if (err.name === 'CastError') {
-        return res.status(400).json({
-            success: false,
-            message: 'Invalid ID format',
-            field: err.path
-        });
+        return res.status(400).json({ success: false, message: 'Invalid ID format', field: err.path });
     }
-    
-    if (err.name === 'JsonWebTokenError') {
-        return res.status(401).json({
-            success: false,
-            message: 'Invalid token'
-        });
-    }
-    
-    if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({
-            success: false,
-            message: 'Token expired'
-        });
-    }
-    
-    // Multer file size error
+    if (err.name === 'JsonWebTokenError') return res.status(401).json({ success: false, message: 'Invalid token' });
+    if (err.name === 'TokenExpiredError') return res.status(401).json({ success: false, message: 'Token expired' });
     if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({
-            success: false,
-            message: 'File too large. Maximum size is 5MB'
-        });
+        return res.status(400).json({ success: false, message: 'File too large. Maximum size is 5MB' });
     }
-    
+
     const status = err.status || 500;
     const message = err.message || 'Internal server error';
-    
     res.status(status).json({
         success: false,
         message,
@@ -648,7 +378,6 @@ app.use((err, req, res, next) => {
 });
 
 // ==================== START SERVER ====================
-
 const startServer = (port) => {
     const server = app.listen(port, () => {
         console.log('\n=================================');
@@ -659,40 +388,25 @@ const startServer = (port) => {
         console.log(`📅 Interviews: http://localhost:${port}/api/interviews`);
         console.log(`📞 Contact: http://localhost:${port}/api/contact`);
         console.log(`📱 OTP: http://localhost:${port}/api/otp`);
+        console.log(`💬 Feedback: http://localhost:${port}/api/feedback`);
         console.log(`⚙️  Environment: ${NODE_ENV}`);
         console.log(`📁 CV Uploads: ${cvsDir}`);
         console.log(`📁 Profile Pictures: ${profilesDir}`);
+        console.log(`⏱️  Request timeout: DISABLED`);
+        console.log(`🛡️  DB connection check: enabled`);
+        console.log(`🌐 CORS: All origins allowed (development mode)`);
         console.log('=================================\n');
-        
+
         if (socketIo) {
             try {
-                const io = socketIo(server, {
-                    cors: {
-                        origin: CLIENT_URLS,
-                        credentials: true
-                    }
-                });
-
+                const io = socketIo(server, { cors: { origin: CLIENT_URLS, credentials: true } });
                 io.on('connection', (socket) => {
                     console.log('🔌 New client connected');
-                    
-                    if (socket.user) {
-                        socket.join(`user:${socket.user.id}`);
-                    }
-
-                    socket.on('join-chat', (chatId) => {
-                        socket.join(`chat:${chatId}`);
-                    });
-
-                    socket.on('leave-chat', (chatId) => {
-                        socket.leave(`chat:${chatId}`);
-                    });
-                    
-                    socket.on('disconnect', () => {
-                        console.log('🔌 Client disconnected');
-                    });
+                    if (socket.user) socket.join(`user:${socket.user.id}`);
+                    socket.on('join-chat', (chatId) => socket.join(`chat:${chatId}`));
+                    socket.on('leave-chat', (chatId) => socket.leave(`chat:${chatId}`));
+                    socket.on('disconnect', () => console.log('🔌 Client disconnected'));
                 });
-
                 app.set('io', io);
                 console.log('✅ Socket.io initialized');
             } catch (err) {
@@ -701,9 +415,12 @@ const startServer = (port) => {
         }
     });
 
+    server.timeout = 0;
+
     server.on('error', (error) => {
         if (error.code === 'EADDRINUSE') {
             console.log(`⚠️ Port ${port} is in use, trying port ${port + 1}...`);
+            server.close();
             startServer(port + 1);
         } else {
             console.error('❌ Server failed to start:', error.message);

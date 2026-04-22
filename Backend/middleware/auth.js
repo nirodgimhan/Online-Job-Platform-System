@@ -35,7 +35,7 @@ const auth = async (req, res, next) => {
             console.error('❌ Database not connected (readyState:', mongoose.connection.readyState, ')');
             return res.status(503).json({ 
                 success: false, 
-                message: 'Database connection unavailable. Please try again later.',
+                message: 'Connection lost. Please try again.',
                 retry: true 
             });
         }
@@ -69,11 +69,11 @@ const auth = async (req, res, next) => {
     } catch (error) {
         console.error('❌ Auth error:', error.message);
         
-        // Handle unexpected errors (e.g., database query timeout)
+        // Handle database timeout/network errors
         if (error.name === 'MongoTimeoutError' || error.name === 'MongoNetworkError') {
             return res.status(503).json({
                 success: false,
-                message: 'Database timeout. Please try again.',
+                message: 'Connection lost. Please try again.',
                 retry: true
             });
         }
