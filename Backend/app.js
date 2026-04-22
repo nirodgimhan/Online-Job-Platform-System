@@ -71,7 +71,7 @@ if (!fs.existsSync(profilesDir)) fs.mkdirSync(profilesDir, { recursive: true });
 const publicDir = path.join(__dirname, 'public');
 if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
 
-// ==================== CORS CONFIGURATION (MOVED BEFORE RATE LIMITER) ====================
+// ==================== CORS CONFIGURATION ====================
 const corsOptions = {
     origin: function (origin, callback) {
         if (!origin || NODE_ENV === 'development') {
@@ -95,7 +95,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// ==================== RATE LIMITER (NOW AFTER CORS) ====================
+// ==================== RATE LIMITER ====================
 if (rateLimit) {
     const limiter = rateLimit({
         windowMs: 15 * 60 * 1000,
@@ -227,15 +227,50 @@ try {
     require('./models/Contact');
     require('./Models/Notification');
     require('./models/OTP');
+    // Chat model (defined inline or imported)
+    // We'll import from ./models/Chat if the file exists, otherwise define inline later
+    try {
+        require('./models/Chat');
+    } catch (err) {
+        console.log('⚠️ Chat model not found, will be defined inline');
+    }
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
 }
 
+// Define Chat model inline if not already defined
+let ChatSession;
+try {
+    ChatSession = mongoose.model('ChatSession');
+} catch (err) {
+    const messageSchema = new mongoose.Schema({
+        sender: { type: String, enum: ['user', 'support', 'system'], required: true },
+        text: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now }
+    });
+    const chatSessionSchema = new mongoose.Schema({
+        sessionId: { type: String, required: true, unique: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+        userEmail: { type: String, default: '' },
+        userName: { type: String, default: 'Guest' },
+        status: { type: String, enum: ['active', 'resolved', 'closed'], default: 'active' },
+        messages: [messageSchema],
+        startedAt: { type: Date, default: Date.now },
+        lastActivity: { type: Date, default: Date.now }
+    });
+    chatSessionSchema.pre('save', function(next) {
+        this.lastActivity = Date.now();
+        next();
+    });
+    ChatSession = mongoose.model('ChatSession', chatSessionSchema);
+    console.log('✅ Chat model defined inline');
+}
+
 // ==================== IMPORT ROUTES ====================
 let authRoutes, userRoutes, studentRoutes, companyRoutes, postRoutes, jobRoutes, applicationRoutes;
 let cvRoutes, notificationRoutes, messageRoutes, adminRoutes, searchRoutes, interviewRoutes, activityRoutes;
-let contactRoutes, otpRoutes, feedbackRoutes;
+let contactRoutes, otpRoutes, feedbackRoutes, chatRoutes;
 
 const loadRoute = (path, fallbackMessage) => {
     try {
@@ -270,6 +305,19 @@ contactRoutes       = loadRoute('./Routes/contactRoutes', 'Contact routes not im
 otpRoutes           = loadRoute('./routes/otpRoutes', 'OTP routes not implemented');
 feedbackRoutes      = loadRoute('./routes/feedbackRoutes', 'Feedback routes not implemented');
 
+// Load chat routes (create the file ./routes/chat.js as described earlier)
+try {
+    chatRoutes = require('./routes/chat');
+    console.log('✅ ./routes/chat.js loaded');
+} catch (err) {
+    console.error('❌ Error loading chat routes:', err.message);
+    const router = express.Router();
+    router.all('*', (req, res) => {
+        res.status(501).json({ success: false, message: 'Chat routes not implemented' });
+    });
+    chatRoutes = router;
+}
+
 // ==================== API ROUTES ====================
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -288,10 +336,11 @@ app.use('/api/search', searchRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/chat', chatRoutes);           // <--- CHAT ROUTES ADDED
 
 console.log('\n✅ API routes registered:');
 ['auth','users','students','companies','posts','jobs','applications','cv','interviews',
- 'notifications','messages','activities','admin','search','contact','otp','feedback'].forEach(r => {
+ 'notifications','messages','activities','admin','search','contact','otp','feedback','chat'].forEach(r => {
     console.log(`   - /api/${r}`);
 });
 
@@ -319,7 +368,8 @@ app.get('/api', (req, res) => {
             auth: '/api/auth', users: '/api/users', students: '/api/students', companies: '/api/companies',
             posts: '/api/posts', jobs: '/api/jobs', applications: '/api/applications', cv: '/api/cv',
             interviews: '/api/interviews', notifications: '/api/notifications', messages: '/api/messages',
-            activities: '/api/activities', contact: '/api/contact', otp: '/api/otp', feedback: '/api/feedback', health: '/api/health'
+            activities: '/api/activities', contact: '/api/contact', otp: '/api/otp', feedback: '/api/feedback',
+            chat: '/api/chat', health: '/api/health'
         }
     });
 });
@@ -389,6 +439,7 @@ const startServer = (port) => {
         console.log(`📞 Contact: http://localhost:${port}/api/contact`);
         console.log(`📱 OTP: http://localhost:${port}/api/otp`);
         console.log(`💬 Feedback: http://localhost:${port}/api/feedback`);
+        console.log(`💬 Chat: http://localhost:${port}/api/chat`);
         console.log(`⚙️  Environment: ${NODE_ENV}`);
         console.log(`📁 CV Uploads: ${cvsDir}`);
         console.log(`📁 Profile Pictures: ${profilesDir}`);
@@ -402,6 +453,7 @@ const startServer = (port) => {
                 const io = socketIo(server, { cors: { origin: CLIENT_URLS, credentials: true } });
                 io.on('connection', (socket) => {
                     console.log('🔌 New client connected');
+                    // Optional: attach user after authentication
                     if (socket.user) socket.join(`user:${socket.user.id}`);
                     socket.on('join-chat', (chatId) => socket.join(`chat:${chatId}`));
                     socket.on('leave-chat', (chatId) => socket.leave(`chat:${chatId}`));
