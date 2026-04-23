@@ -227,7 +227,7 @@ const CvManager = () => {
         <div className="cv-filters-card">
           <div className="cv-card-header">
             <div className="cv-header-left"><div className="cv-header-icon-wrapper"><FaFileAlt/></div><div><h1>CV Manager</h1><p className="cv-header-subtitle">Upload and manage your resumes</p></div></div>
-            <div className="cv-header-stats"><div className="cv-stat-badge"><FaFileAlt className="cv-stat-icon"/><span className="cv-stat-number">{stats.total}</span><span className="cv-stat-label">CVs</span></div></div>
+      
           </div>
           <div className="cv-search-wrapper"><div className="cv-search-input-group"><FaSearch className="cv-search-icon"/><input type="text" placeholder="Search by title..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>{searchTerm && <button className="cv-clear-search" onClick={()=>setSearchTerm('')}><FaTimes/></button>}</div></div>
           <div className="cv-filters-row">

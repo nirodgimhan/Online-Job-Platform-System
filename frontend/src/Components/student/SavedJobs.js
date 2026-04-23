@@ -164,11 +164,7 @@ const StudentSavedJobs = () => {
                 <p className="ssj-header-subtitle">Jobs you've saved for later</p>
               </div>
             </div>
-            <div className="ssj-stat-badge">
-              <FaHeart className="ssj-stat-icon" />
-              <span className="ssj-stat-number">{totalJobs}</span>
-              <span className="ssj-stat-label">{totalJobs === 1 ? 'Job' : 'Jobs'} Saved</span>
-            </div>
+          
           </div>
 
           {/* Search bar */}
