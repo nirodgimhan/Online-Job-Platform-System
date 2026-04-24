@@ -3,7 +3,7 @@ import { useAuth, API } from '../Components/context/AuthContext';
 import { toast } from 'react-toastify';
 import { 
   FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaLock, FaEye, FaEyeSlash,
-  FaCheckCircle, FaTimesCircle, FaSave, FaEdit, FaBell, FaMoon, FaSun,
+  FaCheckCircle, FaTimesCircle, FaSave, FaEdit, FaBell,
   FaExclamationTriangle, FaTrashAlt, FaPowerOff, FaSpinner, FaArrowLeft,
   FaKey, FaMobileAlt, FaPaperPlane, FaShieldAlt
 } from 'react-icons/fa';
@@ -13,12 +13,6 @@ const Settings = () => {
   const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
   
-  // Dark mode state
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved === 'true';
-  });
-
   // Profile form
   const [profile, setProfile] = useState({
     name: '',
@@ -73,16 +67,6 @@ const Settings = () => {
   // Danger zone
   const [deactivating, setDeactivating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('settings-dark-mode');
-      localStorage.setItem('darkMode', 'true');
-    } else {
-      document.body.classList.remove('settings-dark-mode');
-      localStorage.setItem('darkMode', 'false');
-    }
-  }, [darkMode]);
 
   useEffect(() => {
     if (user) {
@@ -194,14 +178,12 @@ const Settings = () => {
     }
     setVerifyingOtp(true);
     try {
-      // The OTP verification endpoint already updates the user's phone number
       const verifyResponse = await API.post('/otp/verify', { phone: phoneInput, otp: otpCode });
       if (verifyResponse.data.success) {
         toast.success('Phone number verified and updated!');
         setPhoneVerified(true);
         setShowOtpInput(false);
         setOtpCode('');
-        // Update the local user object with the new phone number
         updateUser({ ...user, phoneNumber: phoneInput });
       }
     } catch (err) {
@@ -305,9 +287,6 @@ const Settings = () => {
           <FaArrowLeft /> Back
         </button>
         <h1>Settings</h1>
-        <button className="settings-dark-toggle" onClick={() => setDarkMode(!darkMode)}>
-          {darkMode ? <FaSun /> : <FaMoon />}
-        </button>
       </div>
 
       <div className="settings-grid">

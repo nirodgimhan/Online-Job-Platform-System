@@ -416,6 +416,67 @@ router.get('/company', auth, async (req, res) => {
   }
 });
 
+// ==================== NEW ADMIN ENDPOINT ====================
+// GET /api/interviews/admin/all - Get all interviews (admin only)
+router.get('/admin/all', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin only.'
+      });
+    }
+
+    const interviews = await Interview.find({})
+      .populate('jobId', 'title description location employmentType salary')
+      .populate('studentId', 'name email phoneNumber')
+      .populate('companyId', 'name companyName email companyLogo')
+      .sort({ scheduledDate: -1 });
+
+    function getRelativeTime(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = date - now;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMs < 0) return 'Passed';
+        if (diffMins < 60) return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
+        if (diffHours < 24) return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+        return `In ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+      } catch (e) {
+        return '';
+      }
+    }
+
+    const processedInterviews = interviews.map(interview => {
+      const interviewObj = interview.toObject();
+      interviewObj.isUpcoming = new Date(interview.scheduledDate) > new Date();
+      interviewObj.isPast = new Date(interview.scheduledDate) <= new Date();
+      interviewObj.relativeTime = getRelativeTime(interview.scheduledDate);
+      return interviewObj;
+    });
+
+    res.json({
+      success: true,
+      interviews: processedInterviews,
+      count: processedInterviews.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching all interviews for admin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch interviews',
+      error: error.message
+    });
+  }
+});
+// ==================== END ADMIN ENDPOINT ====================
+
 // GET /api/interviews/:id - Get single interview by ID
 router.get('/:id', auth, async (req, res) => {
   try {

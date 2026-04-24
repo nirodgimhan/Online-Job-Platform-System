@@ -18,7 +18,7 @@ import Register from './Components/Register';
 import Dashboard from './Components/Dashboard';
 import ProtectedRoute from './Components/ProtectedRoute';
 import Settings from './Components/Settings';
-import HelpSupport from './Components/HelpSupport';  // <-- ADDED
+import HelpSupport from './Components/HelpSupport';
 
 // Public Job Search Components
 import JobSearch from './Components/student/JobSearch';
@@ -52,17 +52,14 @@ import AdminReports from './Components/admin/AdminReports';
 import AdminContactMessages from './Components/admin/AdminContactMessages';
 import FeedbackManager from './Components/admin/FeedbackManager';
 
-// ========== Layout for Authenticated Users ==========
-// This layout includes Sidebar + main content area with centered container
+// ========== Layout for Authenticated Users (with Sidebar) ==========
 const AuthenticatedLayout = () => {
   return (
-    <div className="app-authenticated-layout">
+    <div className="sb-dashboard-layout">
       <Sidebar />
-      <div className="app-main-wrapper">
-        <div className="app-main-container">
-          <Outlet />  {/* Nested routes will render here */}
-        </div>
-      </div>
+      <main className="sb-main-content">
+        <Outlet />
+      </main>
     </div>
   );
 };
@@ -72,29 +69,26 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="App">
-          <Navbar />  {/* Fixed at top, always visible */}
+          <Navbar />
 
           <Routes>
-            {/* Public Routes – No Sidebar */}
+            {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/services" element={<Services />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
+
             {/* Public Job Search Routes */}
             <Route path="/jobs" element={<JobSearch />} />
             <Route path="/job/:id" element={<JobDetails />} />
 
-            {/* ========== Protected Routes with Sidebar ========== */}
-            <Route element={<ProtectedRoute />}> {/* Generic auth check */}
+            {/* Protected Routes with Sidebar */}
+            <Route element={<ProtectedRoute />}>
               <Route element={<AuthenticatedLayout />}>
-                {/* Settings – accessible to all authenticated users */}
                 <Route path="/settings" element={<Settings />} />
-
-                {/* Help & Support – accessible to all authenticated users */}
-                <Route path="/help" element={<HelpSupport />} />  {/* <-- ADDED */}
+                <Route path="/help" element={<HelpSupport />} />
 
                 {/* Student Routes */}
                 <Route path="/student">
@@ -134,20 +128,15 @@ function App() {
                   <Route path="verifications" element={<VerificationRequests />} />
                   <Route path="reports" element={<AdminReports />} />
                   <Route path="contact-messages" element={<AdminContactMessages />} />
-
                   <Route path="feedback" element={<FeedbackManager />} />
-                  
-
-
                 </Route>
               </Route>
             </Route>
 
-            {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
 
-          <ToastContainer 
+          <ToastContainer
             position="top-right"
             autoClose={3000}
             hideProgressBar={false}

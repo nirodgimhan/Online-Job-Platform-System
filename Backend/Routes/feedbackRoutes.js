@@ -1,66 +1,186 @@
 const express = require('express');
 const router = express.Router();
-const Feedback = require('../Models/Feedback');
+const Feedback = require('../models/Feedback');      // adjust path if needed
+const auth = require('../middleware/auth');
+const User = require('../models/User');
 
-// 1. CREATE Feedback (User)
-router.post('/', async (req, res) => {
+// Helper to check admin role
+const isAdmin = (req) => req.user && req.user.role === 'admin';
+
+// @route   POST /api/feedback
+// @desc    Submit new feedback (authenticated users only)
+// @access  Private
+router.post('/', auth, async (req, res) => {
     try {
-        const newFeedback = new Feedback(req.body);
-        const savedFeedback = await newFeedback.save();
-        res.status(201).json(savedFeedback);
+        const { comment, rating } = req.body;
+
+        if (!comment || comment.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Comment is required'
+            });
+        }
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Rating must be between 1 and 5'
+            });
+        }
+
+        // Get user details (name might be from User model)
+        const user = await User.findById(req.user.id).select('name');
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const newFeedback = new Feedback({
+            user: req.user.id,
+            name: user.name,
+            comment: comment.trim(),
+            rating: parseInt(rating)
+        });
+
+        await newFeedback.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Feedback submitted successfully',
+            feedback: newFeedback
+        });
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        console.error('Error submitting feedback:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error, please try again later'
+        });
     }
 });
 
-// 2. GET ALL Feedback (Admin View)
+// @route   GET /api/feedback
+// @desc    Get all feedback (public – for testimonials)
+// @access  Public
 router.get('/', async (req, res) => {
     try {
-        const feedbacks = await Feedback.find().sort({ createdAt: -1 });
-        res.json(feedbacks);
+        const feedbacks = await Feedback.find()
+            .sort({ createdAt: -1 })
+            .limit(20);   // optional limit
+        res.json({
+            success: true,
+            feedbacks
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('Error fetching feedback:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch feedback'
+        });
     }
 });
 
-// 3. GET BEST 3 (Home Page View)
+// @route   GET /api/feedback/featured
+// @desc    Get featured feedback (max 3) – for homepage
+// @access  Public
 router.get('/featured', async (req, res) => {
     try {
-        const featured = await Feedback.find({ isFeatured: true }).limit(3);
-        res.json(featured);
+        const featured = await Feedback.find({ isFeatured: true })
+            .sort({ createdAt: -1 })
+            .limit(3);
+        res.json({
+            success: true,
+            feedbacks: featured
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('Error fetching featured feedback:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch featured feedback'
+        });
     }
 });
 
-// 4. TOGGLE FEATURED (Admin Action)
-router.patch('/feature/:id', async (req, res) => {
+// ==================== ADMIN ONLY ROUTES ====================
+
+// @route   PATCH /api/feedback/:id/toggle-feature
+// @desc    Toggle featured status (admin only, max 3 featured)
+// @access  Private/Admin
+router.patch('/:id/toggle-feature', auth, async (req, res) => {
     try {
+        if (!isAdmin(req)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
         const feedback = await Feedback.findById(req.params.id);
-        
-        // Logic: If trying to feature, check if 3 already exist
+        if (!feedback) {
+            return res.status(404).json({
+                success: false,
+                message: 'Feedback not found'
+            });
+        }
+
+        // If trying to feature (from false to true), enforce max 3 featured
         if (!feedback.isFeatured) {
-            const count = await Feedback.countDocuments({ isFeatured: true });
-            if (count >= 3) {
-                return res.status(400).json({ message: "Only 3 feedbacks can be featured at once." });
+            const featuredCount = await Feedback.countDocuments({ isFeatured: true });
+            if (featuredCount >= 3) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Only 3 feedbacks can be featured at a time. Unfeature one first.'
+                });
             }
         }
 
         feedback.isFeatured = !feedback.isFeatured;
         await feedback.save();
-        res.json(feedback);
+
+        res.json({
+            success: true,
+            message: feedback.isFeatured ? 'Feedback featured' : 'Feedback unfeatured',
+            feedback
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('Error toggling featured:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
     }
 });
 
-// 5. DELETE Feedback
-router.delete('/:id', async (req, res) => {
+// @route   DELETE /api/feedback/:id
+// @desc    Delete a feedback (admin only)
+// @access  Private/Admin
+router.delete('/:id', auth, async (req, res) => {
     try {
-        await Feedback.findByIdAndDelete(req.params.id);
-        res.json({ message: "Feedback deleted" });
+        if (!isAdmin(req)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const feedback = await Feedback.findByIdAndDelete(req.params.id);
+        if (!feedback) {
+            return res.status(404).json({
+                success: false,
+                message: 'Feedback not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Feedback deleted successfully'
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('Error deleting feedback:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
     }
 });
 

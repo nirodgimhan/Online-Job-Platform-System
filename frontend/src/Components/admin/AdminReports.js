@@ -3,13 +3,12 @@ import { useAuth, API } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import {
   FaChartLine, FaUsers, FaBriefcase, FaFileAlt, FaCalendarAlt,
-  FaSyncAlt, FaExclamationTriangle, FaBuilding, FaStar, FaCheckCircle,
-  FaTimesCircle, FaFilter, FaSearch
+  FaSyncAlt, FaExclamationTriangle, FaBuilding
 } from 'react-icons/fa';
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area, ComposedChart, Scatter
+  AreaChart, Area
 } from 'recharts';
 
 const AdminReports = () => {
@@ -17,7 +16,6 @@ const AdminReports = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
   // Data states
   const [usersStats, setUsersStats] = useState({ total: 0, students: 0, companies: 0, admins: 0, verified: 0 });
@@ -36,65 +34,81 @@ const AdminReports = () => {
       setError('Access denied. Admin only.');
       setLoading(false);
     }
-  }, [user, dateRange]);
+  }, [user]);
+
+  const safeFetch = async (url, fallbackValue = null) => {
+    try {
+      const response = await API.get(url);
+      return response.data;
+    } catch (err) {
+      if (err.response?.status === 403) {
+        console.warn(`Access denied to ${url}`);
+      } else {
+        console.error(`Error fetching ${url}:`, err.message);
+      }
+      return fallbackValue;
+    }
+  };
 
   const fetchAllData = async () => {
     setLoading(true);
     setRefreshing(true);
     setError(null);
     try {
-      // Parallel fetch
-      const [usersRes, jobsRes, applicationsRes, interviewsRes] = await Promise.allSettled([
-        API.get('/users'),
-        API.get('/jobs/admin/all'),
-        API.get('/applications/company'),
-        API.get('/interviews/company')
-      ]);
+      // 1. Users
+      const usersRes = await safeFetch('/users', { users: [] });
+      const users = usersRes.users || [];
+      const students = users.filter(u => u.role === 'student');
+      const companies = users.filter(u => u.role === 'company');
+      const admins = users.filter(u => u.role === 'admin');
+      setUsersStats({
+        total: users.length,
+        students: students.length,
+        companies: companies.length,
+        admins: admins.length,
+        verified: users.filter(u => u.isVerified).length
+      });
 
-      // Process users
-      if (usersRes.status === 'fulfilled') {
-        const users = usersRes.value.data.users || [];
-        const students = users.filter(u => u.role === 'student');
-        const companies = users.filter(u => u.role === 'company');
-        const admins = users.filter(u => u.role === 'admin');
-        setUsersStats({
-          total: users.length,
-          students: students.length,
-          companies: companies.length,
-          admins: admins.length,
-          verified: users.filter(u => u.isVerified).length
-        });
-      } else {
-        console.warn('Users fetch failed');
-      }
+      // 2. Jobs
+      const jobsRes = await safeFetch('/jobs/admin/all', { jobs: [] });
+      const jobs = jobsRes.jobs || [];
+      setJobsStats({
+        total: jobs.length,
+        active: jobs.filter(j => j.status === 'active').length,
+        closed: jobs.filter(j => j.status === 'closed').length
+      });
+      const trends = {};
+      jobs.forEach(job => {
+        const date = new Date(job.createdAt).toISOString().slice(0, 10);
+        trends[date] = (trends[date] || 0) + 1;
+      });
+      const trendData = Object.entries(trends).map(([date, count]) => ({ date, count })).sort((a,b) => a.date.localeCompare(b.date));
+      setJobTrends(trendData);
 
-      // Process jobs
-      if (jobsRes.status === 'fulfilled') {
-        const jobs = jobsRes.value.data.jobs || [];
-        setJobsStats({
-          total: jobs.length,
-          active: jobs.filter(j => j.status === 'active').length,
-          closed: jobs.filter(j => j.status === 'closed').length
-        });
-        const trends = {};
-        jobs.forEach(job => {
-          const date = new Date(job.createdAt).toISOString().slice(0, 10);
-          trends[date] = (trends[date] || 0) + 1;
-        });
-        const trendData = Object.entries(trends).map(([date, count]) => ({ date, count })).sort((a,b) => a.date.localeCompare(b.date));
-        setJobTrends(trendData);
-      } else {
-        console.warn('Jobs fetch failed');
-      }
-
-      // Applications aggregation
-      let totalApps = 0;
-      let statusCounts = { pending: 0, reviewed: 0, shortlisted: 0, interview: 0, accepted: 0, rejected: 0 };
+      // 3. Applications
+      let allApplications = [];
       try {
-        const allJobsRes = await API.get('/jobs/admin/all');
-        const allJobs = allJobsRes.data.jobs || [];
-        totalApps = allJobs.reduce((sum, job) => sum + (job.applicantsCount || 0), 0);
-        if (totalApps > 0) {
+        const adminApps = await API.get('/applications/admin/all');
+        allApplications = adminApps.data.applications || [];
+      } catch (err) {
+        if (err.response?.status === 403 || err.response?.status === 404) {
+          const companyApps = await API.get('/applications/company');
+          allApplications = companyApps.data.applications || [];
+        } else {
+          throw err;
+        }
+      }
+      const totalApps = allApplications.length;
+      let statusCounts = { pending: 0, reviewed: 0, shortlisted: 0, interview: 0, accepted: 0, rejected: 0 };
+      if (totalApps > 0) {
+        const hasStatus = allApplications.some(app => app.status);
+        if (hasStatus) {
+          allApplications.forEach(app => {
+            const status = app.status?.toLowerCase();
+            if (statusCounts[status] !== undefined) statusCounts[status]++;
+            else statusCounts.pending++;
+          });
+        } else {
           statusCounts = {
             pending: Math.floor(totalApps * 0.4),
             reviewed: Math.floor(totalApps * 0.25),
@@ -104,48 +118,50 @@ const AdminReports = () => {
             rejected: Math.floor(totalApps * 0.05)
           };
         }
-        setApplicationsStats({ total: totalApps, ...statusCounts });
-        const pieData = Object.entries(statusCounts)
-          .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
-          .filter(item => item.value > 0);
-        setApplicationStatusData(pieData);
-      } catch (err) {
-        console.warn('Applications aggregation failed', err);
-        setApplicationsStats({ total: 0, pending: 0, reviewed: 0, shortlisted: 0, interview: 0, accepted: 0, rejected: 0 });
-        setApplicationStatusData([]);
       }
+      setApplicationsStats({ total: totalApps, ...statusCounts });
+      const pieData = Object.entries(statusCounts)
+        .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
+        .filter(item => item.value > 0);
+      setApplicationStatusData(pieData);
 
-      // Interviews
+      // 4. Interviews
+      let allInterviews = [];
       try {
-        const interviewsResAll = await API.get('/interviews');
-        const interviews = interviewsResAll.data.interviews || [];
-        setInterviewsStats({
-          total: interviews.length,
-          upcoming: interviews.filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled').length,
-          completed: interviews.filter(i => i.status === 'completed').length,
-          cancelled: interviews.filter(i => i.status === 'cancelled').length
-        });
+        const adminInterviews = await API.get('/interviews/admin/all');
+        allInterviews = adminInterviews.data.interviews || [];
       } catch (err) {
-        console.warn('Interviews fetch failed', err);
-        setInterviewsStats({ total: 0, upcoming: 0, completed: 0, cancelled: 0 });
+        if (err.response?.status === 403 || err.response?.status === 404) {
+          try {
+            const companyInterviews = await API.get('/interviews/company');
+            allInterviews = companyInterviews.data.interviews || [];
+          } catch (err2) {
+            allInterviews = [];
+          }
+        } else {
+          allInterviews = [];
+        }
       }
+      setInterviewsStats({
+        total: allInterviews.length,
+        upcoming: allInterviews.filter(i => new Date(i.scheduledDate) > new Date() && i.status !== 'cancelled').length,
+        completed: allInterviews.filter(i => i.status === 'completed').length,
+        cancelled: allInterviews.filter(i => i.status === 'cancelled').length
+      });
 
-      // Top companies
-      if (jobsRes.status === 'fulfilled') {
-        const jobs = jobsRes.value.data.jobs || [];
-        const companyMap = {};
-        jobs.forEach(job => {
-          const name = job.companyId?.companyName || 'Unknown';
-          companyMap[name] = (companyMap[name] || 0) + 1;
-        });
-        const top = Object.entries(companyMap)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a,b) => b.count - a.count)
-          .slice(0, 5);
-        setTopCompanies(top);
-      }
+      // 5. Top companies
+      const companyMap = {};
+      jobs.forEach(job => {
+        const name = job.companyId?.companyName || 'Unknown';
+        companyMap[name] = (companyMap[name] || 0) + 1;
+      });
+      const top = Object.entries(companyMap)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a,b) => b.count - a.count)
+        .slice(0, 5);
+      setTopCompanies(top);
 
-      // Ratings mock
+      // 6. Ratings mock
       setRatingsData([
         { name: 'Excellent', value: 25 },
         { name: 'Good', value: 40 },
@@ -208,45 +224,45 @@ const AdminReports = () => {
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
+      {/* Stats Cards - smaller size */}
       <div className="ar-stats-grid">
-        <div className="ar-stat-card ar-stat-total">
-          <div className="ar-stat-icon"><FaUsers /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-total"><FaUsers /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{usersStats.total}</span>
             <span className="ar-stat-label">Total Users</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-students">
-          <div className="ar-stat-icon"><FaUsers /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-students"><FaUsers /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{usersStats.students}</span>
             <span className="ar-stat-label">Students</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-companies">
-          <div className="ar-stat-icon"><FaBuilding /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-companies"><FaBuilding /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{usersStats.companies}</span>
             <span className="ar-stat-label">Companies</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-jobs">
-          <div className="ar-stat-icon"><FaBriefcase /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-jobs"><FaBriefcase /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{jobsStats.total}</span>
             <span className="ar-stat-label">Total Jobs</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-applications">
-          <div className="ar-stat-icon"><FaFileAlt /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-applications"><FaFileAlt /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{applicationsStats.total}</span>
             <span className="ar-stat-label">Applications</span>
           </div>
         </div>
-        <div className="ar-stat-card ar-stat-interviews">
-          <div className="ar-stat-icon"><FaCalendarAlt /></div>
+        <div className="ar-stat-card">
+          <div className="ar-stat-icon ar-stat-interviews"><FaCalendarAlt /></div>
           <div className="ar-stat-info">
             <span className="ar-stat-value">{interviewsStats.total}</span>
             <span className="ar-stat-label">Interviews</span>
@@ -256,7 +272,7 @@ const AdminReports = () => {
 
       {/* Charts Grid */}
       <div className="ar-charts-grid">
-        {/* Job Trends Line Chart */}
+        {/* Job Trends */}
         <div className="ar-chart-card">
           <div className="ar-chart-header">
             <h3>Job Postings Over Time</h3>
@@ -264,21 +280,23 @@ const AdminReports = () => {
           </div>
           <div className="ar-chart-body">
             {jobTrends.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={jobTrends} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4361ee" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#4361ee" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="count" stroke="#4361ee" fillOpacity={1} fill="url(#colorJobs)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={jobTrends}>
+                    <defs>
+                      <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4361ee" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#4361ee" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="count" stroke="#4361ee" fillOpacity={1} fill="url(#colorJobs)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="ar-empty-chart">No job data available</div>
             )}
@@ -293,10 +311,71 @@ const AdminReports = () => {
           </div>
           <div className="ar-chart-body">
             {applicationStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={applicationStatusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {applicationStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="ar-empty-chart">No application data available</div>
+            )}
+          </div>
+        </div>
+
+        {/* Top Companies */}
+        <div className="ar-chart-card">
+          <div className="ar-chart-header">
+            <h3>Top Companies by Job Posts</h3>
+            <p>Companies with most job listings</p>
+          </div>
+          <div className="ar-chart-body">
+            {topCompanies.length > 0 ? (
+              <div style={{ height: 300, width: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topCompanies} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <XAxis type="number" />
+                    <YAxis type="category" dataKey="name" width={100} />
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#4361ee" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="ar-empty-chart">No company data available</div>
+            )}
+          </div>
+        </div>
+
+        {/* Ratings */}
+        <div className="ar-chart-card">
+          <div className="ar-chart-header">
+            <h3>Interview Feedback Ratings</h3>
+            <p>Candidate satisfaction distribution</p>
+          </div>
+          <div className="ar-chart-body">
+            <div style={{ height: 300, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={applicationStatusData}
+                    data={ratingsData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -305,7 +384,7 @@ const AdminReports = () => {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {applicationStatusData.map((entry, index) => (
+                    {ratingsData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -313,62 +392,7 @@ const AdminReports = () => {
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="ar-empty-chart">No application data available yet</div>
-            )}
-          </div>
-        </div>
-
-        {/* Top Companies by Jobs */}
-        <div className="ar-chart-card">
-          <div className="ar-chart-header">
-            <h3>Top Companies by Job Posts</h3>
-            <p>Companies with most job listings</p>
-          </div>
-          <div className="ar-chart-body">
-            {topCompanies.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={topCompanies} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={100} />
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#4361ee" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="ar-empty-chart">No company data available</div>
-            )}
-          </div>
-        </div>
-
-        {/* Ratings / Feedback Distribution */}
-        <div className="ar-chart-card">
-          <div className="ar-chart-header">
-            <h3>Interview Feedback Ratings</h3>
-            <p>Candidate satisfaction distribution</p>
-          </div>
-          <div className="ar-chart-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={ratingsData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {ratingsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -379,17 +403,19 @@ const AdminReports = () => {
             <p>Active vs Closed positions</p>
           </div>
           <div className="ar-chart-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={[{ name: 'Jobs', active: jobsStats.active, closed: jobsStats.closed }]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="active" fill="#10b981" name="Active Jobs" />
-                <Bar dataKey="closed" fill="#ef4444" name="Closed Jobs" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={[{ name: 'Jobs', active: jobsStats.active, closed: jobsStats.closed }]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="active" fill="#10b981" name="Active Jobs" />
+                  <Bar dataKey="closed" fill="#ef4444" name="Closed Jobs" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -400,35 +426,37 @@ const AdminReports = () => {
             <p>Breakdown by user type</p>
           </div>
           <div className="ar-chart-body">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Students', value: usersStats.students },
-                    { name: 'Companies', value: usersStats.companies },
-                    { name: 'Admins', value: usersStats.admins }
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  <Cell fill="#4361ee" />
-                  <Cell fill="#10b981" />
-                  <Cell fill="#f59e0b" />
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300, width: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Students', value: usersStats.students },
+                      { name: 'Companies', value: usersStats.companies },
+                      { name: 'Admins', value: usersStats.admins }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    <Cell fill="#4361ee" />
+                    <Cell fill="#10b981" />
+                    <Cell fill="#f59e0b" />
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Additional Insights Table */}
+      {/* Platform Health Metrics */}
       <div className="ar-insights-card">
         <div className="ar-insights-header">
           <h3>Platform Health Metrics</h3>

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth, API } from '../Components/context/AuthContext';
 import { toast } from 'react-toastify';
 import { 
   FaQuestionCircle, FaEnvelope, FaPhone, FaComments, 
   FaChevronDown, FaChevronUp, FaPaperPlane, FaBookOpen,
-  FaHeadset, FaClock, FaCheckCircle
+  FaHeadset, FaClock, FaCheckCircle, FaTimes, FaUserCircle,
+  FaRobot, FaSpinner, FaCommentDots
 } from 'react-icons/fa';
 
 const HelpSupport = () => {
@@ -19,6 +20,16 @@ const HelpSupport = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Chat State
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const chatEndRef = useRef(null);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  // FAQ data
   const faqs = [
     {
       question: 'How do I create an account?',
@@ -46,6 +57,120 @@ const HelpSupport = () => {
     }
   ];
 
+  // Auto-reply logic (keyword matching)
+  const getBotReply = (message) => {
+    const msg = message.toLowerCase();
+    if (msg.includes('job') && (msg.includes('apply') || msg.includes('application'))) {
+      return '📌 To apply for a job:\n1. Browse jobs from the "Browse Jobs" page.\n2. Click on a job to view details.\n3. Press the "Apply" button.\n4. Upload your CV and optionally write a cover letter.\n\nNeed more help? Let me know!';
+    } else if (msg.includes('post job') || msg.includes('post a job')) {
+      return '🏢 Companies can post jobs from their dashboard:\n1. Go to Company Dashboard.\n2. Click "Post New Job".\n3. Fill in all details and submit.\n4. Your job will be reviewed and published.';
+    } else if (msg.includes('verify') || msg.includes('verification')) {
+      return '✅ Company verification usually takes 24–48 hours. You will receive an email once your account is verified.';
+    } else if (msg.includes('reset password') || msg.includes('forgot password')) {
+      return '🔐 On the login page, click "Forgot Password", enter your email, and you will receive a password reset link.';
+    } else if (msg.includes('contact') || msg.includes('support') || msg.includes('help')) {
+      return '📞 You can reach us at:\n- Email: support@jobportal.com\n- Phone: +94 11 234 5678\n- Or use the contact form on this page.\n\nOur team is available 24/7.';
+    } else if (msg.includes('hello') || msg.includes('hi') || msg.includes('hey')) {
+      return '👋 Hello! Welcome to JobPortal Support. How can I assist you today?';
+    } else {
+      return '🤖 I am still learning. Please try one of these keywords:\n- apply for job\n- post job\n- verification\n- reset password\n- contact support\n\nOr use the contact form for more detailed help.';
+    }
+  };
+
+  // Start chat session
+  const startChat = async () => {
+    setShowChat(true);
+    setChatLoading(true);
+    try {
+      // Try to create a session on backend (optional)
+      const response = await API.post('/chat/start', {
+        name: user?.name || 'Guest',
+        email: user?.email || ''
+      }).catch(() => ({ data: { sessionId: 'local_' + Date.now() } }));
+      const newSessionId = response.data.sessionId || 'local_' + Date.now();
+      setSessionId(newSessionId);
+
+      // Welcome message
+      setChatMessages([
+        {
+          id: Date.now(),
+          sender: 'bot',
+          text: '👋 Hi! I am JobPortal Bot. How can I help you today?\n\nYou can ask me about:\n• Applying for jobs\n• Posting jobs\n• Account verification\n• Password reset\n• Contacting support',
+          timestamp: new Date()
+        }
+      ]);
+    } catch (err) {
+      // Fallback – chat works without backend
+      setChatMessages([
+        {
+          id: Date.now(),
+          sender: 'bot',
+          text: '👋 Hi! I am JobPortal Bot. How can I help you today?\n\nYou can ask me about:\n• Applying for jobs\n• Posting jobs\n• Account verification\n• Password reset\n• Contacting support',
+          timestamp: new Date()
+        }
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Send user message and get bot reply
+  const sendMessage = async () => {
+    if (!chatInput.trim()) return;
+    const userMsg = {
+      id: Date.now(),
+      sender: 'user',
+      text: chatInput,
+      timestamp: new Date()
+    };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setIsTyping(true);
+
+    // Get bot reply (local logic)
+    setTimeout(() => {
+      const replyText = getBotReply(chatInput);
+      const botMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: replyText,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, botMsg]);
+      setIsTyping(false);
+    }, 800);
+
+    // Optional: send to backend for storage
+    if (sessionId && !sessionId.startsWith('local_')) {
+      try {
+        await API.post('/chat/message', {
+          sessionId,
+          message: chatInput,
+          sender: 'user'
+        });
+      } catch (err) {
+        console.warn('Backend chat save failed', err);
+      }
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') sendMessage();
+  };
+
+  const closeChat = () => {
+    setShowChat(false);
+    setChatMessages([]);
+    setSessionId(null);
+  };
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
+
+  // FAQ toggle
   const handleFaqToggle = (index) => {
     setOpenFaq(openFaq === index ? null : index);
   };
@@ -62,7 +187,6 @@ const HelpSupport = () => {
     }
     setSubmitting(true);
     try {
-      // Use the existing contact endpoint (same as ContactUs page)
       await API.post('/contact', {
         name: formData.name,
         email: formData.email,
@@ -215,19 +339,77 @@ const HelpSupport = () => {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Live Chat CTA */}
-        <div className="hs-live-chat">
-          <div className="hs-live-chat-content">
-            <FaComments />
-            <div>
-              <h3>Need instant help?</h3>
-              <p>Chat with our support team in real-time</p>
+      {/* Live Chat Bot Button */}
+      <button className="hs-chat-bot-button" onClick={startChat}>
+        <FaCommentDots />
+        <span>Chat with us</span>
+      </button>
+
+      {/* Chat Bot Modal */}
+      {showChat && (
+        <div className="hs-chat-modal-overlay" onClick={closeChat}>
+          <div className="hs-chat-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="hs-chat-header">
+              <div className="hs-chat-header-info">
+                <FaRobot className="hs-chat-icon" />
+                <div>
+                  <h3>JobPortal Bot</h3>
+                  <p>Online • Instant replies</p>
+                </div>
+              </div>
+              <button className="hs-chat-close" onClick={closeChat}>
+                <FaTimes />
+              </button>
             </div>
-            <button className="hs-btn-primary">Start Live Chat</button>
+            <div className="hs-chat-messages">
+              {chatLoading ? (
+                <div className="hs-chat-loading">
+                  <FaSpinner className="hs-spin" />
+                  <p>Starting chat...</p>
+                </div>
+              ) : (
+                <>
+                  {chatMessages.map((msg) => (
+                    <div key={msg.id} className={`hs-chat-message ${msg.sender === 'user' ? 'hs-message-user' : 'hs-message-bot'}`}>
+                      <div className="hs-message-avatar">
+                        {msg.sender === 'user' ? <FaUserCircle /> : <FaRobot />}
+                      </div>
+                      <div className="hs-message-bubble">
+                        <div className="hs-message-text">{msg.text}</div>
+                        <div className="hs-message-time">
+                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {isTyping && (
+                    <div className="hs-chat-typing">
+                      <FaRobot />
+                      <span>Bot is typing...</span>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </>
+              )}
+            </div>
+            <div className="hs-chat-input-area">
+              <input
+                type="text"
+                placeholder="Type your question here..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={chatLoading}
+              />
+              <button onClick={sendMessage} disabled={!chatInput.trim() || chatLoading}>
+                <FaPaperPlane />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,112 +1,174 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { FaStar, FaTrash, FaUserCircle } from 'react-icons/fa';
+import { useAuth, API } from '../context/AuthContext';
+import { FaStar, FaTrash, FaUserCircle, FaSyncAlt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const FeedbackManager = () => {
-    const [allFeedback, setAllFeedback] = useState([]);
+    const { user } = useAuth();
+    const [feedbacks, setFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const fetchAll = async () => {
+    // Fetch all feedbacks
+    const fetchAllFeedbacks = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/feedback');
-            setAllFeedback(res.data);
-            setLoading(false);
+            const res = await API.get('/feedback');
+            if (res.data.success) {
+                setFeedbacks(res.data.feedbacks || []);
+            } else {
+                throw new Error(res.data.message || 'Failed to fetch feedback');
+            }
         } catch (err) {
-            console.error("Error fetching feedback:", err);
+            console.error('Error fetching feedback:', err);
+            toast.error(err.response?.data?.message || 'Could not load feedback');
+        } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
-    useEffect(() => { fetchAll(); }, []);
+    useEffect(() => {
+        if (user?.role === 'admin') {
+            fetchAllFeedbacks();
+        } else {
+            toast.error('Access denied. Admin only.');
+            setLoading(false);
+        }
+    }, [user]);
 
-    // ✅ This was missing!
     const handleToggleFeature = async (id) => {
         try {
-            await axios.patch(`http://localhost:5000/api/feedback/feature/${id}`);
-            toast.success("Featured status updated!");
-            fetchAll(); // Refresh the list from the database
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Error updating featured status");
-        }
-    };
-
-    // ✅ This was missing!
-    const handleDelete = async (id) => {
-        if (window.confirm("Are you sure you want to delete this feedback?")) {
-            try {
-                await axios.delete(`http://localhost:5000/api/feedback/${id}`);
-                toast.success("Feedback deleted");
-                fetchAll();
-            } catch (err) {
-                toast.error("Failed to delete feedback");
+            const res = await API.patch(`/feedback/${id}/toggle-feature`);
+            if (res.data.success) {
+                toast.success(res.data.message || 'Featured status updated');
+                await fetchAllFeedbacks();
+            } else {
+                throw new Error(res.data.message);
             }
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Failed to update featured status';
+            toast.error(msg);
         }
     };
 
-    if (loading) return <div className="ds-loading-container"><div className="ds-spinner"></div></div>;
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this feedback? This action cannot be undone.')) {
+            return;
+        }
+        try {
+            const res = await API.delete(`/feedback/${id}`);
+            if (res.data.success) {
+                toast.success('Feedback deleted successfully');
+                await fetchAllFeedbacks();
+            } else {
+                throw new Error(res.data.message);
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete feedback');
+        }
+    };
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        fetchAllFeedbacks();
+    };
+
+    if (loading) {
+        return (
+            <div className="fm-loading-container">
+                <div className="fm-spinner"></div>
+                <p>Loading feedback data...</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="admin-feedback-container" style={{ padding: '20px' }}>
-            <div style={{ marginBottom: '20px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
-                <h2 style={{ fontSize: '24px', fontWeight: '600' }}>Manage Feedback</h2>
-                <p style={{ color: '#666' }}>Select up to 3 best feedbacks to show on the Home Page.</p>
+        <div className="fm-feedback-manager">
+            <div className="fm-header">
+                <div className="fm-header-left">
+                    <div className="fm-header-icon-wrapper">
+                        <FaStar />
+                    </div>
+                    <div>
+                        <h2>Manage Feedback</h2>
+                        <p>Select up to 3 feedbacks to feature on the homepage</p>
+                    </div>
+                </div>
+                <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="fm-refresh-btn"
+                >
+                    <FaSyncAlt className={refreshing ? 'fm-spin' : ''} /> Refresh
+                </button>
             </div>
 
-            <div className="table-responsive" style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="fm-table-container">
+                <table className="fm-table">
                     <thead>
-                        <tr style={{ background: '#f8f9fa', textAlign: 'left' }}>
-                            <th style={{ padding: '15px', borderBottom: '1px solid #ddd' }}>User</th>
-                            <th style={{ padding: '15px', borderBottom: '1px solid #ddd' }}>Comment</th>
-                            <th style={{ padding: '15px', borderBottom: '1px solid #ddd' }}>Status</th>
-                            <th style={{ padding: '15px', borderBottom: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
+                        <tr>
+                            <th>User</th>
+                            <th>Feedback</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                            <th style={{ textAlign: 'center' }}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {allFeedback.map((f) => (
-                            <tr key={f._id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{ padding: '15px', fontWeight: '500' }}>
-                                    <FaUserCircle style={{ marginRight: '8px', color: '#4299e1' }} /> {f.name}
-                                </td>
-                                <td style={{ padding: '15px', color: '#555', maxWidth: '400px' }}>{f.comment}</td>
-                                <td style={{ padding: '15px' }}>
-                                    {f.isFeatured ? (
-                                        <span style={{ color: '#9c4221', background: '#feebc8', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>
-                                            ⭐ FEATURED
-                                        </span>
-                                    ) : (
-                                        <span style={{ color: '#4a5568', background: '#edf2f7', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>
-                                            Standard
-                                        </span>
-                                    )}
-                                </td>
-                                <td style={{ padding: '15px', textAlign: 'center' }}>
-                                    <button 
-                                        onClick={() => handleToggleFeature(f._id)}
-                                        style={{ 
-                                            background: f.isFeatured ? '#3182ce' : '#ebf8ff',
-                                            color: f.isFeatured ? '#fff' : '#3182ce',
-                                            border: '1px solid #3182ce',
-                                            padding: '6px 12px',
-                                            borderRadius: '4px',
-                                            marginRight: '8px',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        {f.isFeatured ? 'Unfeature' : 'Feature'}
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDelete(f._id)}
-                                        style={{ background: '#fff5f5', color: '#e53e3e', border: '1px solid #feb2b2', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
-                                    >
-                                        <FaTrash />
-                                    </button>
+                        {feedbacks.length === 0 ? (
+                            <tr>
+                                <td colSpan="5" className="fm-empty-state">
+                                    No feedback submissions yet.
                                 </td>
                             </tr>
-                        ))}
+                        ) : (
+                            feedbacks.map((fb) => (
+                                <tr key={fb._id}>
+                                    <td className="fm-user-cell">
+                                        <FaUserCircle className="fm-user-icon" />
+                                        {fb.name}
+                                    </td>
+                                    <td className="fm-comment">
+                                        "{fb.comment}"
+                                    </td>
+                                    <td>
+                                        <div className="fm-rating">
+                                            {[...Array(5)].map((_, i) => (
+                                                <FaStar
+                                                    key={i}
+                                                    className={i < fb.rating ? 'fm-star-filled' : 'fm-star-empty'}
+                                                />
+                                            ))}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span className={`fm-badge ${fb.isFeatured ? 'fm-badge-featured' : 'fm-badge-standard'}`}>
+                                            {fb.isFeatured ? '⭐ Featured' : 'Standard'}
+                                        </span>
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <button
+                                            onClick={() => handleToggleFeature(fb._id)}
+                                            className={`fm-action-btn ${fb.isFeatured ? 'fm-unfeature-btn' : 'fm-feature-btn'}`}
+                                        >
+                                            {fb.isFeatured ? 'Unfeature' : 'Feature'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(fb._id)}
+                                            className="fm-action-btn fm-delete-btn"
+                                        >
+                                            <FaTrash />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
+            </div>
+
+            <div className="fm-info-note">
+                <strong>ℹ️ Note:</strong> Only 3 feedbacks can be featured at a time. When you feature a fourth one, the backend will reject it until you unfeature one.
             </div>
         </div>
     );
