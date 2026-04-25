@@ -198,7 +198,7 @@ const CompanyInterviews = () => {
     return (
       <div className="ci-loading-container">
         <div className="ci-spinner"></div>
-        <h4>Loading interviews...</h4>
+        <h4>Loading interviews....</h4>
       </div>
     );
   }

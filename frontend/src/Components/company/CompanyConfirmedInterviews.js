@@ -212,7 +212,7 @@ const CompanyConfirmedInterviews = () => {
     return (
       <div className="cci-loading-container">
         <div className="cci-spinner"></div>
-        <h4>Loading confirmed interviews...</h4>
+        <h4>Loading confirmed interviews....</h4>
         <p>Please wait while we fetch your confirmed interviews</p>
       </div>
     );

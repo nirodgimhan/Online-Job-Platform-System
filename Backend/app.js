@@ -49,7 +49,7 @@ try {
 // ==================== ENVIRONMENT VARIABLES ====================
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/jobportal';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const CLIENT_URLS = process.env.CLIENT_URLS 
     ? process.env.CLIENT_URLS.split(',') 

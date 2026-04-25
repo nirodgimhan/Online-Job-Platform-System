@@ -12,6 +12,14 @@ import {
   FaBug, FaDatabase, FaTrash, FaEdit, FaPlus, FaHeart
 } from 'react-icons/fa';
 
+// Helper to get full URL for images
+const getFullImageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  return `${baseUrl}${path.startsWith('/') ? path : '/' + path}`;
+};
+
 const StudentInterviews = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -36,7 +44,7 @@ const StudentInterviews = () => {
   const [ensuringProfile, setEnsuringProfile] = useState(false);
 
   // ----------------------------------------------
-  // Helper functions (same as original)
+  // Helper functions
   // ----------------------------------------------
   const getStatusText = (status) => {
     const map = { scheduled: 'Scheduled', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled' };
@@ -104,7 +112,7 @@ const StudentInterviews = () => {
   };
 
   // ----------------------------------------------
-  // Data fetching (same logic as original)
+  // Data fetching
   // ----------------------------------------------
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -428,10 +436,18 @@ const StudentInterviews = () => {
                 {/* LEFT: Company Logo */}
                 <div className="si-card-logo">
                   {interview.companyLogo ? (
-                    <img src={interview.companyLogo} alt={interview.companyName} />
-                  ) : (
-                    <div className="si-logo-placeholder"><FaBuilding /></div>
-                  )}
+                    <img 
+                      src={getFullImageUrl(interview.companyLogo)} 
+                      alt={interview.companyName}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className="si-logo-placeholder" style={{ display: interview.companyLogo ? 'none' : 'flex' }}>
+                    <FaBuilding />
+                  </div>
                 </div>
 
                 {/* RIGHT: Content */}
@@ -507,7 +523,7 @@ const StudentInterviews = () => {
         )}
       </div>
 
-      {/* Modals: Details, Feedback, Cancel (same as original but styled with new classes) */}
+      {/* Modals: Details, Feedback, Cancel */}
       {showDetailsModal && selectedInterview && (
         <div className="si-modal-overlay" onClick={() => setShowDetailsModal(false)}>
           <div className="si-modal si-modal-large" onClick={e => e.stopPropagation()}>

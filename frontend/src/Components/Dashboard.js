@@ -55,7 +55,7 @@ const Dashboard = () => {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false); // kept for potential future use but button removed
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -401,11 +401,10 @@ const Dashboard = () => {
     );
   }
 
-  // ==================== STUDENT DASHBOARD RENDER ====================
+  // ==================== STUDENT DASHBOARD RENDER (unchanged) ====================
   if (user?.role === 'student') {
     return (
       <div className="jobdash-student-dashboard">
-        {/* Welcome Header with Background Image */}
         <div className="jobdash-welcome-header" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")' }}>
           <div className="jobdash-welcome-overlay"></div>
           <div className="jobdash-welcome-content">
@@ -426,87 +425,41 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-          <div className="jobdash-welcome-actions">
-            {/* Notification button removed */}
-          </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="jobdash-stats-grid">
           <div className="jobdash-stat-card">
-            <div className="jobdash-stat-info">
-              <h3>{stats.totalApplications}</h3>
-              <p>Total Applications</p>
-            </div>
-            <div className="jobdash-stat-icon jobdash-stat-icon-primary">
-              <FaBriefcase />
-            </div>
+            <div className="jobdash-stat-info"><h3>{stats.totalApplications}</h3><p>Total Applications</p></div>
+            <div className="jobdash-stat-icon jobdash-stat-icon-primary"><FaBriefcase /></div>
           </div>
           <div className="jobdash-stat-card">
-            <div className="jobdash-stat-info">
-              <h3>{stats.savedJobs}</h3>
-              <p>Saved Jobs</p>
-            </div>
-            <div className="jobdash-stat-icon jobdash-stat-icon-success">
-              <FaHeart />
-            </div>
+            <div className="jobdash-stat-info"><h3>{stats.savedJobs}</h3><p>Saved Jobs</p></div>
+            <div className="jobdash-stat-icon jobdash-stat-icon-success"><FaHeart /></div>
           </div>
           <div className="jobdash-stat-card">
-            <div className="jobdash-stat-info">
-              <h3>{stats.pendingApplications}</h3>
-              <p>In Review</p>
-            </div>
-            <div className="jobdash-stat-icon jobdash-stat-icon-info">
-              <FaClock />
-            </div>
+            <div className="jobdash-stat-info"><h3>{stats.pendingApplications}</h3><p>In Review</p></div>
+            <div className="jobdash-stat-icon jobdash-stat-icon-info"><FaClock /></div>
           </div>
           <div className="jobdash-stat-card">
-            <div className="jobdash-stat-info">
-              <h3>{stats.upcomingInterviews}</h3>
-              <p>Upcoming Interviews</p>
-            </div>
-            <div className="jobdash-stat-icon jobdash-stat-icon-warning">
-              <FaCalendarAlt />
-            </div>
+            <div className="jobdash-stat-info"><h3>{stats.upcomingInterviews}</h3><p>Upcoming Interviews</p></div>
+            <div className="jobdash-stat-icon jobdash-stat-icon-warning"><FaCalendarAlt /></div>
           </div>
         </div>
 
-        {/* Three‑column row: Application Status, Recommended Jobs, Calendar */}
         <div className="jobdash-three-col">
-          {/* Application Status */}
           <div className="jobdash-card">
-            <div className="jobdash-card-header">
-              <h5>Application Status</h5>
-            </div>
+            <div className="jobdash-card-header"><h5>Application Status</h5></div>
             <div className="jobdash-card-body">
-              <div className="jobdash-status-item">
-                <span><FaCheckCircle className="jobdash-text-success" /> Accepted</span>
-                <span className="jobdash-status-value">{stats.acceptedApplications}</span>
-              </div>
-              <div className="jobdash-status-item">
-                <span><FaClock className="jobdash-text-warning" /> Pending</span>
-                <span className="jobdash-status-value">{stats.pendingApplications}</span>
-              </div>
-              <div className="jobdash-status-item">
-                <span><FaEye className="jobdash-text-info" /> Reviewed</span>
-                <span className="jobdash-status-value">{stats.reviewedApplications}</span>
-              </div>
-              <div className="jobdash-status-item">
-                <span><FaTimesCircle className="jobdash-text-danger" /> Rejected</span>
-                <span className="jobdash-status-value">{stats.rejectedApplications}</span>
-              </div>
-              <div className="jobdash-status-item">
-                <span><FaCalendarAlt className="jobdash-text-primary" /> Interview</span>
-                <span className="jobdash-status-value">{stats.interviewedApplications}</span>
-              </div>
+              <div className="jobdash-status-item"><span><FaCheckCircle className="jobdash-text-success" /> Accepted</span><span className="jobdash-status-value">{stats.acceptedApplications}</span></div>
+              <div className="jobdash-status-item"><span><FaClock className="jobdash-text-warning" /> Pending</span><span className="jobdash-status-value">{stats.pendingApplications}</span></div>
+              <div className="jobdash-status-item"><span><FaEye className="jobdash-text-info" /> Reviewed</span><span className="jobdash-status-value">{stats.reviewedApplications}</span></div>
+              <div className="jobdash-status-item"><span><FaTimesCircle className="jobdash-text-danger" /> Rejected</span><span className="jobdash-status-value">{stats.rejectedApplications}</span></div>
+              <div className="jobdash-status-item"><span><FaCalendarAlt className="jobdash-text-primary" /> Interview</span><span className="jobdash-status-value">{stats.interviewedApplications}</span></div>
             </div>
           </div>
 
-          {/* Recommended Jobs */}
           <div className="jobdash-card">
-            <div className="jobdash-card-header">
-              <h5>Recommended Jobs</h5>
-            </div>
+            <div className="jobdash-card-header"><h5>Recommended Jobs</h5></div>
             <div className="jobdash-card-body">
               {activeJobs.length > 0 ? (
                 activeJobs.map(job => (
@@ -514,305 +467,228 @@ const Dashboard = () => {
                     <div className="jobdash-recommended-content">
                       <h6>{job.title}</h6>
                       <p>{job.companyId?.companyName || 'Company'}</p>
-                      <div className="jobdash-job-meta">
-                        <span><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span>
-                        <span><FaDollarSign /> {job.salary?.min ? `$${job.salary.min.toLocaleString()}` : 'Negotiable'}</span>
-                      </div>
+                      <div className="jobdash-job-meta"><span><FaMapMarkerAlt /> {job.location?.city || 'Remote'}</span><span><FaDollarSign /> {job.salary?.min ? `$${job.salary.min.toLocaleString()}` : 'Negotiable'}</span></div>
                     </div>
-                    <Link to={`/student/job/${job._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">
-                      View
-                    </Link>
+                    <Link to={`/student/job/${job._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">View</Link>
                   </div>
                 ))
               ) : (
-                <div className="jobdash-empty-state">
-                  <p>No recommended jobs found</p>
-                  <Link to="/student/jobs" className="jobdash-btn jobdash-btn-primary jobdash-btn-sm">
-                    Browse All Jobs
-                  </Link>
-                </div>
+                <div className="jobdash-empty-state"><p>No recommended jobs found</p><Link to="/student/jobs" className="jobdash-btn jobdash-btn-primary jobdash-btn-sm">Browse All Jobs</Link></div>
               )}
             </div>
           </div>
 
-          {/* Calendar Widget */}
           <div className="jobdash-card jobdash-calendar-card">
-            <div className="jobdash-card-header">
-              <h5><FaCalendarAlt /> Calendar</h5>
-              <div className="jobdash-calendar-nav">
-                <button onClick={handlePrevMonth} className="jobdash-icon-btn-sm"><FaChevronLeft /></button>
-                <span>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
-                <button onClick={handleNextMonth} className="jobdash-icon-btn-sm"><FaChevronRight /></button>
-              </div>
-            </div>
+            <div className="jobdash-card-header"><h5><FaCalendarAlt /> Calendar</h5><div className="jobdash-calendar-nav"><button onClick={handlePrevMonth} className="jobdash-icon-btn-sm"><FaChevronLeft /></button><span>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span><button onClick={handleNextMonth} className="jobdash-icon-btn-sm"><FaChevronRight /></button></div></div>
             <div className="jobdash-card-body">
               <div className="jobdash-calendar">
-                <div className="jobdash-calendar-weekdays">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="jobdash-calendar-weekday">{day}</div>
-                  ))}
-                </div>
+                <div className="jobdash-calendar-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <div key={day} className="jobdash-calendar-weekday">{day}</div>)}</div>
                 <div className="jobdash-calendar-days">
-                  {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => (
-                    <div key={`empty-${i}`} className="jobdash-calendar-day jobdash-calendar-day-empty"></div>
-                  ))}
+                  {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => <div key={`empty-${i}`} className="jobdash-calendar-day jobdash-calendar-day-empty"></div>)}
                   {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
                     const day = i + 1;
                     const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
                     const hasEvent = hasEventOnDate(dateObj);
                     const isToday = dateObj.toDateString() === new Date().toDateString();
-                    return (
-                      <div key={day} className={`jobdash-calendar-day ${isToday ? 'jobdash-calendar-day-today' : ''} ${hasEvent ? 'jobdash-calendar-day-event' : ''}`}>
-                        {day}
-                        {hasEvent && <FaCircle className="jobdash-event-dot" />}
-                      </div>
-                    );
+                    return <div key={day} className={`jobdash-calendar-day ${isToday ? 'jobdash-calendar-day-today' : ''} ${hasEvent ? 'jobdash-calendar-day-event' : ''}`}>{day}{hasEvent && <FaCircle className="jobdash-event-dot" />}</div>;
                   })}
                 </div>
               </div>
-              <div className="jobdash-upcoming-events">
-                <h6>Upcoming Events</h6>
-                {calendarEvents.filter(e => e.date >= new Date()).slice(0, 3).map(event => (
-                  <div key={event.id} className="jobdash-event-item">
-                    <FaCalendarAlt />
-                    <span>{event.title}</span>
-                    <small>{event.date.toLocaleDateString()}</small>
-                  </div>
-                ))}
-                {calendarEvents.filter(e => e.date >= new Date()).length === 0 && (
-                  <p className="jobdash-empty-text">No upcoming events</p>
-                )}
-              </div>
+              <div className="jobdash-upcoming-events"><h6>Upcoming Events</h6>{calendarEvents.filter(e => e.date >= new Date()).slice(0, 3).map(event => <div key={event.id} className="jobdash-event-item"><FaCalendarAlt /><span>{event.title}</span><small>{event.date.toLocaleDateString()}</small></div>)}{calendarEvents.filter(e => e.date >= new Date()).length === 0 && <p className="jobdash-empty-text">No upcoming events</p>}</div>
             </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="jobdash-quick-actions-wrapper">
-          <h5 className="jobdash-quick-actions-title">
-            <FaRegClock /> Quick Actions
-          </h5>
+          <h5 className="jobdash-quick-actions-title"><FaRegClock /> Quick Actions</h5>
           <div className="jobdash-quick-actions">
-            <Link to="/student/jobs" className="jobdash-quick-action-card">
-              <FaBriefcase />
-              <span>Browse Jobs</span>
-            </Link>
-            <Link to="/student/cv-manager" className="jobdash-quick-action-card">
-              <FaFileAlt />
-              <span>Manage CVs</span>
-            </Link>
-            <Link to="/student/saved-jobs" className="jobdash-quick-action-card">
-              <FaHeart />
-              <span>Saved Jobs</span>
-            </Link>
-            <Link to="/student/profile" className="jobdash-quick-action-card">
-              <FaUserGraduate />
-              <span>My Profile</span>
-            </Link>
-            <Link to="/student/skill-tests" className="jobdash-quick-action-card">
-              <FaCode />
-              <span>Skill Tests</span>
-            </Link>
-            <Link to="/student/interviews" className="jobdash-quick-action-card">
-              <FaCalendarAlt />
-              <span>Interviews</span>
-            </Link>
+            <Link to="/student/jobs" className="jobdash-quick-action-card"><FaBriefcase /><span>Browse Jobs</span></Link>
+            <Link to="/student/cv-manager" className="jobdash-quick-action-card"><FaFileAlt /><span>Manage CVs</span></Link>
+            <Link to="/student/saved-jobs" className="jobdash-quick-action-card"><FaHeart /><span>Saved Jobs</span></Link>
+            <Link to="/student/profile" className="jobdash-quick-action-card"><FaUserGraduate /><span>My Profile</span></Link>
+            <Link to="/student/skill-tests" className="jobdash-quick-action-card"><FaCode /><span>Skill Tests</span></Link>
+            <Link to="/student/interviews" className="jobdash-quick-action-card"><FaCalendarAlt /><span>Interviews</span></Link>
           </div>
         </div>
-
-        {/* Companies to Follow section removed */}
       </div>
     );
   }
 
-  // ==================== COMPANY DASHBOARD RENDER ====================
-  if (user?.role === 'company') {
-    return (
-      <div className="jobdash-company-dashboard">
-        {/* Welcome Header with Background Image */}
-        <div className="jobdash-welcome-header" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")' }}>
-          <div className="jobdash-welcome-overlay"></div>
-          <div className="jobdash-welcome-content">
-            <div className="jobdash-profile-logo">
-              {profilePictureUrl ? (
-                <img src={profilePictureUrl} alt={user.companyName || user.name} />
-              ) : (
-                getInitials(user.companyName || user.name)
-              )}
-            </div>
-            <div className="jobdash-welcome-text">
-              <h2>Welcome back, {user.companyName || user.name}! 🏢</h2>
-              <p>Find the best talent for your company. Post jobs and review applications.</p>
-              <div className="jobdash-user-meta">
-                <span><FaEye /> {companyStats.profileViews} profile views</span>
-                <span><FaChartBar /> {companyStats.jobViews} job views</span>
-                <span><FaUsers /> {stats.companyFollowers} followers</span>
-              </div>
-            </div>
+// ==================== COMPANY DASHBOARD RENDER (reordered) ====================
+if (user?.role === 'company') {
+  return (
+    <div className="jobdash-company-dashboard">
+      {/* Welcome Header */}
+      <div className="jobdash-welcome-header" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80")' }}>
+        <div className="jobdash-welcome-overlay"></div>
+        <div className="jobdash-welcome-content">
+          <div className="jobdash-profile-logo">
+            {profilePictureUrl ? <img src={profilePictureUrl} alt={user.companyName || user.name} /> : getInitials(user.companyName || user.name)}
           </div>
-          <div className="jobdash-welcome-actions">
-            {/* Notification button removed */}
+          <div className="jobdash-welcome-text">
+            <h2>Welcome back, {user.companyName || user.name}! 🏢</h2>
+            <p>Find the best talent for your company. Post jobs and review applications.</p>
+            <div className="jobdash-user-meta">
+              <span><FaEye /> {companyStats.profileViews} profile views</span>
+              <span><FaChartBar /> {companyStats.jobViews} job views</span>
+              <span><FaUsers /> {stats.companyFollowers} followers</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Original company dashboard content – unchanged */}
-        <div className="jobdash-two-column">
-          <div className="jobdash-main-col">
-            <div className="jobdash-stats-grid">
-              <div className="jobdash-stat-card">
-                <div className="jobdash-stat-info">
-                  <h3>{stats.activeJobs}</h3>
-                  <p>Active Jobs</p>
-                </div>
-                <div className="jobdash-stat-icon jobdash-stat-icon-primary"><FaBriefcase /></div>
+      {/* Stats Cards (smaller) */}
+      <div className="jobdash-stats-grid">
+        <div className="jobdash-stat-card">
+          <div className="jobdash-stat-info"><h3>{stats.activeJobs}</h3><p>Active Jobs</p></div>
+          <div className="jobdash-stat-icon jobdash-stat-icon-primary"><FaBriefcase /></div>
+        </div>
+        <div className="jobdash-stat-card">
+          <div className="jobdash-stat-info"><h3>{stats.totalApplications}</h3><p>Total Applications</p></div>
+          <div className="jobdash-stat-icon jobdash-stat-icon-success"><FaFileAlt /></div>
+        </div>
+        <div className="jobdash-stat-card">
+          <div className="jobdash-stat-info"><h3>{stats.shortlistedApplications}</h3><p>Shortlisted</p></div>
+          <div className="jobdash-stat-icon jobdash-stat-icon-info"><FaStar /></div>
+        </div>
+        <div className="jobdash-stat-card">
+          <div className="jobdash-stat-info"><h3>{stats.upcomingInterviews}</h3><p>Upcoming Interviews</p></div>
+          <div className="jobdash-stat-icon jobdash-stat-icon-warning"><FaCalendarAlt /></div>
+        </div>
+      </div>
+
+      {/* Equal‑height row: Application Pipeline | Recent Applications */}
+      <div style={{ display: 'flex', gap: '28px', marginBottom: '32px' }}>
+        <div style={{ flex: 1, display: 'flex' }}>
+          <div className="jobdash-card" style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="jobdash-card-header"><h5>Application Pipeline</h5></div>
+            <div className="jobdash-card-body" style={{ flex: 1 }}>
+              <div className="jobdash-pipeline-grid">
+                <div className="jobdash-pipeline-item"><h3>{stats.pendingApplications}</h3><p>Pending Review</p></div>
+                <div className="jobdash-pipeline-item"><h3>{stats.shortlistedApplications}</h3><p>Shortlisted</p></div>
+                <div className="jobdash-pipeline-item"><h3>{stats.interviewedApplications}</h3><p>Interviewed</p></div>
+                <div className="jobdash-pipeline-item"><h3>{stats.acceptedApplications}</h3><p>Accepted</p></div>
               </div>
-              <div className="jobdash-stat-card">
-                <div className="jobdash-stat-info">
-                  <h3>{stats.totalApplications}</h3>
-                  <p>Total Applications</p>
-                </div>
-                <div className="jobdash-stat-icon jobdash-stat-icon-success"><FaFileAlt /></div>
-              </div>
-              <div className="jobdash-stat-card">
-                <div className="jobdash-stat-info">
-                  <h3>{stats.shortlistedApplications}</h3>
-                  <p>Shortlisted</p>
-                </div>
-                <div className="jobdash-stat-icon jobdash-stat-icon-info"><FaStar /></div>
-              </div>
-              <div className="jobdash-stat-card">
-                <div className="jobdash-stat-info">
-                  <h3>{stats.upcomingInterviews}</h3>
-                  <p>Upcoming Interviews</p>
-                </div>
-                <div className="jobdash-stat-icon jobdash-stat-icon-warning"><FaCalendarAlt /></div>
+              <div className="jobdash-distribution">
+                <div><div className="jobdash-distribution-header"><span>Application Rate</span><span>{companyStats.applicationRate}%</span></div><div className="jobdash-progress"><div className="jobdash-progress-bar jobdash-bg-success" style={{ width: `${companyStats.applicationRate}%` }}></div></div></div>
+                <div><div className="jobdash-distribution-header"><span>Hire Rate</span><span>{companyStats.hireRate}%</span></div><div className="jobdash-progress"><div className="jobdash-progress-bar jobdash-bg-primary" style={{ width: `${companyStats.hireRate}%` }}></div></div></div>
               </div>
             </div>
-
-            <div className="jobdash-row">
-              <div className="jobdash-col-6">
-                <div className="jobdash-card">
-                  <div className="jobdash-card-header"><h5>Application Pipeline</h5></div>
-                  <div className="jobdash-card-body">
-                    <div className="jobdash-pipeline-grid">
-                      <div className="jobdash-pipeline-item"><h3>{stats.pendingApplications}</h3><p>Pending Review</p></div>
-                      <div className="jobdash-pipeline-item"><h3>{stats.shortlistedApplications}</h3><p>Shortlisted</p></div>
-                      <div className="jobdash-pipeline-item"><h3>{stats.interviewedApplications}</h3><p>Interviewed</p></div>
-                      <div className="jobdash-pipeline-item"><h3>{stats.acceptedApplications}</h3><p>Accepted</p></div>
+          </div>
+        </div>
+        <div style={{ flex: 1, display: 'flex' }}>
+          <div className="jobdash-card" style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="jobdash-card-header"><h5>Recent Applications</h5><Link to="/company/applicants" className="jobdash-btn jobdash-btn-link">View All</Link></div>
+            <div className="jobdash-card-body" style={{ flex: 1 }}>
+              {recentApplications.length > 0 ? (
+                recentApplications.map(app => (
+                  <div key={app._id} className="jobdash-recommended-item">
+                    <div className="jobdash-recommended-content">
+                      <h6>{app.studentId?.name || 'Applicant'}</h6>
+                      <p>{app.jobId?.title || 'Position'}</p>
+                      <div className="jobdash-job-meta"><span><FaClock /> {formatDate(app.appliedDate)}</span><span className={getStatusBadge(app.status)}>{app.status || 'Pending'}</span></div>
                     </div>
-                    <div className="jobdash-distribution">
-                      <div><div className="jobdash-distribution-header"><span>Application Rate</span><span>{companyStats.applicationRate}%</span></div><div className="jobdash-progress"><div className="jobdash-progress-bar jobdash-bg-success" style={{ width: `${companyStats.applicationRate}%` }}></div></div></div>
-                      <div><div className="jobdash-distribution-header"><span>Hire Rate</span><span>{companyStats.hireRate}%</span></div><div className="jobdash-progress"><div className="jobdash-progress-bar jobdash-bg-primary" style={{ width: `${companyStats.hireRate}%` }}></div></div></div>
-                    </div>
+                    <Link to={`/company/applicants/${app._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">Review</Link>
                   </div>
-                </div>
-              </div>
-              <div className="jobdash-col-6">
-                <div className="jobdash-card">
-                  <div className="jobdash-card-header"><h5>Recent Applications</h5><Link to="/company/applicants" className="jobdash-btn jobdash-btn-link">View All</Link></div>
-                  <div className="jobdash-card-body">
-                    {recentApplications.length > 0 ? (
-                      recentApplications.map(app => (
-                        <div key={app._id} className="jobdash-recommended-item">
-                          <div className="jobdash-recommended-content">
-                            <h6>{app.studentId?.name || 'Applicant'}</h6>
-                            <p>{app.jobId?.title || 'Position'}</p>
-                            <div className="jobdash-job-meta"><span><FaClock /> {formatDate(app.appliedDate)}</span><span className={getStatusBadge(app.status)}>{app.status || 'Pending'}</span></div>
-                          </div>
-                          <Link to={`/company/applicants/${app._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">Review</Link>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="jobdash-empty-state"><p>No applications yet</p><Link to="/company/post-job" className="jobdash-btn jobdash-btn-primary jobdash-btn-sm">Post a Job</Link></div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                ))
+              ) : (
+                <div className="jobdash-empty-state"><p>No applications yet</p><Link to="/company/post-job" className="jobdash-btn jobdash-btn-primary jobdash-btn-sm">Post a Job</Link></div>
+              )}
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div className="jobdash-quick-actions-wrapper">
-              <h5 className="jobdash-quick-actions-title"><FaRegClock /> Quick Actions</h5>
-              <div className="jobdash-quick-actions">
-                <Link to="/company/post-job" className="jobdash-quick-action-card"><FaBriefcase /><span>Post New Job</span></Link>
-                <Link to="/company/jobs" className="jobdash-quick-action-card"><FaNewspaper /><span>Manage Jobs</span></Link>
-                <Link to="/company/applicants" className="jobdash-quick-action-card"><FaUsers /><span>View Applicants</span></Link>
-                <Link to="/company/profile" className="jobdash-quick-action-card"><FaBuilding /><span>Company Profile</span></Link>
-                <Link to="/company/interviews" className="jobdash-quick-action-card"><FaCalendarAlt /><span>Interviews</span></Link>
-                <Link to="/company/reports" className="jobdash-quick-action-card"><FaChartLine /><span>Analytics</span></Link>
-              </div>
-            </div>
-
-            {upcomingInterviews.length > 0 && (
-              <div className="jobdash-card jobdash-interviews-card">
-                <div className="jobdash-card-header"><h5><FaCalendarAlt /> Upcoming Interviews</h5><Link to="/company/interviews" className="jobdash-btn jobdash-btn-link">View All</Link></div>
-                <div className="jobdash-card-body">
-                  <div className="jobdash-interviews-list">
-                    {upcomingInterviews.map(interview => (
-                      <div key={interview._id} className="jobdash-interview-item">
-                        <div className="jobdash-interview-info"><h6>{interview.jobId?.title || 'Position'}</h6><p className="jobdash-company-name">with {interview.studentId?.name || 'Candidate'}</p><div className="jobdash-interview-meta"><span><FaCalendarAlt /> {formatInterviewDate(interview.scheduledDate)}</span><span className="jobdash-interview-mode">{interview.mode === 'Online' ? <FaVideo /> : <FaBuilding />}{interview.mode || 'Online'}</span></div></div>
-                        <div className="jobdash-interview-actions"><Link to={`/company/interviews/${interview._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">View Details</Link></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeJobs.length > 0 && (
-              <div className="jobdash-card">
-                <div className="jobdash-card-header"><h5>Active Jobs</h5><Link to="/company/jobs" className="jobdash-btn jobdash-btn-link">Manage Jobs</Link></div>
-                <div className="jobdash-card-body">
-                  {activeJobs.map(job => (
-                    <div key={job._id} className="jobdash-recommended-item">
-                      <div className="jobdash-recommended-content"><h6>{job.title}</h6><p>{job.location?.city || 'Remote'} • {job.employmentType || 'Full-time'}</p><div className="jobdash-job-meta"><span><FaUsers /> {job.applicationsCount || 0} applicants</span><span><FaEye /> {job.views || 0} views</span><span className="jobdash-badge jobdash-badge-success">Active</span></div></div>
-                      <div className="jobdash-interview-actions"><Link to={`/company/jobs/${job._id}/applications`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">View Applicants</Link></div>
+      {/* Upcoming Interviews + Active Jobs (two‑column row) */}
+      <div className="jobdash-row" style={{ marginBottom: '32px' }}>
+        <div className="jobdash-col-6">
+          {upcomingInterviews.length > 0 && (
+            <div className="jobdash-card jobdash-interviews-card">
+              <div className="jobdash-card-header"><h5><FaCalendarAlt /> Upcoming Interviews</h5><Link to="/company/interviews" className="jobdash-btn jobdash-btn-link">View All</Link></div>
+              <div className="jobdash-card-body">
+                <div className="jobdash-interviews-list">
+                  {upcomingInterviews.map(interview => (
+                    <div key={interview._id} className="jobdash-interview-item">
+                      <div className="jobdash-interview-info"><h6>{interview.jobId?.title || 'Position'}</h6><p className="jobdash-company-name">with {interview.studentId?.name || 'Candidate'}</p><div className="jobdash-interview-meta"><span><FaCalendarAlt /> {formatInterviewDate(interview.scheduledDate)}</span><span className="jobdash-interview-mode">{interview.mode === 'Online' ? <FaVideo /> : <FaBuilding />}{interview.mode || 'Online'}</span></div></div>
+                      <div className="jobdash-interview-actions"><Link to={`/company/interviews/${interview._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">View Details</Link></div>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
-
-          <div className="jobdash-side-col">
-            <div className="jobdash-card jobdash-calendar-card">
-              <div className="jobdash-card-header"><h5><FaCalendarAlt /> Calendar</h5><div className="jobdash-calendar-nav"><button onClick={handlePrevMonth} className="jobdash-icon-btn-sm"><FaChevronLeft /></button><span>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span><button onClick={handleNextMonth} className="jobdash-icon-btn-sm"><FaChevronRight /></button></div></div>
-              <div className="jobdash-card-body">
-                <div className="jobdash-calendar">
-                  <div className="jobdash-calendar-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <div key={day} className="jobdash-calendar-weekday">{day}</div>)}</div>
-                  <div className="jobdash-calendar-days">
-                    {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => <div key={`empty-${i}`} className="jobdash-calendar-day jobdash-calendar-day-empty"></div>)}
-                    {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
-                      const day = i + 1;
-                      const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-                      const hasEvent = hasEventOnDate(dateObj);
-                      const isToday = dateObj.toDateString() === new Date().toDateString();
-                      return <div key={day} className={`jobdash-calendar-day ${isToday ? 'jobdash-calendar-day-today' : ''} ${hasEvent ? 'jobdash-calendar-day-event' : ''}`}>{day}{hasEvent && <FaCircle className="jobdash-event-dot" />}</div>;
-                    })}
-                  </div>
-                </div>
-                <div className="jobdash-upcoming-events"><h6>Upcoming Events</h6>{calendarEvents.filter(e => e.date >= new Date()).slice(0, 3).map(event => <div key={event.id} className="jobdash-event-item"><FaCalendarAlt /><span>{event.title}</span><small>{event.date.toLocaleDateString()}</small></div>)}{calendarEvents.filter(e => e.date >= new Date()).length === 0 && <p className="jobdash-empty-text">No upcoming events</p>}</div>
-              </div>
             </div>
+          )}
+        </div>
+        <div className="jobdash-col-6">
+          {activeJobs.length > 0 && (
             <div className="jobdash-card">
-              <div className="jobdash-card-header"><h5><FaUserFriends /> Followers</h5></div>
+              <div className="jobdash-card-header"><h5>Active Jobs</h5><Link to="/company/jobs" className="jobdash-btn jobdash-btn-link">Manage Jobs</Link></div>
               <div className="jobdash-card-body">
-                {followersList.length > 0 ? (
-                  followersList.map(follower => (
-                    <div key={follower._id} className="jobdash-follow-item">
-                      <div className="jobdash-follow-info"><div className="jobdash-follow-logo">{follower.profilePicture ? <img src={`http://localhost:5000${follower.profilePicture}`} alt={follower.name} /> : <div className="jobdash-follow-initials">{getInitials(follower.name)}</div>}</div><div className="jobdash-follow-details"><h6>{follower.name}</h6><p>{follower.email}</p></div></div>
-                      <Link to={`/company/followers/${follower._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">View Profile</Link>
-                    </div>
-                  ))
-                ) : (
-                  <div className="jobdash-empty-state"><p>No followers yet</p></div>
-                )}
+                {activeJobs.map(job => (
+                  <div key={job._id} className="jobdash-recommended-item">
+                    <div className="jobdash-recommended-content"><h6>{job.title}</h6><p>{job.location?.city || 'Remote'} • {job.employmentType || 'Full-time'}</p><div className="jobdash-job-meta"><span><FaUsers /> {job.applicationsCount || 0} applicants</span><span><FaEye /> {job.views || 0} views</span><span className="jobdash-badge jobdash-badge-success">Active</span></div></div>
+                    <div className="jobdash-interview-actions"><Link to={`/company/jobs/${job._id}/applications`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">View Applicants</Link></div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
-    );
-  }
+
+      
+
+      {/* Sidebar: Calendar + Followers (inline side‑by‑side) */}
+      <div className="jobdash-side-col">
+        <div className="jobdash-card jobdash-calendar-card">
+          <div className="jobdash-card-header"><h5><FaCalendarAlt /> Calendar</h5><div className="jobdash-calendar-nav"><button onClick={handlePrevMonth} className="jobdash-icon-btn-sm"><FaChevronLeft /></button><span>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span><button onClick={handleNextMonth} className="jobdash-icon-btn-sm"><FaChevronRight /></button></div></div>
+          <div className="jobdash-card-body">
+            <div className="jobdash-calendar">
+              <div className="jobdash-calendar-weekdays">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <div key={day} className="jobdash-calendar-weekday">{day}</div>)}</div>
+              <div className="jobdash-calendar-days">
+                {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => <div key={`empty-${i}`} className="jobdash-calendar-day jobdash-calendar-day-empty"></div>)}
+                {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
+                  const day = i + 1;
+                  const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                  const hasEvent = hasEventOnDate(dateObj);
+                  const isToday = dateObj.toDateString() === new Date().toDateString();
+                  return <div key={day} className={`jobdash-calendar-day ${isToday ? 'jobdash-calendar-day-today' : ''} ${hasEvent ? 'jobdash-calendar-day-event' : ''}`}>{day}{hasEvent && <FaCircle className="jobdash-event-dot" />}</div>;
+                })}
+              </div>
+            </div>
+            <div className="jobdash-upcoming-events"><h6>Upcoming Events</h6>{calendarEvents.filter(e => e.date >= new Date()).slice(0, 3).map(event => <div key={event.id} className="jobdash-event-item"><FaCalendarAlt /><span>{event.title}</span><small>{event.date.toLocaleDateString()}</small></div>)}{calendarEvents.filter(e => e.date >= new Date()).length === 0 && <p className="jobdash-empty-text">No upcoming events</p>}</div>
+          </div>
+        </div>
+        <div className="jobdash-card">
+          <div className="jobdash-card-header"><h5><FaUserFriends /> Followers</h5></div>
+          <div className="jobdash-card-body">
+            {followersList.length > 0 ? (
+              followersList.map(follower => (
+                <div key={follower._id} className="jobdash-follow-item">
+                  <div className="jobdash-follow-info"><div className="jobdash-follow-logo">{follower.profilePicture ? <img src={`http://localhost:5000${follower.profilePicture}`} alt={follower.name} /> : <div className="jobdash-follow-initials">{getInitials(follower.name)}</div>}</div><div className="jobdash-follow-details"><h6>{follower.name}</h6><p>{follower.email}</p></div></div>
+                  <Link to={`/company/followers/${follower._id}`} className="jobdash-btn jobdash-btn-sm jobdash-btn-outline-primary">View Profile</Link>
+                </div>
+              ))
+            ) : (
+              <div className="jobdash-empty-state"><p>No followers yet</p></div>
+            )}
+          </div>
+        </div>
+        {/* Quick Actions – moved to the bottom (inside main column) */}
+      <div className="jobdash-quick-actions-wrapper">
+        <h5 className="jobdash-quick-actions-title"><FaRegClock /> Quick Actions</h5>
+        <div className="jobdash-quick-actions">
+          <Link to="/company/post-job" className="jobdash-quick-action-card"><FaBriefcase /><span>Post New Job</span></Link>
+          <Link to="/company/jobs" className="jobdash-quick-action-card"><FaNewspaper /><span>Manage Jobs</span></Link>
+          <Link to="/company/applicants" className="jobdash-quick-action-card"><FaUsers /><span>View Applicants</span></Link>
+          <Link to="/company/profile" className="jobdash-quick-action-card"><FaBuilding /><span>Company Profile</span></Link>
+          <Link to="/company/interviews" className="jobdash-quick-action-card"><FaCalendarAlt /><span>Interviews</span></Link>
+          <Link to="/company/reports" className="jobdash-quick-action-card"><FaChartLine /><span>Analytics</span></Link>
+        </div>
+      </div>
+      </div>
+    </div>
+  );
+}
 
   return null;
 };

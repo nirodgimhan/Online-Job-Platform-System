@@ -9,7 +9,7 @@ import {
   FaCalendarAlt, FaFileAlt, FaCamera, FaSpinner, FaArrowLeft, FaMapPin,
   FaCalendar, FaHeart, FaRegHeart, FaComment, FaShare, FaImage, FaVideo,
   FaExternalLinkAlt, FaSearch, FaEye, FaClock, FaDollarSign, FaChartLine,
-  FaUserPlus, FaUserCheck, FaEllipsisH
+  FaUserPlus, FaUserCheck, FaEllipsisH, FaShareAlt
 } from 'react-icons/fa';
 
 // Helper to get full URL for images
@@ -199,13 +199,11 @@ const CompanyProfile = () => {
 
       if (response.data.success) {
         toast.success('Logo updated successfully');
-        const newLogoUrl = response.data.logo; // the route returns { logo: url }
+        const newLogoUrl = response.data.logo;
 
-        // Update local profile state
         setProfile(prev => ({ ...prev, companyLogo: newLogoUrl }));
         setLogoPreview(getFullImageUrl(newLogoUrl));
 
-        // Update user context
         try {
           const userResponse = await API.get('/auth/me');
           if (userResponse.data.success) {
@@ -426,7 +424,7 @@ const CompanyProfile = () => {
     return (
       <div className="cp-loading-container">
         <div className="cp-spinner"></div>
-        <h4>Loading company profile...</h4>
+        <h4>Loading company profile....</h4>
       </div>
     );
   }
@@ -503,30 +501,130 @@ const CompanyProfile = () => {
           </div>
         </div>
 
-        {/* Basic Information Card */}
+        {/* Basic Information Card – Modern Two-Column Layout with Icons */}
         {!editing && (
           <div className="cp-info-card">
-            <div className="cp-info-header"><h3>Basic Information</h3></div>
+            <div className="cp-info-header">
+              <h3>Basic Information</h3>
+            </div>
             <div className="cp-info-content">
-              <div className="cp-info-row">
-                <div className="cp-info-item"><span className="cp-label">Industry</span><span className="cp-value">{formData.industry || 'Not specified'}</span></div>
-                <div className="cp-info-item"><span className="cp-label">Company Size</span><span className="cp-value">{formData.companySize || 'Not specified'}</span></div>
-                <div className="cp-info-item"><span className="cp-label">Founded</span><span className="cp-value">{formData.foundedYear || 'Not specified'}</span></div>
-                <div className="cp-info-item"><span className="cp-label">Website</span><span className="cp-value">{formData.website ? <a href={formData.website} target="_blank" rel="noopener noreferrer">{formData.website} <FaExternalLinkAlt size={12} /></a> : 'Not specified'}</span></div>
+              <div className="cp-info-grid">
+                {/* Industry */}
+                <div className="cp-info-item">
+                  <div className="cp-info-icon"><FaBuilding /></div>
+                  <div className="cp-info-details">
+                    <span className="cp-label">Industry</span>
+                    <span className="cp-value">{formData.industry || 'Not specified'}</span>
+                  </div>
+                </div>
+                {/* Company Size */}
+                <div className="cp-info-item">
+                  <div className="cp-info-icon"><FaUsers /></div>
+                  <div className="cp-info-details">
+                    <span className="cp-label">Company Size</span>
+                    <span className="cp-value">{formData.companySize || 'Not specified'}</span>
+                  </div>
+                </div>
+                {/* Founded Year */}
+                <div className="cp-info-item">
+                  <div className="cp-info-icon"><FaCalendarAlt /></div>
+                  <div className="cp-info-details">
+                    <span className="cp-label">Founded</span>
+                    <span className="cp-value">{formData.foundedYear || 'Not specified'}</span>
+                  </div>
+                </div>
+                {/* Website */}
+                <div className="cp-info-item">
+                  <div className="cp-info-icon"><FaGlobe /></div>
+                  <div className="cp-info-details">
+                    <span className="cp-label">Website</span>
+                    <span className="cp-value">
+                      {formData.website ? (
+                        <a href={formData.website} target="_blank" rel="noopener noreferrer">
+                          {formData.website.replace(/^https?:\/\//, '')} <FaExternalLinkAlt size={12} />
+                        </a>
+                      ) : 'Not specified'}
+                    </span>
+                  </div>
+                </div>
+                {/* Contact Email */}
+                <div className="cp-info-item">
+                  <div className="cp-info-icon"><FaEnvelope /></div>
+                  <div className="cp-info-details">
+                    <span className="cp-label">Contact Email</span>
+                    <span className="cp-value">{formData.contactEmail || 'Not specified'}</span>
+                  </div>
+                </div>
+                {/* Contact Phone */}
+                <div className="cp-info-item">
+                  <div className="cp-info-icon"><FaPhone /></div>
+                  <div className="cp-info-details">
+                    <span className="cp-label">Contact Phone</span>
+                    <span className="cp-value">{formData.contactPhone || 'Not specified'}</span>
+                  </div>
+                </div>
               </div>
-              <div className="cp-info-row"><div className="cp-info-item cp-full-width"><span className="cp-label">Description</span><p className="cp-description">{formData.description || 'No description provided'}</p></div></div>
-              <div className="cp-info-row">
-                <div className="cp-info-item"><span className="cp-label">Contact Email</span><span className="cp-value">{formData.contactEmail || 'Not specified'}</span></div>
-                <div className="cp-info-item"><span className="cp-label">Contact Phone</span><span className="cp-value">{formData.contactPhone || 'Not specified'}</span></div>
+
+              {/* Full-width Description */}
+              <div className="cp-info-item-full">
+                <div className="cp-info-icon"><FaFileAlt /></div>
+                <div className="cp-info-details">
+                  <span className="cp-label">Description</span>
+                  <p className="cp-description">{formData.description || 'No description provided'}</p>
+                </div>
               </div>
-              <div className="cp-info-row"><div className="cp-info-item cp-full-width"><span className="cp-label">Address</span><span className="cp-value">{formData.address?.street || formData.address?.city || formData.address?.country ? (<> {formData.address.street && <span>{formData.address.street}, </span>}{formData.address.city && <span>{formData.address.city}, </span>}{formData.address.state && <span>{formData.address.state}, </span>}{formData.address.country && <span>{formData.address.country}</span>}{formData.address.zipCode && <span> - {formData.address.zipCode}</span>}</>) : 'No address provided'}</span></div></div>
-              <div className="cp-info-row"><div className="cp-info-item cp-full-width"><span className="cp-label">Social Media</span><div className="cp-social-links">
-                {formData.socialMedia?.linkedin && <a href={formData.socialMedia.linkedin} target="_blank" rel="noopener noreferrer"><FaLinkedin /> LinkedIn</a>}
-                {formData.socialMedia?.twitter && <a href={formData.socialMedia.twitter} target="_blank" rel="noopener noreferrer"><FaTwitter /> Twitter</a>}
-                {formData.socialMedia?.facebook && <a href={formData.socialMedia.facebook} target="_blank" rel="noopener noreferrer"><FaFacebook /> Facebook</a>}
-                {formData.socialMedia?.instagram && <a href={formData.socialMedia.instagram} target="_blank" rel="noopener noreferrer"><FaInstagram /> Instagram</a>}
-                {!formData.socialMedia?.linkedin && !formData.socialMedia?.twitter && !formData.socialMedia?.facebook && !formData.socialMedia?.instagram && <span>No social media links provided</span>}
-              </div></div></div>
+
+              {/* Full-width Address */}
+              <div className="cp-info-item-full">
+                <div className="cp-info-icon"><FaMapMarkerAlt /></div>
+                <div className="cp-info-details">
+                  <span className="cp-label">Address</span>
+                  <span className="cp-value">
+                    {formData.address?.street || formData.address?.city || formData.address?.country ? (
+                      <>
+                        {formData.address.street && <span>{formData.address.street}, </span>}
+                        {formData.address.city && <span>{formData.address.city}, </span>}
+                        {formData.address.state && <span>{formData.address.state}, </span>}
+                        {formData.address.country && <span>{formData.address.country}</span>}
+                        {formData.address.zipCode && <span> - {formData.address.zipCode}</span>}
+                      </>
+                    ) : 'No address provided'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Full-width Social Media */}
+              <div className="cp-info-item-full">
+                <div className="cp-info-icon"><FaShareAlt /></div>
+                <div className="cp-info-details">
+                  <span className="cp-label">Social Media</span>
+                  <div className="cp-social-links">
+                    {formData.socialMedia?.linkedin && (
+                      <a href={formData.socialMedia.linkedin} target="_blank" rel="noopener noreferrer" className="cp-social-link">
+                        <FaLinkedin /> LinkedIn
+                      </a>
+                    )}
+                    {formData.socialMedia?.twitter && (
+                      <a href={formData.socialMedia.twitter} target="_blank" rel="noopener noreferrer" className="cp-social-link">
+                        <FaTwitter /> Twitter
+                      </a>
+                    )}
+                    {formData.socialMedia?.facebook && (
+                      <a href={formData.socialMedia.facebook} target="_blank" rel="noopener noreferrer" className="cp-social-link">
+                        <FaFacebook /> Facebook
+                      </a>
+                    )}
+                    {formData.socialMedia?.instagram && (
+                      <a href={formData.socialMedia.instagram} target="_blank" rel="noopener noreferrer" className="cp-social-link">
+                        <FaInstagram /> Instagram
+                      </a>
+                    )}
+                    {!formData.socialMedia?.linkedin && !formData.socialMedia?.twitter && !formData.socialMedia?.facebook && !formData.socialMedia?.instagram && (
+                      <span>No social media links provided</span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

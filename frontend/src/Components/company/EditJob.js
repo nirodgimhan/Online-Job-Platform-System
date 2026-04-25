@@ -385,7 +385,7 @@ const EditJob = () => {
                 />
               </div>
               <div className="col-md-4 mb-3">
-                <label className="form-label">Country</label>
+                <label className="form-label">Countrys</label>
                 <input
                   type="text"
                   className="form-control"
