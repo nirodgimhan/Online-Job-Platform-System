@@ -226,14 +226,8 @@ try {
     require('./models/CV');
     require('./models/Contact');
     require('./Models/Notification');
-    require('./models/OTP');
-    // Chat model (defined inline or imported)
-    // We'll import from ./models/Chat if the file exists, otherwise define inline later
-    try {
-        require('./models/Chat');
-    } catch (err) {
-        console.log('⚠️ Chat model not found, will be defined inline');
-    }
+    require('./models/OTP');  
+    require('./models/Feedback');        
     console.log('✅ All models loaded successfully');
 } catch (err) {
     console.error('❌ Error loading models:', err.message);
@@ -318,6 +312,16 @@ try {
     chatRoutes = router;
 }
 
+
+
+try {
+    feedbackRoutes = require('./routes/feedbackRoutes');
+    console.log('✅ feedbackRoutes loaded');
+} catch (err) {
+    console.error('❌ Error loading feedbackRoutes:', err.message);
+    feedbackRoutes = express.Router();
+}
+
 // ==================== API ROUTES ====================
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -334,9 +338,8 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/contact', contactRoutes);
-app.use('/api/otp', otpRoutes);
+app.use('/api/otp', otpRoutes);          // <-- ADDED OTP routes
 app.use('/api/feedback', feedbackRoutes);
-app.use('/api/chat', chatRoutes);           // <--- CHAT ROUTES ADDED
 
 console.log('\n✅ API routes registered:');
 ['auth','users','students','companies','posts','jobs','applications','cv','interviews',
