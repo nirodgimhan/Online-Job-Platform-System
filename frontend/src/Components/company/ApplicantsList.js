@@ -519,7 +519,7 @@ const ApplicantsList = () => {
     return (
       <div className="al-loading-container">
         <div className="al-spinner"></div>
-        <h4>Loading applications...</h4>
+        <h4>Loading applications....</h4>
         <p>Please wait while we fetch your applicants</p>
       </div>
     );
