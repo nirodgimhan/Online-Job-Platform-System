@@ -459,7 +459,7 @@ const EditJob = () => {
                     id="isNegotiable"
                   />
                   <label className="form-check-label" htmlFor="isNegotiable">
-                    Salary is negotiable
+                    Salary is negotiables
                   </label>
                 </div>
               </div>
