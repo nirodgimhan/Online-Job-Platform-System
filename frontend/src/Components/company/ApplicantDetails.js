@@ -364,7 +364,7 @@ const ApplicantDetails = () => {
                   <p className="ad-phone"><FaPhone /> {application.studentPhone}</p>
                 )}
                 <div className="ad-contact-info">
-                  <h3>Contact Information</h3>
+                  <h3>Contact Informations</h3>
                   <div className="ad-info-row">
                     <span>Email:</span>
                     <a href={`mailto:${application.studentEmail}`}>{application.studentEmail}</a>
