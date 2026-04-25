@@ -424,7 +424,7 @@ const CompanyProfile = () => {
     return (
       <div className="cp-loading-container">
         <div className="cp-spinner"></div>
-        <h4>Loading company profile...</h4>
+        <h4>Loading company profile....</h4>
       </div>
     );
   }
